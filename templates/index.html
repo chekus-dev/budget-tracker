@@ -1,0 +1,48 @@
+{{define "index.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Tracker</title>
+<script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-emerald-50/40 min-h-screen py-6 px-4 sm:py-10 sm:px-6">
+<div class="bg-emerald-900 text-white rounded-2xl p-6 shadow-sm">
+        <h1 class="text-2xl sm:text-3xl font-bold text-emerald-900 mb-1">Budget Tracker</h1>
+        <p class="text-sm sm:text-base text-emerald-700/70 mb-6 sm:mb-8">Track what you spend, one entry at a time.</p>
+
+        <!-- Add expense form -->
+        <form action="/add" method="POST" class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm mb-6 sm:mb-8 flex flex-col sm:flex-row gap-3">
+            <input
+                type="text"
+                name="description"
+                placeholder="What did you spend on?"
+                required
+                class="flex-1 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-800"
+            >
+            <input
+                type="number"
+                step="0.01"
+                name="amount"
+                placeholder="₦0.00"
+                required
+                class="w-full sm:w-28 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-800"
+            >
+            <button
+                type="submit"
+                class="w-full sm:w-auto bg-emerald-900 hover:bg-emerald-800 text-white font-medium rounded-lg px-4 py-2 transition"
+            >
+                Add
+            </button>
+        </form>
+
+        <div id="expenses-container">
+            {{template "expenses_list.html" .}}
+        </div>
+
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
+{{end}}

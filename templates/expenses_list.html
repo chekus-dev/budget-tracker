@@ -1,0 +1,31 @@
+{{define "expenses_list.html"}}
+<div id="total-card" class="bg-emerald-900 text-white rounded-2xl p-5 sm:p-6 mb-6 sm:mb-8 shadow-sm" data-total="{{.Total}}">
+    <p class="text-sm text-emerald-200 mb-1">Total spent</p>
+    <p id="total-amount" class="text-2xl sm:text-3xl font-semibold">₦{{printf "%.2f" .Total}}</p>
+</div>
+
+<div id="expenses-list" class="bg-white rounded-2xl shadow-sm divide-y divide-emerald-50">
+    {{if .Expenses}}
+        {{range .Expenses}}
+        <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4" data-id="{{.ID}}">
+            <div class="min-w-0 pr-3">
+                <p class="font-medium text-emerald-900 truncate">{{.Description}}</p>
+                <p class="text-xs text-emerald-700/50">{{.CreatedAt}}</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <p class="font-semibold text-emerald-900 whitespace-nowrap">₦{{printf "%.2f" .Amount}}</p>
+                <button
+                    class="delete-btn text-emerald-700/40 hover:text-red-600 transition text-sm"
+                    data-id="{{.ID}}"
+                    title="Delete"
+                >
+                    ✕
+                </button>
+            </div>
+        </div>
+        {{end}}
+    {{else}}
+        <p class="px-6 py-8 text-center text-emerald-700/50">No expenses yet. Add your first one above.</p>
+    {{end}}
+</div>
+{{end}}
