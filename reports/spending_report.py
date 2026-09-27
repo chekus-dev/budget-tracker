@@ -9,18 +9,22 @@ Usage:
 """
 
 import csv
+import os
 import sys
 from datetime import datetime
 
 import matplotlib.pyplot as plt
 import mysql.connector
 import pandas as pd
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DB_CONFIG = {
-    "host": "127.0.0.1",
-    "user": "root",
-    "password": "Budget2026!",
-    "database": "budget",
+    "host": os.getenv("DB_HOST", "127.0.0.1"),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD", ""),
+    "database": os.getenv("DB_NAME", "budget"),
 }
 
 
@@ -73,6 +77,7 @@ def main():
         sys.exit(0)
 
     df = pd.DataFrame(rows)
+    df["amount"] = df["amount"].astype(float)  # MySQL DECIMAL -> Python Decimal -> float
     print_summary(df)
     export_csv(df)
     plot_monthly_spending(df)

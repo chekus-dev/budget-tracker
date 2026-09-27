@@ -1,0 +1,198 @@
+{{define "saved-settings.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saved Settings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #185fa5;
+            --primary-dark: #0C447C;
+            --bg-light: #f8f9fa;
+            --surface-light: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666;
+            --border: #e0e0e0;
+        }
+
+        html.dark {
+            --bg-light: #0f0f0f;
+            --surface-light: #1a1a1a;
+            --text-primary: #f5f5f5;
+            --text-secondary: #999;
+            --border: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 20px 16px 120px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        /* Setting Card */
+        .setting-card {
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .setting-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .setting-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .setting-empty {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Category List */
+        .category-list {
+            margin-top: 8px;
+        }
+
+        .category-item {
+            padding: 8px 0;
+            font-size: 13px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .category-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(24, 95, 165, 0.3);
+        }
+
+        .btn-danger {
+            background: none;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.05);
+        }
+    </style>
+</head>
+<body>
+    {{template "nav.html" .}}
+
+    <div class="container">
+        <h1 class="page-title">Saved Settings</h1>
+        <p class="page-subtitle">Your current configuration</p>
+
+        <!-- Budget Limit -->
+        <div class="setting-card">
+            <div class="setting-label">Monthly Budget Limit</div>
+            {{if gt .BudgetLimit 0.0}}
+            <div class="setting-value">₦{{printf "%.2f" .BudgetLimit}}</div>
+            {{else}}
+            <div class="setting-empty">Not set</div>
+            {{end}}
+        </div>
+
+        <!-- Theme -->
+        <div class="setting-card">
+            <div class="setting-label">Appearance</div>
+            <div class="setting-value" style="text-transform: capitalize;">{{if .Theme}}{{.Theme}}{{else}}System{{end}}</div>
+        </div>
+
+        <!-- Categories -->
+        <div class="setting-card">
+            <div class="setting-label">Categories</div>
+            {{if .Categories}}
+            <div class="category-list">
+                {{range .Categories}}
+                <div class="category-item">
+                    <span class="category-dot"></span>
+                    <span>{{.}}</span>
+                </div>
+                {{end}}
+            </div>
+            {{else}}
+            <div class="setting-empty">No categories saved</div>
+            {{end}}
+        </div>
+
+        <div class="button-group">
+            <a href="/settings" class="btn btn-primary">Edit Settings</a>
+            <form action="/settings/reset" method="POST" style="flex: 1;">
+                <button type="submit" class="btn btn-danger" style="width: 100%;" onclick="return confirm('Are you sure? This will reset all settings.')">Reset All</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+{{end}}

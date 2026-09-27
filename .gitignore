@@ -1,0 +1,23 @@
+# Environment variables / secrets
+.env
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+web-server-in-go-with-mysql-database
+
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+
+# Generated reports (regenerable from the database)
+reports/*.png
+reports/*.csv
+
+# OS/editor cruft
+.DS_Store
+*.swp

@@ -1,0 +1,319 @@
+{{define "settings.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #185fa5;
+            --primary-dark: #0C447C;
+            --bg-light: #f8f9fa;
+            --surface-light: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666;
+            --border: #e0e0e0;
+        }
+
+        html.dark {
+            --bg-light: #0f0f0f;
+            --surface-light: #1a1a1a;
+            --text-primary: #f5f5f5;
+            --text-secondary: #999;
+            --border: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 20px 16px 120px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        /* Form Section */
+        .form-section {
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            background: var(--surface-light);
+            color: var(--text-primary);
+            transition: border-color 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.1);
+        }
+
+        .theme-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .theme-btn {
+            padding: 12px 8px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface-light);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .theme-btn:hover,
+        .theme-btn.active {
+            border-color: var(--primary);
+            background: rgba(24, 95, 165, 0.08);
+        }
+
+        /* Category List */
+        .category-item {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .category-item input {
+            flex: 1;
+        }
+
+        .category-remove {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 6px;
+            transition: color 0.2s;
+        }
+
+        .category-remove:hover {
+            color: #ef4444;
+        }
+
+        .add-category-btn {
+            font-size: 13px;
+            color: var(--primary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .add-category-btn:hover {
+            opacity: 0.8;
+        }
+
+        /* Submit Button */
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(24, 95, 165, 0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        @media (min-width: 481px) {
+            .container {
+                max-width: 720px;
+                padding-left: 24px;
+                padding-right: 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 16px 12px 112px;
+            }
+
+            .page-title {
+                font-size: 22px;
+            }
+
+            .form-section {
+                padding: 14px;
+            }
+
+            .theme-grid {
+                gap: 8px;
+            }
+
+            .theme-btn {
+                padding: 10px 6px;
+            }
+
+            .theme-icon {
+                font-size: 20px;
+            }
+
+            .category-item {
+                align-items: flex-start;
+            }
+
+            .category-item .form-input {
+                min-width: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    {{template "nav.html" .}}
+
+    <div class="container">
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">Customize your budget tracker</p>
+
+        <form action="/settings/saved" method="POST">
+            <!-- Monthly Budget Limit -->
+            <div class="form-section">
+                <label class="form-label">Monthly Budget Limit</label>
+                <p class="form-hint">Set your monthly spending limit. Leave blank for no limit.</p>
+                <input type="number" step="0.01" name="budget" placeholder="₦0.00" 
+                    value="{{if .BudgetLimit}}{{printf "%.2f" .BudgetLimit}}{{end}}" class="form-input">
+            </div>
+
+            <!-- Theme -->
+            <div class="form-section">
+                <label class="form-label">Theme</label>
+                <p class="form-hint">Choose how the tracker looks on your device.</p>
+                <div class="theme-section" id="theme-selector">
+                    <button type="button" class="theme-btn" data-theme="light" onclick="selectTheme('light')">Light</button>
+                    <button type="button" class="theme-btn" data-theme="dark" onclick="selectTheme('dark')">Dark</button>
+                    <button type="button" class="theme-btn" data-theme="system" onclick="selectTheme('system')">System</button>
+                </div>
+                <input type="hidden" name="theme" id="theme-input" value="{{.Theme}}">
+            </div>
+
+            <!-- Categories -->
+            <div class="form-section">
+                <label class="form-label">Categories</label>
+                <p class="form-hint">Organize your expenses into categories</p>
+                <div id="category-list">
+                    {{range .Categories}}
+                    <div class="category-item">
+                        <input type="text" name="category" value="{{.}}" class="form-input" style="margin-bottom: 0;">
+                        <button type="button" class="category-remove" onclick="removeCategory(this)">✕</button>
+                    </div>
+                    {{end}}
+                </div>
+                <button type="button" class="add-category-btn" onclick="addCategory()">+ Add category</button>
+            </div>
+
+            <button type="submit" class="submit-btn">Save Settings</button>
+        </form>
+    </div>
+
+    <script>
+        function selectTheme(theme) {
+            document.getElementById('theme-input').value = theme;
+            localStorage.setItem('bt-theme', theme);
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const isDark = theme === 'dark' || (theme === 'system' && prefersDark);
+            document.documentElement.classList.toggle('dark', isDark);
+            document.body.classList.toggle('dark', isDark);
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.theme === theme);
+            });
+        }
+
+        function addCategory() {
+            const list = document.getElementById('category-list');
+            const item = document.createElement('div');
+            item.className = 'category-item';
+            item.innerHTML = `
+                <input type="text" name="category" placeholder="New category" class="form-input" style="margin-bottom: 0;">
+                <button type="button" class="category-remove" onclick="removeCategory(this)">✕</button>
+            `;
+            list.appendChild(item);
+            item.querySelector('input').focus();
+        }
+
+        function removeCategory(btn) {
+            btn.closest('.category-item').remove();
+        }
+
+        // Load theme preference
+        const savedTheme = document.getElementById('theme-input').value || localStorage.getItem('bt-theme') || 'system';
+        document.getElementById('theme-input').value = savedTheme;
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = savedTheme === 'dark' || (savedTheme === 'system' && prefersDark);
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.body.classList.add('dark');
+        }
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.theme === savedTheme);
+        });
+    </script>
+</body>
+</html>
+{{end}}

@@ -1,31 +1,104 @@
 {{define "expenses_list.html"}}
-<div id="total-card" class="bg-emerald-900 text-white rounded-2xl p-5 sm:p-6 mb-6 sm:mb-8 shadow-sm" data-total="{{.Total}}">
-    <p class="text-sm text-emerald-200 mb-1">Total spent</p>
-    <p id="total-amount" class="text-2xl sm:text-3xl font-semibold">₦{{printf "%.2f" .Total}}</p>
-</div>
+<style>
+:root {
+--primary: #185fa5;
+--danger: #ef4444;
+--surface-light: #ffffff;
+--border: #e0e0e0;
+--text-secondary: #666;
+    }
 
-<div id="expenses-list" class="bg-white rounded-2xl shadow-sm divide-y divide-emerald-50">
-    {{if .Expenses}}
-        {{range .Expenses}}
-        <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4" data-id="{{.ID}}">
-            <div class="min-w-0 pr-3">
-                <p class="font-medium text-emerald-900 truncate">{{.Description}}</p>
-                <p class="text-xs text-emerald-700/50">{{.CreatedAt}}</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <p class="font-semibold text-emerald-900 whitespace-nowrap">₦{{printf "%.2f" .Amount}}</p>
-                <button
-                    class="delete-btn text-emerald-700/40 hover:text-red-600 transition text-sm"
-                    data-id="{{.ID}}"
-                    title="Delete"
-                >
-                    ✕
-                </button>
-            </div>
-        </div>
-        {{end}}
-    {{else}}
-        <p class="px-6 py-8 text-center text-emerald-700/50">No expenses yet. Add your first one above.</p>
-    {{end}}
+html.dark {
+--surface-light: #1a1a1a;
+--border: #333;
+--text-secondary: #999;
+    }
+
+.expense-item {
+background: var(--surface-light);
+border: 1px solid var(--border);
+border-radius: 12px;
+padding: 12px;
+margin-bottom: 8px;
+display: flex;
+align-items: center;
+gap: 12px;
+transition: box-shadow 0.2s;
+    }
+
+.expense-item:hover {
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+.expense-icon {
+width: 40px;
+height: 40px;
+border-radius: 50%;
+background: var(--border);
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 18px;
+flex-shrink: 0;
+    }
+
+.expense-details {
+flex: 1;
+min-width: 0;
+    }
+
+.expense-name {
+font-size: 14px;
+font-weight: 500;
+margin-bottom: 4px;
+    }
+
+.expense-time {
+font-size: 12px;
+color: var(--text-secondary);
+    }
+
+.expense-amount {
+font-size: 14px;
+font-weight: 600;
+color: var(--primary);
+    }
+
+.delete-btn {
+background: none;
+border: none;
+color: var(--text-secondary);
+cursor: pointer;
+font-size: 18px;
+padding: 4px;
+transition: color 0.2s;
+    }
+
+.delete-btn:hover {
+color: var(--danger);
+    }
+
+.empty-expenses {
+text-align: center;
+padding: 20px;
+color: var(--text-secondary);
+font-size: 14px;
+    }
+</style>
+
+{{if .Expenses}}
+    {{range .Expenses}}
+<div class="expense-item" data-id="{{.ID}}">
+<div class="expense-icon">🧾</div>
+<div class="expense-details">
+<div class="expense-name">{{.Description}}</div>
+<div class="expense-time">{{.CreatedAt}}</div>
 </div>
+<div class="expense-amount">-₦{{printf "%.2f" .Amount}}</div>
+<button class="delete-btn" data-id="{{.ID}}" title="Delete expense">✕</button>
+</div>
+    {{end}}
+{{else}}
+<div class="empty-expenses">No expenses yet. Add your first one above.</div>
+{{end}}
 {{end}}

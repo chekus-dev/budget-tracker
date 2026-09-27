@@ -5,43 +5,586 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Budget Tracker</title>
-<script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-emerald-50/40 min-h-screen py-6 px-4 sm:py-10 sm:px-6">
-<div class="bg-emerald-900 text-white rounded-2xl p-6 shadow-sm">
-        <h1 class="text-2xl sm:text-3xl font-bold text-emerald-900 mb-1">Budget Tracker</h1>
-        <p class="text-sm sm:text-base text-emerald-700/70 mb-6 sm:mb-8">Track what you spend, one entry at a time.</p>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #185fa5;
+            --primary-dark: #0C447C;
+            --primary-light: #5eb3ff;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-light: #f8f9fa;
+            --bg-dark: #0f0f0f;
+            --surface-light: #ffffff;
+            --surface-dark: #1a1a1a;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666;
+            --border: #e0e0e0;
+        }
 
-        <!-- Add expense form -->
-        <form action="/add" method="POST" class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm mb-6 sm:mb-8 flex flex-col sm:flex-row gap-3">
-            <input
-                type="text"
-                name="description"
-                placeholder="What did you spend on?"
-                required
-                class="flex-1 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-800"
-            >
-            <input
-                type="number"
-                step="0.01"
-                name="amount"
-                placeholder="₦0.00"
-                required
-                class="w-full sm:w-28 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-800"
-            >
-            <button
-                type="submit"
-                class="w-full sm:w-auto bg-emerald-900 hover:bg-emerald-800 text-white font-medium rounded-lg px-4 py-2 transition"
-            >
-                Add
-            </button>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html.dark {
+            --bg-light: #0f0f0f;
+            --surface-light: #1a1a1a;
+            --text-primary: #f5f5f5;
+            --text-secondary: #999;
+            --border: #333;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-primary);
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 20px 16px 120px;
+        }
+
+        /* Balance Card */
+        .balance-section {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 16px;
+            padding: 24px;
+            color: white;
+            margin-bottom: 24px;
+        }
+
+        .balance-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .balance-amount {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .balance-stats {
+            display: flex;
+            gap: 8px;
+        }
+
+        .stat-pill {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 8px 10px;
+        }
+
+        .stat-value {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+
+        .month-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .month-nav-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .month-nav-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .month-nav-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .month-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        /* Budget Card */
+        .budget-card {
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .budget-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .budget-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .budget-amount {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, var(--warning) 0%, #d97706 100%);
+        }
+
+        .progress-fill.danger {
+            background: linear-gradient(90deg, var(--danger) 0%, #dc2626 100%);
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: right;
+        }
+
+        /* Alert */
+        .alert {
+            padding: 12px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .alert-info {
+            background: rgba(24, 95, 165, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(24, 95, 165, 0.2);
+        }
+
+        /* Add Expense Form */
+        .add-form {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .add-form input {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            background: var(--surface-light);
+            color: var(--text-primary);
+            transition: border-color 0.2s;
+        }
+
+        .add-form input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.1);
+        }
+
+        .add-form input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .add-form-desc {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .add-form-amount {
+            width: 100px;
+        }
+
+        .add-form-btn {
+            padding: 10px 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .add-form-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(24, 95, 165, 0.3);
+        }
+
+        .add-form-btn:active {
+            transform: translateY(0);
+        }
+
+        .add-form-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Section Title */
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Total Card */
+        .total-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 12px;
+            padding: 16px;
+            color: white;
+            margin-bottom: 16px;
+        }
+
+        .total-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 6px;
+        }
+
+        .total-amount {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        /* Expense Item */
+        .expense-item {
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: box-shadow 0.2s;
+        }
+
+        .expense-item:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .expense-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .expense-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .expense-name {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .expense-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .expense-amount {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .delete-btn:hover {
+            color: var(--danger);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        /* Reset Button */
+        .reset-btn {
+            width: 100%;
+            padding: 12px;
+            background: none;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 24px;
+        }
+
+        .reset-btn:hover {
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        @media (min-width: 481px) {
+            .container {
+                max-width: 720px;
+                padding-left: 24px;
+                padding-right: 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 16px 12px 112px;
+            }
+
+            .balance-section {
+                padding: 20px 16px;
+            }
+
+            .balance-amount {
+                font-size: 28px;
+            }
+
+            .balance-stats {
+                flex-wrap: wrap;
+            }
+
+            .stat-pill {
+                min-width: calc(50% - 4px);
+            }
+
+            .month-nav {
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .add-form {
+                flex-wrap: wrap;
+            }
+
+            .add-form-desc {
+                flex-basis: 100%;
+            }
+
+            .add-form-amount {
+                flex: 1;
+                width: auto;
+                min-width: 0;
+            }
+
+            .add-form-btn {
+                flex: 0 0 auto;
+            }
+
+            .budget-header {
+                gap: 12px;
+                align-items: flex-start;
+            }
+
+            .expense-item {
+                gap: 8px;
+                padding: 10px;
+            }
+
+            .expense-name,
+            .expense-time {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    {{template "nav.html" .}}
+
+    <div class="container">
+        <!-- Balance Section -->
+        <div class="balance-section">
+            <div class="balance-label">Current balance</div>
+            <div class="balance-amount" id="home-balance">₦{{printf "%.2f" .Total}}</div>
+            <div class="balance-stats">
+                <div class="stat-pill">
+                    <div class="stat-value" id="home-stat-count">{{len .Expenses}}</div>
+                    <div class="stat-label">Expenses</div>
+                </div>
+                {{if gt .BudgetLimit 0.0}}
+                <div class="stat-pill">
+                    <div class="stat-value">₦{{printf "%.0f" .BudgetLimit}}</div>
+                    <div class="stat-label">Budget</div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-value" id="home-stat-pct">{{printf "%.0f" (divf (mulf .Total 100) .BudgetLimit)}}%</div>
+                    <div class="stat-label">Budget used</div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+
+        <!-- Month Navigation -->
+        <div class="month-nav">
+            <div>
+                <div class="section-title" style="margin-bottom: 4px;">Month</div>
+                <div class="month-title">{{.Month}}</div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <a href="/?month={{.PrevMonth}}" class="month-nav-btn" style="padding: 8px 12px; background: var(--surface-light); border: 1px solid var(--border); border-radius: 6px;">← Prev</a>
+                {{if lt .Month .CurrentMonth}}
+                <a href="/?month={{.NextMonth}}" class="month-nav-btn" style="padding: 8px 12px; background: var(--surface-light); border: 1px solid var(--border); border-radius: 6px;">Next →</a>
+                {{end}}
+            </div>
+        </div>
+
+        <!-- Budget Progress -->
+        {{if gt .BudgetLimit 0.0}}
+        <div class="budget-card" id="budget-card" data-limit="{{.BudgetLimit}}">
+            <div class="budget-header">
+                <div>
+                    <div class="budget-label">Monthly Budget</div>
+                    <div class="budget-label" style="color: var(--text-secondary); margin-top: 4px; font-size: 12px;">Limit: ₦{{printf "%.0f" .BudgetLimit}}</div>
+                </div>
+                <div class="budget-amount" id="budget-card-amount">₦{{printf "%.2f" .Total}}</div>
+            </div>
+            <div class="progress-bar">
+                {{if ge .Total .BudgetLimit}}
+                <div class="progress-fill danger" id="progress-fill" style="width: 100%;"></div>
+                {{else if ge .Total (mulf .BudgetLimit 0.8)}}
+                <div class="progress-fill warning" id="progress-fill" style="width: {{printf "%.1f" (divf .Total .BudgetLimit 1)}}%;"></div>
+                {{else}}
+                <div class="progress-fill" id="progress-fill" style="width: {{printf "%.1f" (divf .Total .BudgetLimit 1)}}%;"></div>
+                {{end}}
+            </div>
+            <div class="progress-text" id="progress-text">{{printf "%.0f" (divf (mulf .Total 100) .BudgetLimit)}}% of ₦{{printf "%.0f" .BudgetLimit}}</div>
+        </div>
+        {{end}}
+
+        <!-- Alerts -->
+        <div class="alert alert-danger {{if and (gt .BudgetLimit 0.0) (ge .Total .BudgetLimit)}}show{{end}}" id="alert-danger">
+            ⚠️ Budget limit reached. You have spent <span id="alert-danger-total">₦{{printf "%.2f" .Total}}</span> of <span id="alert-danger-limit">₦{{printf "%.2f" .BudgetLimit}}</span>.
+        </div>
+        <div class="alert alert-warning {{if and (gt .BudgetLimit 0.0) (ge .Total (mulf .BudgetLimit 0.8)) (lt .Total .BudgetLimit)}}show{{end}}" id="alert-warning">
+            🔔 Approaching your limit: <span id="alert-warning-total">₦{{printf "%.2f" .Total}}</span> of <span id="alert-warning-limit">₦{{printf "%.2f" .BudgetLimit}}</span> used.
+        </div>
+
+        {{if ne .Month .CurrentMonth}}
+        <div class="alert alert-info show">
+            ℹ️ Viewing a past month. Switch to the current month to add expenses.
+        </div>
+        {{end}}
+
+        <!-- Add Expense Form -->
+        {{if eq .Month .CurrentMonth}}
+        <div id="limit-reached-message" style="padding: 14px; background: var(--surface-light); border: 1px solid var(--border); border-radius: 8px; text-align: center; color: var(--text-secondary); font-size: 13px; margin-bottom: 24px; {{if not (and (gt .BudgetLimit 0.0) (ge .Total .BudgetLimit))}}display: none;{{end}}">
+            Budget limit reached. Cannot add more expenses.
+        </div>
+        <form action="/add" method="POST" class="add-form" id="add-form" style="{{if and (gt .BudgetLimit 0.0) (ge .Total .BudgetLimit)}}display: none;{{end}}">
+            <input type="text" name="description" placeholder="What did you spend on?" required class="add-form-desc">
+            <input type="number" step="0.01" name="amount" placeholder="₦0.00" required class="add-form-amount">
+            <button type="submit" class="add-form-btn">Add</button>
         </form>
+        {{end}}
 
+        <!-- Recent Expenses -->
+        <div class="section-title">Recent Activity</div>
+        {{if .Expenses}}
         <div id="expenses-container">
             {{template "expenses_list.html" .}}
         </div>
+        {{else}}
+        <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <div>No expenses yet. Add your first one above.</div>
+        </div>
+        {{end}}
 
+        <!-- Reset Button -->
+        {{if eq .Month .CurrentMonth}}
+        <form action="/clear" method="POST">
+            <input type="hidden" name="month" value="{{.Month}}">
+            <button type="submit" class="reset-btn">Reset this month's expenses</button>
+        </form>
+        {{end}}
     </div>
 
+    <script>window.BUDGET_LIMIT = {{.BudgetLimit}};</script>
     <script src="/static/app.js"></script>
 </body>
 </html>
