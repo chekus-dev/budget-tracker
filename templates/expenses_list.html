@@ -88,11 +88,11 @@ font-size: 14px;
 
 {{if .Expenses}}
     {{range .Expenses}}
-<div class="expense-item" data-id="{{.ID}}">
+<div class="expense-item" data-id="{{.ID}}" data-category="{{.Category}}">
 <div class="expense-icon">🧾</div>
 <div class="expense-details">
 <div class="expense-name">{{.Description}}</div>
-<div class="expense-time">{{.CreatedAt}}</div>
+<div class="expense-time">{{.CreatedAt}}{{if .Category}} · {{.Category}}{{end}}</div>
 </div>
 <div class="expense-amount">-₦{{printf "%.2f" .Amount}}</div>
 <button class="delete-btn" data-id="{{.ID}}" title="Delete expense">✕</button>

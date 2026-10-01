@@ -3,8 +3,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Saved Settings</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#185fa5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+    <link rel="icon" href="/static/icon-192.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -123,6 +130,11 @@
             cursor: pointer;
             transition: all 0.2s;
             font-family: inherit;
+            text-align: center;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .btn-primary {
@@ -144,6 +156,60 @@
         .btn-danger:hover {
             background: rgba(239, 68, 68, 0.05);
         }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        /* Tablet and up */
+        @media (min-width: 768px) {
+            .container {
+                max-width: 700px;
+                padding: 32px 24px 120px;
+            }
+
+            .page-title {
+                font-size: 30px;
+            }
+
+            .page-subtitle {
+                font-size: 15px;
+                margin-bottom: 32px;
+            }
+
+            .setting-card {
+                padding: 20px 24px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 24px;
+            }
+
+            .setting-card > div:first-child {
+                min-width: 160px;
+            }
+
+            .category-list {
+                flex: 1;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px 20px;
+                margin-top: 0;
+            }
+
+            .button-group {
+                max-width: 360px;
+                margin-left: auto;
+                margin-right: 0;
+            }
+        }
+
+        /* Desktop */
+        @media (min-width: 1024px) {
+            .container {
+                max-width: 820px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -155,23 +221,29 @@
 
         <!-- Budget Limit -->
         <div class="setting-card">
-            <div class="setting-label">Monthly Budget Limit</div>
-            {{if gt .BudgetLimit 0.0}}
-            <div class="setting-value">₦{{printf "%.2f" .BudgetLimit}}</div>
-            {{else}}
-            <div class="setting-empty">Not set</div>
-            {{end}}
+            <div>
+                <div class="setting-label">Monthly Budget Limit</div>
+                {{if gt .BudgetLimit 0.0}}
+                <div class="setting-value">₦{{printf "%.2f" .BudgetLimit}}</div>
+                {{else}}
+                <div class="setting-empty">Not set</div>
+                {{end}}
+            </div>
         </div>
 
         <!-- Theme -->
         <div class="setting-card">
-            <div class="setting-label">Appearance</div>
-            <div class="setting-value" style="text-transform: capitalize;">{{if .Theme}}{{.Theme}}{{else}}System{{end}}</div>
+            <div>
+                <div class="setting-label">Appearance</div>
+                <div class="setting-value" style="text-transform: capitalize;">{{if .Theme}}{{.Theme}}{{else}}System{{end}}</div>
+            </div>
         </div>
 
         <!-- Categories -->
         <div class="setting-card">
-            <div class="setting-label">Categories</div>
+            <div>
+                <div class="setting-label">Categories</div>
+            </div>
             {{if .Categories}}
             <div class="category-list">
                 {{range .Categories}}

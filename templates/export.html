@@ -1,0 +1,213 @@
+{{define "export.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Export — Budget Tracker</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #185fa5;
+    --primary-dark: #0c447c;
+    --primary-light: #5eb3ff;
+    --surface: #ffffff;
+    --border: #e0e0e0;
+    --bg: #f8f9fa;
+    --text: #1a1a1a;
+    --text-secondary: #666;
+  }
+  html.dark {
+    --surface: #1a1a1a;
+    --border: #333;
+    --bg: #0f0f0f;
+    --text: #f5f5f5;
+    --text-secondary: #999;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body.dark { background: #0f0f0f; color: #f5f5f5; }
+
+  main {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 24px 16px 100px;
+  }
+
+  .page-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+  }
+
+  .month-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #eef5ff;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+  }
+  html.dark .month-nav { background: #1a2a3a; }
+
+  .month-nav-arrow {
+    color: var(--primary);
+    font-size: 22px;
+    text-decoration: none;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .month-nav-arrow:hover { background: rgba(24,95,165,0.1); }
+  .month-nav-arrow.disabled { color: var(--border); pointer-events: none; }
+
+  .month-nav-label {
+    flex: 1;
+    text-align: center;
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .export-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .export-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 20px;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow 0.2s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .export-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+  .export-card:active {
+    transform: scale(0.98);
+  }
+
+  .export-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .export-icon.csv { background: #e6f4ea; }
+  .export-icon.pdf { background: #fef3e2; }
+
+  .export-info { flex: 1; }
+  .export-title {
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 3px;
+  }
+  .export-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  .export-arrow {
+    color: var(--primary);
+    font-size: 20px;
+    font-weight: 300;
+  }
+
+  .hint {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  @media (min-width: 768px) {
+    main { max-width: 700px; padding: 32px 24px 120px; }
+    .export-cards { flex-direction: row; }
+    .export-card { flex-direction: column; align-items: flex-start; gap: 12px; padding: 24px; }
+    .export-arrow { align-self: flex-end; }
+  }
+
+  @media (min-width: 1024px) {
+    main { max-width: 800px; padding: 40px 32px 60px; }
+  }
+</style>
+</head>
+<body>
+{{template "nav.html" .}}
+
+<main>
+  <h2 class="page-title">Export</h2>
+  <p class="page-subtitle">Download your expenses for <strong>{{.Label}}</strong></p>
+
+  <!-- Month navigation -->
+  <div class="month-nav">
+    <a href="/export?month={{.PrevMonth}}" class="month-nav-arrow" title="Previous month">‹</a>
+    <span class="month-nav-label">{{.Label}}</span>
+    {{if lt .Month .CurrentMonth}}
+      <a href="/export?month={{.NextMonth}}" class="month-nav-arrow" title="Next month">›</a>
+    {{else}}
+      <span class="month-nav-arrow disabled">›</span>
+    {{end}}
+  </div>
+
+  <!-- Export options -->
+  <div class="export-cards">
+
+    <a href="/export/csv?month={{.Month}}" class="export-card" download>
+      <div class="export-icon csv">📄</div>
+      <div class="export-info">
+        <div class="export-title">CSV Spreadsheet</div>
+        <div class="export-desc">Open in Excel, Google Sheets, or Numbers. Includes totals row.</div>
+      </div>
+      <div class="export-arrow">↓</div>
+    </a>
+
+    <a href="/export/pdf?month={{.Month}}" class="export-card" target="_blank" rel="noopener">
+      <div class="export-icon pdf">📑</div>
+      <div class="export-info">
+        <div class="export-title">PDF Report</div>
+        <div class="export-desc">Print-ready report with summary stats and category breakdown.</div>
+      </div>
+      <div class="export-arrow">↗</div>
+    </a>
+
+  </div>
+
+  <p class="hint">PDF opens in a new tab — use your browser's&nbsp;<strong>Print → Save as PDF</strong>&nbsp;to download it.</p>
+</main>
+
+<script>
+  // Sync dark mode
+  document.body.classList.toggle('dark', document.documentElement.classList.contains('dark'));
+</script>
+</body>
+</html>
+{{end}}

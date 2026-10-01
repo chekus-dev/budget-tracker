@@ -50,34 +50,30 @@ function attachDeleteHandlers() {
     });
 }
 
-// Keyword -> icon rules for expense descriptions. Matched in order, first hit wins.
-const EXPENSE_ICON_RULES = [
-    { icon: '🍔', keywords: ['food', 'grocery', 'groceries', 'restaurant', 'lunch', 'dinner', 'breakfast', 'snack', 'coffee'] },
-    { icon: '💡', keywords: ['bill', 'bills', 'electric', 'electricity', 'utility', 'utilities', 'water', 'power'] },
-    { icon: '🚌', keywords: ['transport', 'bus', 'taxi', 'uber', 'bolt', 'fuel', 'fare', 'train', 'petrol', 'gas'] },
-    { icon: '🏥', keywords: ['health', 'hospital', 'doctor', 'pharmacy', 'medicine', 'clinic', 'healthcare'] },
-    { icon: '🛍️', keywords: ['shopping', 'clothes', 'clothing', 'mall', 'store'] },
-    { icon: '🎬', keywords: ['movie', 'entertainment', 'netflix', 'cinema', 'game', 'games'] },
-    { icon: '📚', keywords: ['book', 'books', 'school', 'tuition', 'course', 'education'] },
-    { icon: '🏠', keywords: ['rent', 'housing', 'mortgage'] },
-    { icon: '📶', keywords: ['internet', 'wifi', 'data', 'airtime', 'subscription', 'phone'] },
-];
+// Category -> icon map. Falls back to a neutral icon for custom or missing categories.
+const CATEGORY_ICONS = {
+    'food': '🍔',
+    'transport': '🚌',
+    'bills': '💡',
+    'healthcare': '🏥',
+    'shopping': '🛍️',
+    'entertainment': '🎬',
+    'education': '📚',
+    'rent': '🏠',
+    'utilities': '📶',
+};
 const EXPENSE_ICON_DEFAULT = '🧾';
 
-function iconForDescription(description) {
-    const text = (description || '').toLowerCase();
-    for (const rule of EXPENSE_ICON_RULES) {
-        if (rule.keywords.some(k => text.includes(k))) return rule.icon;
-    }
-    return EXPENSE_ICON_DEFAULT;
+function iconForCategory(category) {
+    if (!category) return EXPENSE_ICON_DEFAULT;
+    return CATEGORY_ICONS[category.trim().toLowerCase()] || EXPENSE_ICON_DEFAULT;
 }
 
 function applyExpenseIcons() {
     document.querySelectorAll('.expense-item').forEach(item => {
-        const nameEl = item.querySelector('.expense-name');
         const iconEl = item.querySelector('.expense-icon');
-        if (!nameEl || !iconEl) return;
-        iconEl.textContent = iconForDescription(nameEl.textContent);
+        if (!iconEl) return;
+        iconEl.textContent = iconForCategory(item.dataset.category);
     });
 }
 

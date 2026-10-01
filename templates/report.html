@@ -3,8 +3,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Spending Report</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#185fa5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+    <link rel="icon" href="/static/icon-192.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -162,6 +169,28 @@
             height: 240px;
         }
 
+        .category-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-top: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .category-row:first-child {
+            border-top: none;
+        }
+
+        .category-row-name {
+            font-weight: 500;
+        }
+
+        .category-row-amount {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
         .budget-pill {
             display: inline-flex;
             align-items: center;
@@ -193,45 +222,34 @@
             height: auto !important;
         }
 
-        @media (min-width: 481px) {
+        /* Tablet and up */
+        @media (min-width: 768px) {
             .container {
-                max-width: 720px;
-                padding-left: 24px;
-                padding-right: 24px;
-            }
-
-            .chart-wrap {
-                height: 300px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 16px 12px 112px;
+                max-width: 700px;
+                padding: 32px 24px 100px;
             }
 
             .page-title {
-                font-size: 22px;
+                font-size: 30px;
             }
 
             .stats-grid {
-                gap: 8px;
-            }
-
-            .stat-card {
-                padding: 12px;
-            }
-
-            .stat-value {
-                font-size: 18px;
-            }
-
-            .chart-section {
-                padding: 16px 10px;
+                grid-template-columns: repeat(4, 1fr);
             }
 
             .chart-wrap {
-                height: 200px;
+                height: 320px;
+            }
+        }
+
+        /* Desktop */
+        @media (min-width: 1024px) {
+            .container {
+                max-width: 960px;
+            }
+
+            .chart-wrap {
+                height: 380px;
             }
         }
     </style>
@@ -286,6 +304,23 @@
                 Add expenses to see your spending visualization
             </p>
             {{end}}
+        </div>
+
+        <!-- Category Breakdown -->
+        <div class="chart-section">
+            <h2 class="chart-title">By Category</h2>
+            <div id="category-breakdown">
+                {{if .CategoryTotals}}
+                {{range .CategoryTotals}}
+                <div class="category-row" data-category-row="{{.Category}}">
+                    <span class="category-row-name">{{.Category}}</span>
+                    <span class="category-row-amount">₦{{printf "%.0f" .Total}}</span>
+                </div>
+                {{end}}
+                {{else}}
+                <p style="color: var(--text-secondary); font-size: 13px; text-align: center;">No categorized expenses yet</p>
+                {{end}}
+            </div>
         </div>
     </div>
 
@@ -406,7 +441,34 @@
                 pillText.textContent = pct + '% of ' + currency(budgetLimit) + ' budget';
             }
 
+            renderCategoryBreakdown(expenses);
             renderChart(expenses);
+        }
+
+        function renderCategoryBreakdown(expenses) {
+            const el = document.getElementById('category-breakdown');
+            if (!el) return;
+
+            const totals = new Map();
+            expenses.forEach(e => {
+                const cat = (e.category && e.category.trim()) || 'Uncategorized';
+                totals.set(cat, (totals.get(cat) || 0) + extractAmount(e));
+            });
+
+            if (totals.size === 0) {
+                el.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px; text-align: center;">No categorized expenses yet</p>';
+                return;
+            }
+
+            const rows = Array.from(totals.entries())
+                .sort((a, b) => b[1] - a[1])
+                .map(([cat, amt]) => `
+                    <div class="category-row">
+                        <span class="category-row-name">${cat}</span>
+                        <span class="category-row-amount">${currency(amt)}</span>
+                    </div>
+                `).join('');
+            el.innerHTML = rows;
         }
 
         async function refresh() {

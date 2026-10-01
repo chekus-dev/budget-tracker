@@ -50,6 +50,7 @@
     .header-content {
         max-width: 480px;
         margin: 0 auto;
+        padding: 0 16px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -96,19 +97,20 @@
         background: rgba(255, 255, 255, 0.2);
     }
 
-    /* Bottom Navigation */
+    /* Bottom Navigation (mobile & tablet) */
     .bottom-nav {
         position: fixed;
         bottom: 0;
-        left: 0;
-        right: 0;
-        max-width: 480px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(100%, 480px);
         margin: 0 auto;
         background: white;
         border-top: 1px solid #e0e0e0;
         display: flex;
         justify-content: space-around;
         z-index: 100;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
     body.dark .bottom-nav {
@@ -122,9 +124,9 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 12px 4px;
-        gap: 6px;
-        font-size: 10px;
+        padding: 10px 2px;
+        gap: 4px;
+        font-size: 9px;
         color: #666;
         text-decoration: none;
         cursor: pointer;
@@ -132,6 +134,7 @@
         border: none;
         background: none;
         font-family: inherit;
+        -webkit-tap-highlight-color: transparent;
     }
 
     .logout-nav-form {
@@ -161,22 +164,21 @@
     }
 
     .nav-icon {
-        font-size: 18px;
+        font-size: 17px;
     }
 
     .nav-label {
         font-weight: 500;
     }
 
-    @media (min-width: 481px) {
-        .header-content,
-        .bottom-nav {
-            max-width: 720px;
+    @media (min-width: 768px) {
+        .home-page .header-content {
+            max-width: 700px;
+            padding: 0 24px;
         }
 
-        .header {
-            padding-left: 24px;
-            padding-right: 24px;
+        .home-page .bottom-nav {
+            width: min(100%, 700px);
         }
     }
 
@@ -202,13 +204,62 @@
         }
 
         .nav-item {
-            padding: 10px 2px;
-            gap: 4px;
-            font-size: 9px;
+            padding: 8px 1px;
+            gap: 3px;
+            font-size: 8px;
         }
 
         .nav-icon {
-            font-size: 16px;
+            font-size: 15px;
+        }
+    }
+
+    /* Desktop: fixed left-side rail */
+    @media (min-width: 1024px) {
+        body {
+            padding-left: 96px;
+        }
+
+        .header-content {
+            max-width: 1040px;
+            padding: 0 32px;
+        }
+
+        .bottom-nav {
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: auto;
+            transform: none;
+            width: 96px;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: stretch;
+            padding-top: 96px;
+            padding-bottom: 0;
+            border-top: none;
+            border-right: 1px solid #e0e0e0;
+        }
+
+        body.dark .bottom-nav {
+            border-right-color: #333;
+        }
+
+        .nav-item,
+        .logout-nav-form {
+            flex: none;
+            width: 100%;
+        }
+
+        .nav-item {
+            padding: 14px 4px;
+            font-size: 10px;
+        }
+
+        .nav-icon {
+            font-size: 18px;
         }
     }
 </style>
@@ -235,13 +286,13 @@
         <span class="nav-icon">📦</span>
         <span class="nav-label">Archive</span>
     </a>
+    <a href="/export" class="nav-item" id="nav-export">
+        <span class="nav-icon">📤</span>
+        <span class="nav-label">Export</span>
+    </a>
     <a href="/settings" class="nav-item" id="nav-settings">
         <span class="nav-icon">⚙️</span>
         <span class="nav-label">Settings</span>
-    </a>
-    <a href="/settings/saved" class="nav-item" id="nav-saved">
-        <span class="nav-icon">🗂️</span>
-        <span class="nav-label">Saved</span>
     </a>
     {{if .Username}}
     <form action="/logout" method="POST" class="logout-nav-form">
@@ -254,7 +305,6 @@
 </nav>
 
 <script>
-    // Set active nav item based on current page
     function setActiveNav() {
         const path = window.location.pathname;
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -267,8 +317,10 @@
             document.getElementById('nav-report').classList.add('active');
         } else if (path === '/archive' || path.startsWith('/archive?')) {
             document.getElementById('nav-archive').classList.add('active');
+        } else if (path === '/export' || path.startsWith('/export')) {
+            document.getElementById('nav-export').classList.add('active');
         } else if (path === '/settings/saved') {
-            document.getElementById('nav-saved').classList.add('active');
+            // no active highlight for saved-settings since we removed that nav item
         } else if (path === '/settings') {
             document.getElementById('nav-settings').classList.add('active');
         }
@@ -276,10 +328,6 @@
 
     setActiveNav();
 
-    // Load theme preference
-    if (localStorage.getItem('bt-theme') === 'dark') {
-        document.documentElement.classList.add('dark');
-        document.body.classList.add('dark');
-    }
+    document.body.classList.toggle('dark', document.documentElement.classList.contains('dark'));
 </script>
 {{end}}

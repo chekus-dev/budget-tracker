@@ -3,8 +3,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Settings</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#185fa5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+    <link rel="icon" href="/static/icon-192.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -96,28 +103,50 @@
             box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.1);
         }
 
-        .theme-section {
+        /* Theme Selector */
+        .theme-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            gap: 12px;
         }
 
         .theme-btn {
-            padding: 12px 8px;
+            padding: 12px;
             border: 2px solid var(--border);
             border-radius: 8px;
-            background: var(--surface-light);
+            background: none;
             color: var(--text-primary);
             cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
             font-family: inherit;
-            font-size: 13px;
-            transition: border-color 0.2s, background 0.2s;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
         }
 
-        .theme-btn:hover,
+        .theme-btn:hover {
+            border-color: var(--primary);
+        }
+
         .theme-btn.active {
             border-color: var(--primary);
-            background: rgba(24, 95, 165, 0.08);
+            background: rgba(24, 95, 165, 0.05);
+        }
+
+        .theme-btn:active {
+            transform: scale(0.96);
+        }
+
+        .theme-btn:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+
+        .theme-icon {
+            font-size: 24px;
         }
 
         /* Category List */
@@ -179,48 +208,77 @@
         }
 
         .submit-btn:active {
-            transform: translateY(0);
+            transform: translateY(0) scale(0.98);
         }
 
-        @media (min-width: 481px) {
+        /* Tablet and up */
+        @media (min-width: 768px) {
             .container {
-                max-width: 720px;
-                padding-left: 24px;
-                padding-right: 24px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 16px 12px 112px;
+                max-width: 700px;
+                padding: 32px 24px 120px;
             }
 
             .page-title {
-                font-size: 22px;
+                font-size: 30px;
+            }
+
+            .page-subtitle {
+                font-size: 15px;
+                margin-bottom: 32px;
             }
 
             .form-section {
-                padding: 14px;
-            }
-
-            .theme-grid {
-                gap: 8px;
+                padding: 22px 24px;
             }
 
             .theme-btn {
-                padding: 10px 6px;
+                padding: 16px;
             }
 
-            .theme-icon {
-                font-size: 20px;
+            .submit-btn {
+                width: auto;
+                min-width: 220px;
+                padding: 12px 32px;
+                display: block;
+                margin-left: auto;
+            }
+        }
+
+        /* Desktop */
+        @media (min-width: 1024px) {
+            .container {
+                max-width: 820px;
             }
 
-            .category-item {
-                align-items: flex-start;
+            .form-section {
+                display: grid;
+                grid-template-columns: 220px 1fr;
+                gap: 24px;
+                align-items: start;
             }
 
-            .category-item .form-input {
-                min-width: 0;
+            .form-section > .form-label,
+            .form-section > .form-hint {
+                grid-column: 1;
+            }
+
+            .form-section > .form-input,
+            .form-section > .theme-grid,
+            .form-section > #category-list,
+            .form-section > .add-category-btn {
+                grid-column: 2;
+            }
+
+            .form-section > .form-label {
+                grid-row: 1;
+            }
+
+            .form-section > .form-hint {
+                grid-row: 2;
+            }
+
+            .form-section > #theme-grid {
+                grid-row: 1 / span 2;
             }
         }
     </style>
@@ -241,16 +299,15 @@
                     value="{{if .BudgetLimit}}{{printf "%.2f" .BudgetLimit}}{{end}}" class="form-input">
             </div>
 
-            <!-- Theme -->
             <div class="form-section">
-                <label class="form-label">Theme</label>
-                <p class="form-hint">Choose how the tracker looks on your device.</p>
-                <div class="theme-section" id="theme-selector">
-                    <button type="button" class="theme-btn" data-theme="light" onclick="selectTheme('light')">Light</button>
-                    <button type="button" class="theme-btn" data-theme="dark" onclick="selectTheme('dark')">Dark</button>
-                    <button type="button" class="theme-btn" data-theme="system" onclick="selectTheme('system')">System</button>
+                <div class="form-label" id="appearance-label">Appearance</div>
+                <p class="form-hint">Select a preferred theme. System follows your device setting.</p>
+                <input type="hidden" name="theme" id="theme-input" value="{{if .Theme}}{{.Theme}}{{else}}system{{end}}">
+                <div class="theme-grid" id="theme-grid" role="group" aria-labelledby="appearance-label">
+                    <button type="button" class="theme-btn" data-theme="light" aria-pressed="false">Light</button>
+                    <button type="button" class="theme-btn" data-theme="dark" aria-pressed="false">Dark</button>
+                    <button type="button" class="theme-btn" data-theme="system" aria-pressed="false">System</button>
                 </div>
-                <input type="hidden" name="theme" id="theme-input" value="{{.Theme}}">
             </div>
 
             <!-- Categories -->
@@ -273,17 +330,34 @@
     </div>
 
     <script>
-        function selectTheme(theme) {
-            document.getElementById('theme-input').value = theme;
-            localStorage.setItem('bt-theme', theme);
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const isDark = theme === 'dark' || (theme === 'system' && prefersDark);
-            document.documentElement.classList.toggle('dark', isDark);
-            document.body.classList.toggle('dark', isDark);
-            document.querySelectorAll('.theme-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.theme === theme);
-            });
+        const themeInput = document.getElementById('theme-input');
+        const themeButtons = document.querySelectorAll('.theme-btn');
+        const themePreference = window.matchMedia('(prefers-color-scheme: dark)');
+
+        function applyTheme(theme) {
+            const useDarkTheme = theme === 'dark' || (theme === 'system' && themePreference.matches);
+            document.documentElement.classList.toggle('dark', useDarkTheme);
+            document.body.classList.toggle('dark', useDarkTheme);
         }
+
+        function selectTheme(theme) {
+            themeInput.value = theme;
+            localStorage.setItem('bt-theme', theme);
+            themeButtons.forEach(button => {
+                const selected = button.dataset.theme === theme;
+                button.classList.toggle('active', selected);
+                button.setAttribute('aria-pressed', String(selected));
+            });
+            applyTheme(theme);
+        }
+
+        themeButtons.forEach(button => {
+            button.addEventListener('click', () => selectTheme(button.dataset.theme));
+        });
+
+        themePreference.addEventListener('change', () => {
+            if (themeInput.value === 'system') applyTheme('system');
+        });
 
         function addCategory() {
             const list = document.getElementById('category-list');
@@ -301,18 +375,8 @@
             btn.closest('.category-item').remove();
         }
 
-        // Load theme preference
-        const savedTheme = document.getElementById('theme-input').value || localStorage.getItem('bt-theme') || 'system';
-        document.getElementById('theme-input').value = savedTheme;
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const isDark = savedTheme === 'dark' || (savedTheme === 'system' && prefersDark);
-        if (isDark) {
-            document.documentElement.classList.add('dark');
-            document.body.classList.add('dark');
-        }
-        document.querySelectorAll('.theme-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.theme === savedTheme);
-        });
+        const savedTheme = themeInput.value || 'system';
+        selectTheme(savedTheme);
     </script>
 </body>
 </html>
