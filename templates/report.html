@@ -2,490 +2,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Spending Report</title>
-    <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#185fa5">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-    <link rel="icon" href="/static/icon-192.png">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary: #185fa5;
-            --primary-dark: #0C447C;
-            --primary-light: #5eb3ff;
-            --bg-light: #f8f9fa;
-            --bg-dark: #0f0f0f;
-            --surface-light: #ffffff;
-            --surface-dark: #1a1a1a;
-            --text-primary: #1a1a1a;
-            --text-secondary: #666;
-            --border: #e0e0e0;
-        }
-
-        html.dark {
-            --bg-light: #0f0f0f;
-            --surface-light: #1a1a1a;
-            --text-primary: #f5f5f5;
-            --text-secondary: #999;
-            --border: #333;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg-light);
-            color: var(--text-primary);
-        }
-
-        .container {
-            max-width: 480px;
-            margin: 0 auto;
-            padding: 20px 16px 120px;
-        }
-
-        .page-title {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .page-subtitle {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-bottom: 24px;
-        }
-
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-
-        .stat-card {
-            background: var(--surface-light);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-            opacity: 0;
-            transform: translateY(6px);
-            animation: statIn 0.35s ease forwards;
-        }
-
-        .stat-card:nth-child(1) { animation-delay: 0s; }
-        .stat-card:nth-child(2) { animation-delay: 0.05s; }
-        .stat-card:nth-child(3) { animation-delay: 0.1s; }
-        .stat-card:nth-child(4) { animation-delay: 0.15s; }
-
-        @keyframes statIn {
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
-        }
-
-        .stat-card.primary:hover {
-            box-shadow: 0 8px 20px rgba(24, 95, 165, 0.28);
-        }
-
-        .stat-icon {
-            width: 30px;
-            height: 30px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            margin-bottom: 10px;
-            background: rgba(24, 95, 165, 0.1);
-            color: var(--primary);
-        }
-
-        .stat-card.primary .stat-icon {
-            background: rgba(255, 255, 255, 0.18);
-            color: white;
-        }
-
-        .stat-card.primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            border: none;
-            color: white;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 500;
-        }
-
-        .stat-card.primary .stat-label {
-            color: rgba(255, 255, 255, 0.85);
-        }
-
-        .stat-value {
-            font-size: 22px;
-            font-weight: 700;
-        }
-
-        /* Chart Section */
-        .chart-section {
-            background: var(--surface-light);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px 16px;
-            margin-bottom: 24px;
-        }
-
-        .chart-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 16px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .chart-wrap {
-            position: relative;
-            margin: 0 auto;
-            height: 240px;
-        }
-
-        .category-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-top: 1px solid var(--border);
-            font-size: 14px;
-        }
-
-        .category-row:first-child {
-            border-top: none;
-        }
-
-        .category-row-name {
-            font-weight: 500;
-        }
-
-        .category-row-amount {
-            font-weight: 600;
-            color: var(--primary);
-        }
-
-        .budget-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 16px;
-            padding: 6px 12px;
-            border-radius: 999px;
-            background: rgba(24, 95, 165, 0.08);
-            color: var(--primary);
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .chart-placeholder {
-            width: 100%;
-            height: 300px;
-            background: var(--border);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-secondary);
-            text-align: center;
-            padding: 20px;
-        }
-
-        canvas {
-            width: 100% !important;
-            height: auto !important;
-        }
-
-        /* Tablet and up */
-        @media (min-width: 768px) {
-            .container {
-                max-width: 700px;
-                padding: 32px 24px 100px;
-            }
-
-            .page-title {
-                font-size: 30px;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-
-            .chart-wrap {
-                height: 320px;
-            }
-        }
-
-        /* Desktop */
-        @media (min-width: 1024px) {
-            .container {
-                max-width: 960px;
-            }
-
-            .chart-wrap {
-                height: 380px;
-            }
-        }
-    </style>
+    <title>Spending Report — Budget Tracker</title>
+    {{template "head.html" .}}
 </head>
-<body>
+<body class="has-chrome">
     {{template "nav.html" .}}
 
-    <div class="container">
-        <h1 class="page-title">Spending Report</h1>
-        <p class="page-subtitle">Track your spending at a glance</p>
+    <main class="app-main">
+        <div class="page-head">
+            <h1 class="page-title">Report</h1>
+            <p class="page-sub">All spending on your account, by category</p>
+        </div>
 
-        <!-- Stats Grid -->
-        <div class="stats-grid">
+        {{/* Income is deliberately absent here rather than a switch away. A
+             report is a share-of-total, and "34% of your spending" stops
+             meaning anything the moment a salary is folded into the
+             denominator — every bar would shrink the month you got paid. The
+             export screen has the whole ledger, both kinds. */}}
+        <div class="stat-grid mb-6">
             <div class="stat-card">
-                <div class="stat-icon"><i class="fa-solid fa-receipt"></i></div>
-                <div class="stat-label">Total Expenses</div>
-                <div class="stat-value" id="stat-count">{{.Count}}</div>
+                <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#receipt"/></svg></div>
+                <div class="stat-label">Expenses</div>
+                <div class="stat-value">{{.Count}}</div>
             </div>
-            <div class="stat-card primary">
-                <div class="stat-icon"><i class="fa-solid fa-wallet"></i></div>
-                <div class="stat-label">Total Spent</div>
-                <div class="stat-value" id="stat-total">₦{{printf "%.0f" .Total}}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
-                <div class="stat-label">Average Entry</div>
-                <div class="stat-value" id="stat-average">₦{{printf "%.0f" .Average}}</div>
+            <div class="stat-card is-primary">
+                <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#wallet"/></svg></div>
+                <div class="stat-label">Total spent</div>
+                <div class="stat-value">{{money0 .CurrencySymbol .Total}}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
-                <div class="stat-label">Largest Expense</div>
-                <div class="stat-value" id="stat-largest">₦{{printf "%.0f" .Largest}}</div>
+                <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#chart"/></svg></div>
+                <div class="stat-label">Average expense</div>
+                <div class="stat-value">{{money0 .CurrencySymbol .Average}}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#trending-up"/></svg></div>
+                <div class="stat-label">Largest expense</div>
+                <div class="stat-value">{{money0 .CurrencySymbol .Largest}}</div>
             </div>
         </div>
 
-        <!-- Chart Section -->
-        <div class="chart-section">
-            <h2 class="chart-title">Spending Breakdown</h2>
-            <div class="chart-wrap">
-                <canvas id="spendingChart"></canvas>
-            </div>
-            {{if gt .BudgetLimit 0.0}}
-            <div style="text-align: center;">
-                <span class="budget-pill" id="budget-pill">
-                    <i class="fa-solid fa-bullseye"></i>
-                    <span id="budget-pill-text">{{printf "%.0f" (divf (mulf .Total 100) .BudgetLimit)}}% of ₦{{printf "%.0f" .BudgetLimit}} budget</span>
-                </span>
-            </div>
-            {{end}}
-            {{if not .ChartExists}}
-            <p style="color: var(--text-secondary); font-size: 13px; text-align: center; margin-top: 16px;">
-                Add expenses to see your spending visualization
-            </p>
-            {{end}}
-        </div>
+        {{if .Count}}
+        <section class="card mb-4">
+            <h2 class="card-title mb-4">Spending by category</h2>
 
-        <!-- Category Breakdown -->
-        <div class="chart-section">
-            <h2 class="chart-title">By Category</h2>
-            <div id="category-breakdown">
-                {{if .CategoryTotals}}
+            {{/* The chart is decoration over this list — the list is what a
+                 screen reader can actually read, so it is never hidden. */}}
+            <div class="h-[280px] relative">
+                <canvas id="categoryChart" role="img" aria-label="Bar chart of spending by category"></canvas>
+            </div>
+
+            <hr class="divider">
+
+            <ul class="expense-list">
                 {{range .CategoryTotals}}
-                <div class="category-row" data-category-row="{{.Category}}">
-                    <span class="category-row-name">{{.Category}}</span>
-                    <span class="category-row-amount">₦{{printf "%.0f" .Total}}</span>
-                </div>
+                <li class="flex items-center justify-between gap-3 py-2">
+                    <span class="chip is-static">{{.Category}}</span>
+                    <span class="expense-amount">{{money $.CurrencySymbol .Total}}</span>
+                </li>
                 {{end}}
-                {{else}}
-                <p style="color: var(--text-secondary); font-size: 13px; text-align: center;">No categorized expenses yet</p>
-                {{end}}
-            </div>
-        </div>
-    </div>
+            </ul>
+        </section>
 
+        {{if gt .BudgetLimit 0.0}}
+        <div class="text-center">
+            <span class="chip is-static">
+                <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#target"/></svg>
+                {{printf "%.0f" .PercentOfBudget}}% of {{money0 .CurrencySymbol .BudgetLimit}} budget
+            </span>
+        </div>
+        {{end}}
+
+        {{else}}
+        <div class="empty">
+            <span class="empty-icon">
+                <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg#chart"/></svg>
+            </span>
+            <p class="empty-title">Nothing to report yet</p>
+            <p class="empty-sub">Once you log an expense, your category breakdown appears here.</p>
+        </div>
+        {{end}}
+    </main>
+
+    {{if .CategoryTotals}}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script>
-        const budgetLimit = {{.BudgetLimit}};
-        const ctx = document.getElementById('spendingChart');
-        let chart = null;
+        (function () {
+            /* Rendered by reportHandler as json.Marshal output, which escapes
+               <, > and & — so it cannot break out of this script element. */
+            var rows = {{.CategoryJSON}};
+            var canvas = document.getElementById('categoryChart');
+            if (!canvas || !rows.length) return;
 
-        function currency(n) {
-            return '₦' + Math.round(n).toLocaleString();
-        }
+            /* Chart.js paints to a canvas and cannot read CSS variables, so
+               resolve them once against the current theme. */
+            var css = getComputedStyle(document.documentElement);
+            var brand = css.getPropertyValue('--brand').trim() || '#185fa5';
+            var muted = css.getPropertyValue('--ink-muted').trim() || '#5b6b82';
+            var line = css.getPropertyValue('--line').trim() || '#e2e8f0';
 
-        function extractDate(e) {
-            const candidates = [e.created_at, e.CreatedAt, e.date, e.Date, e.createdAt];
-            for (const c of candidates) {
-                if (c) {
-                    const d = new Date(c);
-                    if (!isNaN(d.getTime())) return d;
-                }
-            }
-            return null;
-        }
+            /* html/template escapes this for the JS string context, so the
+               glyph is safe here even if the currency code is unusual. */
+            var currency = function (n) {
+                return '{{.CurrencySymbol}}' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
+            };
 
-        function formatDay(d) {
-            return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-        }
-
-        function renderChart(expenses) {
-            // Group amounts by day so the graph shows a spending trend, not just one total.
-            const byDay = new Map();
-            expenses.forEach(e => {
-                const amount = extractAmount(e);
-                const date = extractDate(e);
-                const key = date ? formatDay(date) : 'Unknown';
-                byDay.set(key, (byDay.get(key) || 0) + amount);
-            });
-
-            const labels = Array.from(byDay.keys());
-            const data = Array.from(byDay.values());
-
-            if (!ctx) return;
-
-            if (!chart) {
-                if (labels.length === 0) return;
-                chart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Spent',
-                            data: data,
-                            backgroundColor: '#185fa5',
-                            borderRadius: 6,
-                            maxBarThickness: 36
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: (item) => currency(item.parsed.y)
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: { callback: (v) => currency(v) }
+            new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: rows.map(function (r) { return r.category; }),
+                    datasets: [{
+                        label: 'Spent',
+                        data: rows.map(function (r) { return r.total; }),
+                        backgroundColor: brand,
+                        /* Rounded at the value end, square where it meets the
+                           axis — a bar rounded at the baseline reads as if it
+                           floats off it. */
+                        borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
+                        maxBarThickness: 24
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (item) { return currency(item.parsed.x); }
                             }
                         }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: { color: line },
+                            ticks: { color: muted, callback: function (v) { return currency(v); } }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: muted }
+                        }
                     }
-                });
-            } else {
-                chart.data.labels = labels;
-                chart.data.datasets[0].data = data;
-                chart.update();
-            }
-        }
-
-        function extractAmount(e) {
-            // Try the common variants a Go JSON encoder might produce.
-            const candidates = [e.amount, e.Amount, e.AMOUNT, e.amt, e.Amt, e.value, e.Value];
-            for (const c of candidates) {
-                if (c !== undefined && c !== null && c !== '') {
-                    const n = typeof c === 'string' ? parseFloat(c) : Number(c);
-                    if (!Number.isNaN(n)) return n;
                 }
-            }
-            return 0;
-        }
-
-        let loggedShape = false;
-
-        function applyStats(expenses) {
-            if (!loggedShape && expenses.length > 0) {
-                // One-time debug aid — check your browser console if stats are still 0.
-                console.log('report.html: sample /api/expenses-raw entry ->', expenses[0]);
-                loggedShape = true;
-            }
-            const amounts = expenses.map(extractAmount);
-            const count = amounts.length;
-            const total = amounts.reduce((sum, a) => sum + a, 0);
-            const average = count > 0 ? total / count : 0;
-            const largest = count > 0 ? Math.max(...amounts) : 0;
-
-            document.getElementById('stat-count').textContent = count;
-            document.getElementById('stat-total').textContent = currency(total);
-            document.getElementById('stat-average').textContent = currency(average);
-            document.getElementById('stat-largest').textContent = currency(largest);
-
-            const pillText = document.getElementById('budget-pill-text');
-            if (pillText && budgetLimit > 0) {
-                const pct = Math.round((total / budgetLimit) * 100);
-                pillText.textContent = pct + '% of ' + currency(budgetLimit) + ' budget';
-            }
-
-            renderCategoryBreakdown(expenses);
-            renderChart(expenses);
-        }
-
-        function renderCategoryBreakdown(expenses) {
-            const el = document.getElementById('category-breakdown');
-            if (!el) return;
-
-            const totals = new Map();
-            expenses.forEach(e => {
-                const cat = (e.category && e.category.trim()) || 'Uncategorized';
-                totals.set(cat, (totals.get(cat) || 0) + extractAmount(e));
             });
-
-            if (totals.size === 0) {
-                el.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px; text-align: center;">No categorized expenses yet</p>';
-                return;
-            }
-
-            const rows = Array.from(totals.entries())
-                .sort((a, b) => b[1] - a[1])
-                .map(([cat, amt]) => `
-                    <div class="category-row">
-                        <span class="category-row-name">${cat}</span>
-                        <span class="category-row-amount">${currency(amt)}</span>
-                    </div>
-                `).join('');
-            el.innerHTML = rows;
-        }
-
-        async function refresh() {
-            try {
-                const res = await fetch('/api/expenses-raw');
-                if (!res.ok) return;
-                const expenses = await res.json();
-                applyStats(Array.isArray(expenses) ? expenses : []);
-            } catch (err) {
-                // Network hiccup — keep showing the last known values.
-            }
-        }
-
-        // Fetch immediately, then poll for updates.
-        refresh();
-        setInterval(refresh, 5000);
+        })();
     </script>
+    {{end}}
 </body>
 </html>
 {{end}}

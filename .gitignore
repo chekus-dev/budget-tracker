@@ -18,6 +18,12 @@ __pycache__/
 reports/*.png
 reports/*.csv
 
+# Node / Tailwind build
+node_modules/
+# Compiled stylesheet: rebuilt by `npm run build:css` at deploy (see render.yaml).
+# Track only the source, so a stale build can never be committed.
+static/css/app.css
+
 # OS/editor cruft
 .DS_Store
 *.swp

@@ -2,141 +2,167 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archive</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #185fa5;
-            --primary-dark: #0C447C;
-            --bg-light: #f8f9fa;
-            --surface-light: #ffffff;
-            --text-primary: #1a1a1a;
-            --text-secondary: #666;
-            --border: #e0e0e0;
-        }
-
-        html.dark {
-            --bg-light: #0f0f0f;
-            --surface-light: #1a1a1a;
-            --text-primary: #f5f5f5;
-            --text-secondary: #999;
-            --border: #333;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg-light);
-            color: var(--text-primary);
-        }
-
-        .container {
-            max-width: 480px;
-            margin: 0 auto;
-            padding: 20px 16px 120px;
-        }
-
-        .page-title {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .page-subtitle {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-bottom: 24px;
-        }
-
-        /* Month Card */
-        .month-card {
-            background: var(--surface-light);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 14px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .month-card:hover {
-            border-color: var(--primary);
-            box-shadow: 0 2px 8px rgba(24, 95, 165, 0.1);
-        }
-
-        .month-info {
-            flex: 1;
-        }
-
-        .month-name {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .month-count {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .month-amount {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--primary);
-            text-align: right;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-secondary);
-        }
-
-        .empty-icon {
-            font-size: 40px;
-            margin-bottom: 12px;
-            opacity: 0.5;
-        }
-    </style>
+    <title>Archive — Budget Tracker</title>
+    {{template "head.html" .}}
 </head>
-<body>
+<body class="has-chrome">
     {{template "nav.html" .}}
 
-    <div class="container">
-        <h1 class="page-title">Archive</h1>
-        <p class="page-subtitle">Browse all months with recorded expenses</p>
+    <main class="app-main">
+        <form class="archive-search" action="/archive" method="GET" role="search">
+            <div class="archive-search-main">
+                <label class="label" for="archive-q">Search entries</label>
+                <span class="filter-input archive-search-input">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#search"/></svg>
+                    <input class="input" type="search" id="archive-q" name="q" value="{{.Filters.Query}}" placeholder="Search description, category, date…">
+                </span>
+            </div>
 
-        {{if .Months}}
-        <div>
-            {{range .Months}}
-            <a href="/archive?month={{.Month}}" class="month-card">
-                <div class="month-info">
-                    <div class="month-name">{{.Label}}</div>
-                    <div class="month-count">{{.Count}} expense{{if ne .Count 1}}s{{end}}</div>
+            <div class="archive-search-row">
+                <div class="filter-field">
+                    <label class="label" for="archive-category">Category</label>
+                    <select class="input" id="archive-category" name="category" onchange="this.form.submit()">
+                        <option value="">All categories</option>
+                        {{range .CategoryOptions}}
+                        <option value="{{.}}"{{if eq . $.Filters.Category}} selected{{end}}>{{.}}</option>
+                        {{end}}
+                    </select>
                 </div>
-                <div class="month-amount">₦{{printf "%.2f" .Total}}</div>
-            </a>
-            {{end}}
-        </div>
-        {{else}}
-        <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            <div>No archived expenses yet</div>
+
+                <div class="filter-field">
+                    <label class="label" for="archive-kind">Type</label>
+                    <select class="input" id="archive-kind" name="kind" onchange="this.form.submit()">
+                        <option value=""{{if eq $.Filters.Kind ""}} selected{{end}}>Everything</option>
+                        <option value="expense"{{if eq $.Filters.Kind "expense"}} selected{{end}}>Expenses</option>
+                        <option value="income"{{if eq $.Filters.Kind "income"}} selected{{end}}>Income</option>
+                    </select>
+                </div>
+
+                <div class="filter-field">
+                    <label class="label" for="archive-from">From</label>
+                    <div class="date-field">
+                        <input class="input" type="date" id="archive-from" name="from" value="{{.Filters.From}}" onchange="this.form.submit()">
+                        <button type="button" class="date-trigger" data-date-target="archive-from" aria-label="Choose start date">
+                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#calendar"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filter-field">
+                    <label class="label" for="archive-to">To</label>
+                    <div class="date-field">
+                        <input class="input" type="date" id="archive-to" name="to" value="{{.Filters.To}}" onchange="this.form.submit()">
+                        <button type="button" class="date-trigger" data-date-target="archive-to" aria-label="Choose end date">
+                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#calendar"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="archive-search-actions">
+                <button type="submit" class="btn btn-primary">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#search"/></svg>
+                    Search
+                </button>
+                {{if .Filters.Active}}
+                <a class="btn btn-soft" href="/archive">Clear</a>
+                {{end}}
+            </div>
+        </form>
+
+        {{if .Searching}}
+        <section class="archive-results-head">
+            <div>
+                <p class="eyebrow">Archive search</p>
+                <h1 class="page-title">Results</h1>
+            </div>
+            <p class="page-sub">
+                {{len .Expenses}} result{{if ne (len .Expenses) 1}}s{{end}}{{if .Truncated}}, showing the {{.ResultLimit}} most recent{{end}}
+            </p>
+        </section>
+
+        {{if .Truncated}}
+        <div class="alert alert-brand mb-4">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#info"/></svg>
+            <p>More than {{.ResultLimit}} entries match. Only the {{.ResultLimit}} most recent are listed here.</p>
         </div>
         {{end}}
-    </div>
+
+        <div id="expenses-container">
+            {{template "expenses_list.html" .}}
+        </div>
+
+        {{else if .Details}}
+        {{/* ---------- A single month in detail ---------- */}}
+        <div class="page-head">
+            <h1 class="page-title">{{.Label}}</h1>
+            <p class="page-sub">
+                {{len .Details.Expenses}} entr{{if ne (len .Details.Expenses) 1}}ies{{else}}y{{end}}
+                · {{money .Details.CurrencySymbol .Details.Spent}} spent{{if .Details.Received}} · {{money .Details.CurrencySymbol .Details.Received}} received{{end}}
+            </p>
+        </div>
+
+        <div class="month-switch mb-6">
+            <a class="month-switch-btn" href="/archive?month={{.Details.PrevMonth}}" aria-label="Previous month">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
+            </a>
+            <span class="month-switch-label">{{.Label}}</span>
+            {{if lt .Month .Details.CurrentMonth}}
+            <a class="month-switch-btn" href="/archive?month={{.Details.NextMonth}}" aria-label="Next month">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+            </a>
+            {{else}}
+            <span class="month-switch-btn" aria-disabled="true" aria-label="Next month">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+            </span>
+            {{end}}
+        </div>
+
+        {{template "expenses_list.html" .Details}}
+
+        <p class="mt-6">
+            <a href="/archive" class="btn btn-soft btn-block">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#archive"/></svg>
+                All months
+            </a>
+        </p>
+
+        {{else}}
+        {{/* ---------- The list of months ---------- */}}
+        <div class="page-head">
+            <h1 class="page-title">Archive</h1>
+            <p class="page-sub">Every month with recorded activity</p>
+        </div>
+
+        {{if .Months}}
+        <ul class="expense-list">
+            {{range .Months}}
+            <li>
+                <a href="/archive?month={{.Month}}" class="expense-row row-link">
+                    <span class="expense-icon" aria-hidden="true">
+                        <svg class="icon"><use href="/static/icons.svg#calendar"/></svg>
+                    </span>
+                    <span class="expense-body">
+                        <span class="expense-title">{{.Label}}</span>
+                        <span class="expense-meta">{{.Count}} expense{{if ne .Count 1}}s{{end}}{{if .Received}} · {{money $.CurrencySymbol .Received}} in{{end}}</span>
+                    </span>
+                    <span class="expense-amount">{{money $.CurrencySymbol .Spent}}</span>
+                    <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                </a>
+            </li>
+            {{end}}
+        </ul>
+        {{else}}
+        <div class="empty">
+            <span class="empty-icon">
+                <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg#inbox"/></svg>
+            </span>
+            <p class="empty-title">No archived months yet</p>
+            <p class="empty-sub">Months appear here once you've logged expenses in them.</p>
+        </div>
+        {{end}}
+        {{end}}
+    </main>
 </body>
 </html>
 {{end}}

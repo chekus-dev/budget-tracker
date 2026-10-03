@@ -1,0 +1,59 @@
+{{define "head.html"}}
+{{/*
+  Shared <head> contents. Each page writes its own <title> and then includes
+  this, so every screen gets identical meta, fonts, stylesheet and the
+  no-flash theme script.
+
+  Usage:  <title>Settings — Budget Tracker</title>
+          {{template "head.html" .}}
+*/}}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Tells the browser to render its own UI (form controls, scrollbars,
+     the address bar on mobile) for the theme the page is actually in. -->
+<meta name="color-scheme" content="light dark">
+
+<link rel="manifest" href="/static/manifest.json">
+<!-- Two media-scoped defaults cover the no-JS case (OS setting wins). The
+     third sits last so it beats both, and the script below rewrites its media
+     and content to match the user's in-app Light/Dark/System choice. -->
+<meta name="theme-color" content="#185fa5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#185fa5" media="(prefers-color-scheme: light)" id="theme-color-meta">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Budget">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="icon" href="/static/icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/static/css/app.css">
+
+<script>
+  // Runs before the first paint so the page never flashes the wrong theme.
+  // Must stay in sync with the Light/Dark/System toggle on the settings page.
+  (function () {
+    try {
+      var pref = localStorage.getItem('bt-theme') || 'system';
+      var dark = pref === 'dark' ||
+        (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.toggle('dark', dark);
+
+      // Keep the browser's own chrome — and the installed PWA's status bar — in
+      // step with the choice. The two media-scoped metas above only know the OS
+      // setting, so this last one both wins and follows an in-app override.
+      var meta = document.getElementById('theme-color-meta');
+      if (meta) {
+        meta.setAttribute('media', dark ? '(prefers-color-scheme: dark)' : '(prefers-color-scheme: light)');
+        meta.setAttribute('content', dark ? '#0b1220' : '#185fa5');
+      }
+    } catch (e) {
+      // localStorage can throw in private mode; the light theme is a fine default.
+    }
+  })();
+</script>
+{{end}}

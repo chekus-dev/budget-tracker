@@ -1,0 +1,10 @@
+# Dependencies for the standalone spending report script.
+#
+#   pip install -r reports/requirements.txt
+#
+# The Go server does not use these — it has its own dependencies in go.mod.
+
+psycopg[binary]>=3.2
+pandas>=2.0
+matplotlib>=3.7
+python-dotenv>=1.0

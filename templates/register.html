@@ -2,211 +2,137 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Create Account — Budget Tracker</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#185fa5">
-    <style>
-        :root {
-            --primary: #185fa5;
-            --primary-dark: #0C447C;
-            --bg-light: #f8f9fa;
-            --surface-light: #ffffff;
-            --text-primary: #1a1a1a;
-            --text-secondary: #666;
-            --border: #e0e0e0;
-            --danger: #ef4444;
-        }
-
-        html.dark {
-            --bg-light: #0f0f0f;
-            --surface-light: #1a1a1a;
-            --text-primary: #f5f5f5;
-            --text-secondary: #999;
-            --border: #333;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg-light);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .auth-card {
-            width: 100%;
-            max-width: 380px;
-            background: var(--surface-light);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 32px 28px;
-        }
-
-        .auth-logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 24px;
-        }
-
-        .auth-logo-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-        }
-
-        .auth-logo-text {
-            font-weight: 600;
-            font-size: 16px;
-        }
-
-        .auth-title {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .auth-subtitle {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-bottom: 24px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 11px 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: inherit;
-            background: var(--surface-light);
-            color: var(--text-primary);
-            transition: border-color 0.2s;
-            margin-bottom: 16px;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.1);
-        }
-
-        .form-hint {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-top: -12px;
-            margin-bottom: 16px;
-        }
-
-        .submit-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(24, 95, 165, 0.3);
-        }
-
-        .submit-btn:active {
-            transform: translateY(0) scale(0.98);
-        }
-
-        .auth-error {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            border-radius: 8px;
-            padding: 10px 12px;
-            font-size: 13px;
-            margin-bottom: 16px;
-        }
-
-        .auth-footer {
-            text-align: center;
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-top: 20px;
-        }
-
-        .auth-footer a {
-            color: var(--primary);
-            font-weight: 600;
-            text-decoration: none;
-        }
-
-        .auth-footer a:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <title>Create account — Budget Tracker</title>
+    {{template "head.html" .}}
 </head>
 <body>
-    <div class="auth-card">
-        <div class="auth-logo">
-            <div class="auth-logo-icon">₦</div>
-            <span class="auth-logo-text">Budget Tracker</span>
+    <main class="auth-shell">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <span class="brand-mark" aria-hidden="true">₦</span>
+                Budget Tracker
+            </div>
+
+            <h1 class="auth-title">Create your account</h1>
+            <p class="auth-sub">Set a monthly limit and see what's left as you spend.</p>
+
+            {{if .Error}}
+            <div class="alert alert-over mb-4" role="alert">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+                <p>{{.Error}}</p>
+            </div>
+            {{end}}
+
+            <form action="/register" method="POST" id="register-form" novalidate>
+                <div class="auth-field">
+                    <label class="label" for="username">Username</label>
+                    <input type="text" id="username" name="username" class="input"
+                           value="{{.Username}}" required autofocus autocomplete="username">
+                </div>
+
+                <div class="auth-field">
+                    <label class="label" for="email">Email</label>
+                    <input type="email" id="email" name="email" class="input"
+                           value="{{.Email}}" required autocomplete="email" aria-describedby="email-hint">
+                    <p class="hint" id="email-hint">Used only for password recovery.</p>
+                </div>
+
+                <div class="auth-field">
+                    <label class="label" for="password">Password</label>
+                    <input type="password" id="password" name="password" class="input"
+                           required minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="password-hint">
+                    <p class="hint" id="password-hint">At least 8 characters.</p>
+                </div>
+
+                <div class="auth-field">
+                    <label class="label" for="confirm_password">Confirm password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" class="input"
+                           required minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="confirm-error">
+                    <p class="field-error" id="confirm-error" role="alert" hidden></p>
+                </div>
+
+                {{/* Required on the server too — `required` here is only a
+                     convenience, and is trivially bypassed with curl. */}}
+                <div class="auth-field consent">
+                    <input type="checkbox" id="accept_terms" name="accept_terms" value="1"
+                           class="checkbox" required {{if .TermsChecked}}checked{{end}}>
+                    <label class="consent-label" for="accept_terms">
+                        I have read and agree to the
+                        <a href="/terms" target="_blank" rel="noopener">Terms and Conditions</a>.
+                    </label>
+                </div>
+
+                {{/* reCAPTCHA v2 checkbox. Omitted entirely when no site key is
+                     configured, so local development without keys still renders
+                     a usable form — the server is what decides whether the
+                     challenge is actually required (see recaptchaRequired). */}}
+                {{if .RecaptchaSiteKey}}
+                <div class="auth-field">
+                    <div class="captcha">
+                        <div class="g-recaptcha" data-sitekey="{{.RecaptchaSiteKey}}"></div>
+                    </div>
+                    <p class="field-error" id="captcha-error" role="alert" hidden>Please tick “I’m not a robot” to continue.</p>
+                    <noscript>
+                        <p class="hint">Verification needs JavaScript. Please enable it to sign up.</p>
+                    </noscript>
+                </div>
+                {{/* Must run before api.js scans the page: pick the compact
+                     widget on narrow phones (the full one is 304px wide) and
+                     match the site's dark mode. */}}
+                <script>
+                (function () {
+                    var el = document.querySelector('.g-recaptcha');
+                    if (!el) return;
+                    if (window.innerWidth < 400) el.setAttribute('data-size', 'compact');
+                    if (document.documentElement.classList.contains('dark')) el.setAttribute('data-theme', 'dark');
+                })();
+                </script>
+                <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                {{end}}
+
+                <button type="submit" class="btn btn-primary btn-block">Create account</button>
+            </form>
+
+            <p class="auth-foot">Already have an account? <a href="/login">Log in</a></p>
         </div>
-        <h1 class="auth-title">Create your account</h1>
-        <p class="auth-subtitle">Start tracking your spending</p>
+    </main>
 
-        {{if .Error}}
-        <div class="auth-error">{{.Error}}</div>
-        {{end}}
+    {{/* Friendly inline checks. The server re-validates everything. */}}
+    <script>
+    (function () {
+        var form = document.getElementById('register-form');
+        var pw = document.getElementById('password');
+        var confirm = document.getElementById('confirm_password');
+        var confirmErr = document.getElementById('confirm-error');
+        var captchaErr = document.getElementById('captcha-error');
 
-        <form action="/register" method="POST">
-            <label class="form-label" for="username">Username</label>
-            <input type="text" id="username" name="username" class="form-input" required autofocus autocomplete="username">
+        function showConfirm(msg) {
+            confirmErr.textContent = msg;
+            confirmErr.hidden = !msg;
+        }
 
-            <label class="form-label" for="email">Email</label>
-            <input type="email" id="email" name="email" class="form-input" required autocomplete="email">
-            <p class="form-hint">Used only for password recovery.</p>
+        confirm.addEventListener('input', function () { showConfirm(''); });
 
-            <label class="form-label" for="password">Password</label>
-            <input type="password" id="password" name="password" class="form-input" required autocomplete="new-password" minlength="6">
-            <p class="form-hint">At least 6 characters.</p>
-
-            <label class="form-label" for="confirm_password">Confirm password</label>
-            <input type="password" id="confirm_password" name="confirm_password" class="form-input" required autocomplete="new-password" minlength="6">
-
-            <button type="submit" class="submit-btn">Create Account</button>
-        </form>
-
-        <p class="auth-footer">Already have an account? <a href="/login">Log in</a></p>
-    </div>
+        form.addEventListener('submit', function (e) {
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                form.reportValidity();
+                return;
+            }
+            if (pw.value !== confirm.value) {
+                e.preventDefault();
+                showConfirm('Passwords do not match.');
+                confirm.focus();
+                return;
+            }
+            if (captchaErr && typeof grecaptcha !== 'undefined' && !grecaptcha.getResponse()) {
+                e.preventDefault();
+                captchaErr.hidden = false;
+                captchaErr.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
+        });
+    })();
+    </script>
 </body>
 </html>
 {{end}}

@@ -1,0 +1,86 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+#
+# Render reads this file automatically when you connect this repo.
+# Values marked `sync: false` are secrets and are NOT stored in git;
+# Render prompts you for them in the dashboard instead.
+
+services:
+  - type: web
+    name: budget-tracker
+    runtime: go
+    branch: main
+
+    # "starter" is the cheapest paid instance type. Paid instances stay up
+    # 24/7 — that is what makes the app "always on".
+    #
+    # To use the free tier instead, change this to `free`. Free web services
+    # spin down after ~15 minutes without traffic and cold-start (a few
+    # seconds) on the next visit. You can keep a free instance awake with an
+    # external monitor pinging /healthz every 10 minutes — see README.
+    plan: starter
+
+    region: oregon
+
+    # The stylesheet is built with the Tailwind CLI rather than committed stale,
+    # so the deploy needs Node as well as Go. Render's Go image ships Node, but
+    # pin the major version so a base-image change cannot silently alter the
+    # CSS output. `npm ci` installs exactly what package-lock.json pins.
+    buildCommand: npm ci && npm run build:css && go build -o budget-tracker .
+    startCommand: ./budget-tracker
+
+    # The binary applies migrations/*.sql itself at startup (see migrations.go),
+    # so there is no separate migrate step here and no dependency on psql being
+    # present in the image. Every migration is idempotent, so this is a no-op
+    # once the schema is current. This matters because the health check below
+    # returns 200 even when the database is unusable — without it, a deploy
+    # against an unmigrated database would look green while every page errored.
+
+    # Render polls this to decide whether a deploy succeeded. The handler
+    # returns 200 while the process is up, even if the database is down.
+    healthCheckPath: /healthz
+
+    autoDeploy: true
+
+    envVars:
+      # Pins the Node major used to build the stylesheet.
+      - key: NODE_VERSION
+        value: "22"
+
+      # Supabase connection string (Project Settings -> Database -> URI).
+      # Use the Session pooler on port 5432, not the transaction pooler.
+      - key: DATABASE_URL
+        sync: false
+
+      # Generated once by Render and kept stable. Changing it logs everyone out.
+      - key: SESSION_KEY
+        generateValue: true
+
+      # Optional: your public URL, e.g. https://budget-tracker.onrender.com
+      # Render sets RENDER_EXTERNAL_URL automatically and that is used as a
+      # fallback, so setting this only matters for a custom domain.
+      - key: APP_BASE_URL
+        sync: false
+
+      # Optional: without these, password-reset links are logged to the
+      # server console instead of being emailed.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+
+      # Signup bot protection (Google reCAPTCHA v2 checkbox).
+      # Create a key pair at https://www.google.com/recaptcha/admin/create and
+      # add this service's onrender.com domain to its allowed-domains list.
+      #
+      # RECAPTCHA_SITE_KEY is public — it is rendered into the signup page.
+      # RECAPTCHA_SECRET_KEY is a secret: set it here (sync: false keeps it out
+      # of git) and never commit it.
+      #
+      # Set BOTH in the same deploy. A deployed instance with no secret key
+      # refuses all signups rather than letting bots through — that is
+      # deliberate (see recaptchaRequired() in main.go), but it does mean a
+      # half-configured deploy takes signup down.
+      - key: RECAPTCHA_SITE_KEY
+        sync: false
+      - key: RECAPTCHA_SECRET_KEY
+        sync: false

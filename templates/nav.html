@@ -1,333 +1,152 @@
 {{define "nav.html"}}
-<script>
-    (function() {
-        const theme = localStorage.getItem('bt-theme') || 'system';
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (theme === 'dark' || (theme === 'system' && prefersDark)) {
-            document.documentElement.classList.add('dark');
-        }
-    })();
-</script>
-<style>
-    :root {
-        --primary-color: #185fa5;
-        --primary-dark: #0C447C;
-        --primary-light: #5eb3ff;
-    }
+{{/*
+  Shared chrome for every signed-in screen: the navigation (bottom tab bar on
+  mobile, left sidebar on desktop), the floating "add expense" button and its
+  modal, and the toast host.
 
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
+  Receives the page's data. .Username decides whether the signed-in chrome is
+  rendered at all; .CurrencySymbol labels the amount field; .Month and .Filters
+  are optional and only used to send an edit back where it came from, so a page
+  that supplies neither still works.
+*/}}
 
-    html {
-        transition: background-color 0.3s, color 0.3s;
-    }
-
-    body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background: #f8f9fa;
-        color: #1a1a1a;
-    }
-
-    body.dark {
-        background: #0f0f0f;
-        color: #f5f5f5;
-    }
-
-    .header {
-        padding: 20px 16px 24px;
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-        color: white;
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        margin-bottom: 0;
-        border-radius: 0;
-    }
-
-    .header-content {
-        max-width: 480px;
-        margin: 0 auto;
-        padding: 0 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .logo {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-weight: 600;
-        font-size: 16px;
-    }
-
-    .logo-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-    }
-
-    .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .logout-btn {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: white;
-        border-radius: 6px;
-        padding: 6px 12px;
-        font-size: 12px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        font-family: inherit;
-    }
-
-    .logout-btn:hover {
-        background: rgba(255, 255, 255, 0.2);
-    }
-
-    /* Bottom Navigation (mobile & tablet) */
-    .bottom-nav {
-        position: fixed;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: min(100%, 480px);
-        margin: 0 auto;
-        background: white;
-        border-top: 1px solid #e0e0e0;
-        display: flex;
-        justify-content: space-around;
-        z-index: 100;
-        padding-bottom: env(safe-area-inset-bottom, 0px);
-    }
-
-    body.dark .bottom-nav {
-        background: #1a1a1a;
-        border-color: #333;
-    }
-
-    .nav-item {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 10px 2px;
-        gap: 4px;
-        font-size: 9px;
-        color: #666;
-        text-decoration: none;
-        cursor: pointer;
-        transition: color 0.2s ease;
-        border: none;
-        background: none;
-        font-family: inherit;
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    .logout-nav-form {
-        flex: 1;
-        display: flex;
-    }
-
-    .logout-nav-item {
-        width: 100%;
-        color: #b42318;
-    }
-
-    .logout-nav-item:hover {
-        color: #dc2626;
-    }
-
-    body.dark .nav-item {
-        color: #999;
-    }
-
-    .nav-item.active {
-        color: var(--primary-color);
-    }
-
-    body.dark .nav-item.active {
-        color: var(--primary-light);
-    }
-
-    .nav-icon {
-        font-size: 17px;
-    }
-
-    .nav-label {
-        font-weight: 500;
-    }
-
-    @media (min-width: 768px) {
-        .home-page .header-content {
-            max-width: 700px;
-            padding: 0 24px;
-        }
-
-        .home-page .bottom-nav {
-            width: min(100%, 700px);
-        }
-    }
-
-    @media (max-width: 380px) {
-        .header {
-            padding: 14px 12px 16px;
-        }
-
-        .header-content {
-            gap: 8px;
-        }
-
-        .logo {
-            font-size: 14px;
-        }
-
-        .header-actions {
-            gap: 6px;
-        }
-
-        .logout-btn {
-            padding: 6px 8px;
-        }
-
-        .nav-item {
-            padding: 8px 1px;
-            gap: 3px;
-            font-size: 8px;
-        }
-
-        .nav-icon {
-            font-size: 15px;
-        }
-    }
-
-    /* Desktop: fixed left-side rail */
-    @media (min-width: 1024px) {
-        body {
-            padding-left: 96px;
-        }
-
-        .header-content {
-            max-width: 1040px;
-            padding: 0 32px;
-        }
-
-        .bottom-nav {
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: auto;
-            transform: none;
-            width: 96px;
-            height: 100vh;
-            margin: 0;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: stretch;
-            padding-top: 96px;
-            padding-bottom: 0;
-            border-top: none;
-            border-right: 1px solid #e0e0e0;
-        }
-
-        body.dark .bottom-nav {
-            border-right-color: #333;
-        }
-
-        .nav-item,
-        .logout-nav-form {
-            flex: none;
-            width: 100%;
-        }
-
-        .nav-item {
-            padding: 14px 4px;
-            font-size: 10px;
-        }
-
-        .nav-icon {
-            font-size: 18px;
-        }
-    }
-</style>
-
-<header class="header">
-    <div class="header-content">
-        <div class="logo">
-            <div class="logo-icon">₦</div>
-            <span>Budget</span>
-        </div>
-    </div>
-</header>
-
-<nav class="bottom-nav" id="bottom-nav">
-    <a href="/" class="nav-item" id="nav-home">
-        <span class="nav-icon">🏠</span>
-        <span class="nav-label">Home</span>
-    </a>
-    <a href="/report" class="nav-item" id="nav-report">
-        <span class="nav-icon">📊</span>
-        <span class="nav-label">Report</span>
-    </a>
-    <a href="/archive" class="nav-item" id="nav-archive">
-        <span class="nav-icon">📦</span>
-        <span class="nav-label">Archive</span>
-    </a>
-    <a href="/export" class="nav-item" id="nav-export">
-        <span class="nav-icon">📤</span>
-        <span class="nav-label">Export</span>
-    </a>
-    <a href="/settings" class="nav-item" id="nav-settings">
-        <span class="nav-icon">⚙️</span>
-        <span class="nav-label">Settings</span>
-    </a>
-    {{if .Username}}
-    <form action="/logout" method="POST" class="logout-nav-form">
-        <button type="submit" class="nav-item logout-nav-item" title="Logout">
-            <span class="nav-icon">🚪</span>
-            <span class="nav-label">Logout</span>
-        </button>
-    </form>
-    {{end}}
+<nav class="tabbar" aria-label="Main">
+  <div class="sidebar-brand">
+    <span class="brand-mark" aria-hidden="true">₦</span>
+    <span>Budget Tracker</span>
+  </div>
+  <a href="/" class="nav-item" data-nav="/">
+    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#home"/></svg>
+    <span>Home</span>
+  </a>
+  <a href="/report" class="nav-item" data-nav="/report">
+    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chart"/></svg>
+    <span>Report</span>
+  </a>
+  <a href="/archive" class="nav-item" data-nav="/archive">
+    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#archive"/></svg>
+    <span>Archive</span>
+  </a>
+  <a href="/export" class="nav-item" data-nav="/export">
+    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#export"/></svg>
+    <span>Export</span>
+  </a>
+  <a href="/settings" class="nav-item" data-nav="/settings">
+    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#settings"/></svg>
+    <span>Settings</span>
+  </a>
+  {{if .Username}}
+  <form action="/logout" method="POST" class="contents">
+    <button type="submit" class="nav-item">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#logout"/></svg>
+      <span>Log out</span>
+    </button>
+  </form>
+  {{end}}
 </nav>
 
-<script>
-    function setActiveNav() {
-        const path = window.location.pathname;
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.classList.remove('active');
-        });
+{{if .Username}}
+<!-- One "+" reaches Add Expense from any screen. -->
+<button type="button" class="fab" id="fab-add" aria-haspopup="dialog" aria-controls="add-modal">
+  <svg class="icon icon-lg" aria-hidden="true"><use href="/static/icons.svg#plus"/></svg>
+  <span class="visually-hidden">Add expense</span>
+</button>
 
-        if (path === '/') {
-            document.getElementById('nav-home').classList.add('active');
-        } else if (path === '/report') {
-            document.getElementById('nav-report').classList.add('active');
-        } else if (path === '/archive' || path.startsWith('/archive?')) {
-            document.getElementById('nav-archive').classList.add('active');
-        } else if (path === '/export' || path.startsWith('/export')) {
-            document.getElementById('nav-export').classList.add('active');
-        } else if (path === '/settings/saved') {
-            // no active highlight for saved-settings since we removed that nav item
-        } else if (path === '/settings') {
-            document.getElementById('nav-settings').classList.add('active');
-        }
-    }
+<div class="modal" id="add-modal" role="dialog" aria-modal="true" aria-labelledby="add-modal-title" hidden>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <div>
+        <h2 class="modal-title" id="add-modal-title">Add expense</h2>
+        <p class="page-sub">
+          <span id="add-modal-mode">Adding to</span>
+          <span id="add-modal-month"></span>
+        </p>
+      </div>
+      <button type="button" class="btn-icon" data-close-modal>
+        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#close"/></svg>
+        <span class="visually-hidden">Close</span>
+      </button>
+    </div>
 
-    setActiveNav();
+    {{/* One form, two jobs. app.js swaps the action between /add and /edit/<id>
+         and relabels the submit button when the modal is opened for an edit,
+         and swaps the kind between an expense and income. Sharing the markup
+         means the paths cannot drift apart: a field added for adding is a field
+         added for editing, and a field added for spending is a field added for
+         income. */}}
+    <form action="/add" method="POST" class="stack-tight" id="add-form">
+      {{/* Where to return after an edit: the month on screen, and any active
+           search, so editing a result does not throw the results away. The
+           search's own fields are suffixed _filter where they would otherwise
+           collide with the entry's — "category" and "kind" below both mean the
+           thing being saved. */}}
+      <input type="hidden" name="month" value="{{if .Month}}{{.Month}}{{end}}">
+      <input type="hidden" name="orig_date" id="edit-orig-date" value="">
+      {{with .Filters}}
+      <input type="hidden" name="q" value="{{.Query}}">
+      <input type="hidden" name="category_filter" value="{{.Category}}">
+      <input type="hidden" name="kind_filter" value="{{.Kind}}">
+      <input type="hidden" name="from" value="{{.From}}">
+      <input type="hidden" name="to" value="{{.To}}">
+      {{end}}
 
-    document.body.classList.toggle('dark', document.documentElement.classList.contains('dark'));
-</script>
+      {{/* Which way the money went. A hidden input so the form still submits a
+           kind without JavaScript; the buttons are what set it. */}}
+      <div>
+        <span class="label" id="add-kind-label">Type</span>
+        <input type="hidden" name="kind" id="add-kind" value="expense">
+        <div class="segmented" role="group" aria-labelledby="add-kind-label">
+          <button type="button" class="segmented-btn is-active" data-kind="expense">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#receipt"/></svg>
+            Expense
+          </button>
+          <button type="button" class="segmented-btn" data-kind="income">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#banknote"/></svg>
+            Income
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label class="label" for="add-description" id="add-description-label">What did you spend on?</label>
+        <input class="input" type="text" id="add-description" name="description"
+               placeholder="Lunch, bus fare, data…" required maxlength="255">
+      </div>
+
+      <div>
+        <label class="label" for="add-amount">Amount ({{.CurrencySymbol}})</label>
+        <input class="input" type="number" id="add-amount" name="amount"
+               inputmode="decimal" step="0.01" min="0.01" placeholder="0.00" required>
+      </div>
+
+      <div>
+        <label class="label" for="add-category">Category</label>
+        <select class="input" id="add-category" name="category">
+          <option value="">No category</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="label" for="add-date">Date</label>
+        <div class="date-field">
+          <input class="input" type="date" id="add-date" name="date">
+          <button type="button" class="date-trigger" data-date-target="add-date" aria-label="Choose a date">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#calendar"/></svg>
+          </button>
+        </div>
+        <p class="hint">Leave as today unless you're logging something older.</p>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block mt-2" id="add-submit">
+        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
+        <span id="add-submit-label">Add expense</span>
+      </button>
+    </form>
+  </div>
+</div>
+{{end}}
+
+<div class="toast-host" id="toast-host" role="status" aria-live="polite"></div>
+
+<script src="/static/app.js" defer></script>
 {{end}}

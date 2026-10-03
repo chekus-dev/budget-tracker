@@ -1,0 +1,132 @@
+{{define "terms.html"}}
+{{/*
+  Terms and Conditions.
+
+  NOT LEGAL ADVICE. This describes, accurately, what this specific application
+  actually does with a user's data — it is a starting point drafted from the
+  code, not a reviewed contract. Have it checked by a qualified professional
+  for the jurisdiction you operate in before relying on it.
+
+  Keep it in step with reality: if the app starts storing something new, this
+  page is one of the places that has to change.
+*/}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Terms and Conditions — Budget Tracker</title>
+    {{template "head.html" .}}
+</head>
+<body>
+    <main class="legal-shell">
+        <a href="/register" class="legal-back">← Back to sign up</a>
+
+        <div class="auth-brand">
+            <span class="brand-mark" aria-hidden="true">₦</span>
+            Budget Tracker
+        </div>
+
+        <div class="page-head">
+            <h1 class="page-title">Terms and Conditions</h1>
+            <p class="page-sub">Last updated 2 October 2026</p>
+        </div>
+
+        <section class="card legal-body">
+            <h2>1. What this service is</h2>
+            <p>
+                Budget Tracker is a personal budgeting tool. You record what you
+                spend and what you receive, optionally set a monthly budget and
+                per-category limits, and the app shows you what is left. It is a
+                record-keeping aid — <strong>it is not financial
+                advice</strong>, and it is not a bank, payment service or accounting
+                system.
+            </p>
+
+            <h2>2. Your account</h2>
+            <ul>
+                <li>You need an account to use the app. One account per person.</li>
+                <li>Give a valid email address — it is the only way to recover a
+                    forgotten password.</li>
+                <li>Keep your password to yourself. You are responsible for what
+                    happens under your account.</li>
+                <li>You must be old enough to enter into a contract where you live.</li>
+            </ul>
+
+            <h2>3. What we store</h2>
+            <p>To run the app we keep the following, and nothing else:</p>
+            <ul>
+                <li><strong>Account details:</strong> your username, email address,
+                    and a securely hashed version of your password. The password
+                    itself is never stored and cannot be read back.</li>
+                <li><strong>Your records:</strong> the entries you log — amount,
+                    description, category, date and whether it was money in or out —
+                    plus your settings, such as your monthly budget, per-category
+                    limits and chosen categories.</li>
+            </ul>
+            <p>
+                Your email is used for password recovery and nothing else. We do not
+                sell your data, and we do not use it for advertising. Deleting an
+                entry hides it immediately; it is permanently removed shortly
+                afterwards.
+            </p>
+
+            <h2>4. Acceptable use</h2>
+            <p>Do not:</p>
+            <ul>
+                <li>Create accounts by automated means, or attempt to get around the
+                    human-verification check.</li>
+                <li>Access anyone else's account, or try to break the security of the
+                    service.</li>
+                <li>Use the service to store unlawful material, or in any way that
+                    damages it for other people.</li>
+            </ul>
+            <p>
+                Accounts that do any of these may be removed. We may also block
+                automated signups and requests.
+            </p>
+
+            <h2>5. Availability and accuracy</h2>
+            <p>
+                The service is provided <strong>as is</strong>. We aim to keep it
+                running and your data intact, but we cannot promise uninterrupted
+                availability, and we are not liable for losses arising from downtime,
+                data loss, or from financial decisions you make using figures the app
+                shows you. Please check anything important against your own records.
+            </p>
+            <p>
+                Keep your own copy of anything you cannot afford to lose — the app
+                includes CSV and PDF export for exactly this reason.
+            </p>
+
+            <h2>6. Ending your use</h2>
+            <p>
+                You may stop using the service at any time and ask for your account
+                and its data to be deleted. We may suspend or close an account that
+                breaches these terms.
+            </p>
+
+            <h2>7. Changes to these terms</h2>
+            <p>
+                If these terms change in a way that affects you, the date at the top
+                of this page changes with them. Continuing to use the service after
+                that means you accept the new version.
+            </p>
+
+            <h2>8. Contact</h2>
+            <p>
+                Questions about these terms, or requests to delete your data, should
+                go to the address published on the site you signed up through.
+            </p>
+        </section>
+
+        <p class="note mt-4">
+            By creating an account you confirm that you have read and agree to these
+            terms.
+        </p>
+
+        <p class="mt-6">
+            <a href="/register" class="btn btn-primary btn-block">Back to sign up</a>
+        </p>
+    </main>
+</body>
+</html>
+{{end}}
