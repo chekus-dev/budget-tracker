@@ -1,4 +1,5 @@
 # Budget Tracker
+<img width="1300" height="884" alt="image" src="https://github.com/user-attachments/assets/2b376049-4ada-4aed-86bb-ea9ae9e9fd44" />
 
 A personal budget tracking web application built with Go, PostgreSQL, and a
 lightweight vanilla JavaScript frontend. The project began as a simple
