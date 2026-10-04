@@ -1,21 +1,32 @@
-# Budget Tracker
-<img width="1300" height="884" alt="image" src="https://github.com/user-attachments/assets/65d3a5c3-cd5e-448b-8515-a0c9923dc326" />
+<div align="center">
 
+# 💰 Budget Tracker
 
-A personal budget tracking web application built with Go, PostgreSQL, and a
-lightweight vanilla JavaScript frontend. The project began as a simple
-exercise in connecting Go to a MySQL database, and grew incrementally
-into a working full-stack application with a server-rendered interface,
-dynamic client-side interactions, and a companion Python reporting tool.
-It now runs against a hosted PostgreSQL database on Supabase.
+**A personal finance app built from the ground up — Go, PostgreSQL, and a vanilla JS frontend, with no framework hiding the hard parts.**
 
-This README documents the project honestly — including the setbacks —
-because the process of building it is as much a part of the learning
-as the finished code.
+<img width="1300" height="884" alt="Budget Tracker screenshot" src="https://github.com/user-attachments/assets/65d3a5c3-cd5e-448b-8515-a0c9923dc326" />
+
+<br/><br/>
+
+![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind_v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+
+[![Live Demo](https://img.shields.io/badge/▶_Live_Demo-budget--tracker-f97316?style=for-the-badge)](https://budget-tracker-1-svws.onrender.com/)
+
+</div>
+
+<br/>
+
+A personal budget tracking web application built with Go, PostgreSQL, and a lightweight vanilla JavaScript frontend. The project began as a simple exercise in connecting Go to a MySQL database, and grew incrementally into a working full-stack application with a server-rendered interface, dynamic client-side interactions, and a companion Python reporting tool. It now runs against a hosted PostgreSQL database on Supabase.
+
+This README documents the project honestly — including the setbacks — because the process of building it is as much a part of the learning as the finished code.
 
 ---
 
-## What it does
+## ✨ What It Does
 
 - Log expenses with a description, an amount and a date (displayed in Naira, ₦)
 - Choose the currency from Settings — twelve are offered, and the symbol follows
@@ -40,7 +51,7 @@ as the finished code.
 
 ---
 
-## Tech stack
+## 🧰 Tech Stack
 
 | Layer              | Technology                                                 |
 |--------------------|-------------------------------------------------------------|
@@ -64,7 +75,7 @@ navigation highlight and the loading skeleton.
 
 ---
 
-## How this project was built
+## 🛠️ How This Project Was Built
 
 ### 1. Establishing the connection
 
@@ -232,7 +243,7 @@ spent; it only stops it being recorded.
 
 ---
 
-## Running the project locally
+## 🚀 Running the Project Locally
 
 ### Prerequisites
 
@@ -376,7 +387,7 @@ the `reports/` directory as a CSV file and a PNG chart.
 
 ---
 
-## Deploying to Render (always on)
+## ☁️ Deploying to Render (Always On)
 
 The app deploys to [Render](https://render.com) from this repo. The
 [`render.yaml`](render.yaml) blueprint describes the service, so Render
@@ -490,7 +501,7 @@ afterwards may fail until Supabase wakes the project up again.
 
 ---
 
-## Searching, filtering and editing
+## 🔍 Searching, Filtering and Editing
 
 The home screen carries a filter bar above the list: free text, a category,
 and a from/to date range. Fill in any combination and the page switches from
@@ -545,7 +556,7 @@ Two details in the edit path are easy to get wrong:
 
 ---
 
-## Known limitations and next steps
+## 📌 Known Limitations and Next Steps
 
 This project is intentionally incremental, and several improvements
 are planned rather than already built:
@@ -574,7 +585,7 @@ are planned rather than already built:
 
 ---
 
-## A note on process
+## 📝 A Note on Process
 
 This project was not built in a straight line, and this README does
 not pretend otherwise. Long stretches of time went into fixing a local
@@ -584,3 +595,10 @@ at a time — rather than all at once. That pace was a choice: each
 layer was confirmed to work before the next was added, which made it
 possible to know, at every stage, exactly what was and was not yet
 working.
+
+<div align="center">
+<br/>
+
+[![Live Demo](https://img.shields.io/badge/▶_Try_the_Live_Demo-f97316?style=for-the-badge)](https://budget-tracker-1-svws.onrender.com/)
+
+</div>
