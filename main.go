@@ -455,6 +455,9 @@ func main() {
 	mux.HandleFunc("/forgot-password", forgotPasswordHandler)
 	mux.HandleFunc("/reset-password", resetPasswordHandler)
 
+	// Paystack billing (billing.go). Inert unless PAYSTACK_SECRET_KEY is set.
+	setupBilling(mux)
+
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	mux.Handle("/reports/", http.StripPrefix("/reports/", http.FileServer(http.Dir("reports"))))
 
@@ -1028,8 +1031,12 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			tmpl.ExecuteTemplate(w, "register.html", echo)
 		}
 
-		if username == "" || len(password) < 6 {
-			reject("Username is required and password must be at least 6 characters.")
+		if username == "" {
+			reject("Username is required.")
+			return
+		}
+		if msg := validateNewPassword(password); msg != "" {
+			reject(msg)
 			return
 		}
 		if email == "" || !strings.Contains(email, "@") {
@@ -1060,7 +1067,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 
@@ -1084,7 +1091,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		session.Values["user_id"] = userID
 		session.Values["username"] = username
 		if err := session.Save(r, w); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -1126,6 +1133,9 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		var passwordHash string
 		err := db.QueryRow("SELECT id, password_hash FROM users WHERE username = $1", username).Scan(&id, &passwordHash)
 		if err != nil {
+			// Burn the same bcrypt time as a wrong password, so response time
+			// does not reveal which usernames exist (see dummyHash).
+			bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
 			// Same message and same accounting whether the account is missing
 			// or the password is wrong. Charging the budget in both cases is
 			// what stops the limiter being used to discover which usernames
@@ -1156,7 +1166,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		session.Values["user_id"] = id
 		session.Values["username"] = username
 		if err := session.Save(r, w); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -1185,7 +1195,7 @@ func changePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	// when it was added.
 	settings, err := loadSettings(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	render := func(d ChangePasswordPageData) {
@@ -1203,15 +1213,15 @@ func changePasswordHandler(w http.ResponseWriter, r *http.Request) {
 
 		var passwordHash string
 		if err := db.QueryRow("SELECT password_hash FROM users WHERE id = $1", userID).Scan(&passwordHash); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(current)); err != nil {
 			render(ChangePasswordPageData{Error: "Current password is incorrect."})
 			return
 		}
-		if len(newPassword) < 6 {
-			render(ChangePasswordPageData{Error: "New password must be at least 6 characters."})
+		if msg := validateNewPassword(newPassword); msg != "" {
+			render(ChangePasswordPageData{Error: msg})
 			return
 		}
 		if newPassword != confirm {
@@ -1221,11 +1231,11 @@ func changePasswordHandler(w http.ResponseWriter, r *http.Request) {
 
 		newHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		if _, err := db.Exec("UPDATE users SET password_hash = $1 WHERE id = $2", string(newHash), userID); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 
@@ -1285,22 +1295,22 @@ func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 
 		token, err := generateResetToken()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		expires := time.Now().Add(resetTokenTTL)
 
 		if _, err := db.Exec(
 			"UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3",
-			token, expires, userID,
+			hashResetToken(token), expires, userID,
 		); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 
@@ -1332,7 +1342,7 @@ func resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		var expires time.Time
 		err := db.QueryRow(
 			"SELECT id, reset_token_expires FROM users WHERE reset_token = $1",
-			token,
+			hashResetToken(token),
 		).Scan(&userID, &expires)
 		if err == sql.ErrNoRows || (err == nil && time.Now().After(expires)) {
 			tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{
@@ -1341,13 +1351,13 @@ func resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 
-		if len(newPassword) < 6 {
+		if msg := validateNewPassword(newPassword); msg != "" {
 			tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{
-				Error: "Password must be at least 6 characters.", Valid: true, Token: token,
+				Error: msg, Valid: true, Token: token,
 			})
 			return
 		}
@@ -1360,14 +1370,14 @@ func resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 
 		newHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		if _, err := db.Exec(
 			"UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2",
 			string(newHash), userID,
 		); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 
@@ -1383,7 +1393,7 @@ func resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var expires time.Time
-	err := db.QueryRow("SELECT reset_token_expires FROM users WHERE reset_token = $1", token).Scan(&expires)
+	err := db.QueryRow("SELECT reset_token_expires FROM users WHERE reset_token = $1", hashResetToken(token)).Scan(&expires)
 	if err == sql.ErrNoRows || (err == nil && time.Now().After(expires)) {
 		tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{
 			Error: "This reset link is invalid or has expired.", Valid: false,
@@ -1391,7 +1401,7 @@ func resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 
@@ -2119,12 +2129,12 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if filters.Active() {
 		result, err := searchExpenses(userID, filters)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		settings, err := loadSettings(userID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 
@@ -2150,7 +2160,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 	data, err := loadExpensesByMonth(userID, month)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 
@@ -2378,7 +2388,7 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 		userID, description, amount, category, kind, createdAt,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 
@@ -2442,7 +2452,7 @@ func editHandler(w http.ResponseWriter, r *http.Request) {
 		description, amount, category, kind, newCreatedAt, id, userID,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 
@@ -2493,7 +2503,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 		id, userID,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 
@@ -2528,7 +2538,7 @@ func restoreHandler(w http.ResponseWriter, r *http.Request) {
 		"UPDATE expenses SET deleted_at = NULL WHERE id = $1 AND user_id = $2",
 		id, userID,
 	); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	http.Redirect(w, r, returnPath(r, r.FormValue("month"), ""), http.StatusSeeOther)
@@ -2546,7 +2556,7 @@ func categoriesHandler(w http.ResponseWriter, r *http.Request) {
 
 	settings, err := loadSettings(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 
@@ -2567,7 +2577,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	userID, username, _ := currentUser(r)
 	settings, err := loadSettings(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 
@@ -2579,7 +2589,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		userID,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	defer rows.Close()
@@ -2589,7 +2599,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		var a float64
 		var cat string
 		if err := rows.Scan(&a, &cat); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		amounts = append(amounts, a)
@@ -2635,7 +2645,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	chartJSON, err := json.Marshal(chartRows)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 
@@ -2665,7 +2675,7 @@ func settingsHandler(w http.ResponseWriter, r *http.Request) {
 	userID, username, _ := currentUser(r)
 	settings, err := loadSettings(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	settings.Username = username
@@ -2677,7 +2687,7 @@ func settingsHandler(w http.ResponseWriter, r *http.Request) {
 	// comes back as the zero value from the map, which is exactly "no limit".
 	limits, err := categoryLimits(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	settings.CategoryLimits = limits
@@ -2746,7 +2756,7 @@ func savedSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		// no picker) keeps what is already saved instead of resetting it.
 		existing, err := loadSettings(userID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		currency := strings.ToUpper(strings.TrimSpace(r.FormValue("currency")))
@@ -2763,11 +2773,11 @@ func savedSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			Theme:       theme,
 		}
 		if err := saveSettings(userID, newSettings); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		if err := saveCategoryBudgets(userID, categories, limits); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		http.Redirect(w, r, "/settings/saved", http.StatusSeeOther)
@@ -2776,7 +2786,7 @@ func savedSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 	settings, err := loadSettings(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	settings.Username = username
@@ -2804,13 +2814,13 @@ func clearHandler(w http.ResponseWriter, r *http.Request) {
 		userID, start, end,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 
 	existing, err := loadSettings(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	newSettings := SettingsData{
@@ -2824,7 +2834,7 @@ func clearHandler(w http.ResponseWriter, r *http.Request) {
 		Theme:      existing.Theme,
 	}
 	if err := saveSettings(userID, newSettings); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 
@@ -2839,16 +2849,15 @@ func archiveHandler(w http.ResponseWriter, r *http.Request) {
 
 	month := r.URL.Query().Get("month")
 	filters := parseFilters(r)
-	log.Printf("archive debug: month=%q filters=%+v active=%t", month, filters, filters.Active())
 	if archiveShouldSearch(month, filters) {
 		result, err := searchExpenses(userID, filters)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		settings, err := loadSettings(userID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		tmpl.ExecuteTemplate(w, "archive.html", map[string]interface{}{
@@ -2888,7 +2897,7 @@ func archiveHandler(w http.ResponseWriter, r *http.Request) {
 			userID,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		defer rows.Close()
@@ -2906,19 +2915,19 @@ func archiveHandler(w http.ResponseWriter, r *http.Request) {
 		for rows.Next() {
 			var ms MonthSummary
 			if err := rows.Scan(&ms.Month, &ms.Count, &ms.Spent, &ms.Received); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				serverError(w, err)
 				return
 			}
 			ms.Label = monthLabel(ms.Month)
 			months = append(months, ms)
 		}
 		if err := rows.Err(); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		settings, err := loadSettings(userID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		categoryOptions := categoryOptions(settings.Categories, filters.Category)
@@ -2931,12 +2940,12 @@ func archiveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data, err := loadExpensesByMonth(userID, month)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	settings, err := loadSettings(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	tmpl.ExecuteTemplate(w, "archive.html", map[string]interface{}{
@@ -2986,7 +2995,7 @@ func resetSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 	existing, err := loadSettings(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	newSettings := SettingsData{
@@ -2996,14 +3005,14 @@ func resetSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		Theme:       existing.Theme,
 	}
 	if err := saveSettings(userID, newSettings); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	// Limits live in their own table, so "reset everything" has to clear them
 	// explicitly — the default categories carry no limits, and saveCategoryBudgets
 	// only touches the categories it is handed.
 	if err := clearCategoryBudgets(userID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	http.Redirect(w, r, "/settings/saved", http.StatusSeeOther)
@@ -3021,12 +3030,12 @@ func resetBudgetHandler(w http.ResponseWriter, r *http.Request) {
 
 	existing, err := loadSettings(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	existing.BudgetLimit = 0
 	if err := saveSettings(userID, existing); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	http.Redirect(w, r, "/settings/saved", http.StatusSeeOther)
@@ -3045,7 +3054,7 @@ func expensesRawHandler(w http.ResponseWriter, r *http.Request) {
 		userID,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	defer rows.Close()
@@ -3059,7 +3068,7 @@ func expensesRawHandler(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var e RawExpense
 		if err := rows.Scan(&e.Amount, &e.Category, &e.CreatedAt); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			serverError(w, err)
 			return
 		}
 		data = append(data, e)
@@ -3081,7 +3090,7 @@ func exportPageHandler(w http.ResponseWriter, r *http.Request) {
 	// the same glyph everything else renders with.
 	settings, err := loadSettings(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 
@@ -3108,7 +3117,7 @@ func exportCSVHandler(w http.ResponseWriter, r *http.Request) {
 
 	settings, err := loadSettings(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 
@@ -3119,7 +3128,7 @@ func exportCSVHandler(w http.ResponseWriter, r *http.Request) {
 		userID, start, end,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	defer rows.Close()
@@ -3298,7 +3307,7 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
 	// interpolated value in this function gets.
 	settings, err := loadSettings(userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	symbol := template.HTMLEscapeString(currencySymbol(settings.Currency))
@@ -3311,7 +3320,7 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
 		userID, start, end,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serverError(w, err)
 		return
 	}
 	defer rows.Close()

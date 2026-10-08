@@ -97,6 +97,8 @@ func serverError(w http.ResponseWriter, err error) {
 //     script protection a lot; moving the inline code to /static and using
 //     nonces would let you drop it. The other directives still do real work.
 //   - Google's reCAPTCHA hosts for the signup widget.
+//   - Paystack's hosted checkout, as a form-action target: checkout is a POST that
+//     redirects there, and form-action also applies to redirects.
 //   - Google Fonts (the Inter typeface): stylesheet from fonts.googleapis.com,
 //     font files from fonts.gstatic.com.
 //
@@ -111,7 +113,7 @@ const contentSecurityPolicy = "default-src 'self'; " +
 	"frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; " +
 	"object-src 'none'; " +
 	"base-uri 'self'; " +
-	"form-action 'self'; " +
+	"form-action 'self' https://checkout.paystack.com; " +
 	"frame-ancestors 'none'"
 
 // cspHeader picks the header from CSP_MODE:
