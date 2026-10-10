@@ -9,6 +9,10 @@
     {{template "nav.html" .}}
 
     <main class="app-main">
+
+        <div class="trend-top">
+            {{template "account-bar" .}}
+        </div>
         <div class="alert alert-safe mb-5">
             <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
             <p><strong>Settings saved.</strong> Your changes are live.</p>
@@ -28,11 +32,6 @@
                     {{else}}
                     <span class="summary-value">Not set</span>
                     {{end}}
-                </div>
-
-                <div class="summary-row">
-                    <span class="summary-label">Appearance</span>
-                    <span class="summary-value capitalize">{{if .Theme}}{{.Theme}}{{else}}System{{end}}</span>
                 </div>
 
                 <div class="summary-row is-stacked">
@@ -81,8 +80,8 @@
                 </div>
                 <p class="modal-body">
                     This clears your monthly budget limit, your per-category limits,
-                    your theme preference and all of your categories. Your expenses
-                    and income are not deleted.
+                    and all of your categories. Your expenses and income are not
+                    deleted. Your browser's appearance preference is not changed.
                 </p>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-soft" data-close-modal>Cancel</button>

@@ -1,15 +1,4 @@
 {{define "terms.html"}}
-{{/*
-  Terms and Conditions.
-
-  NOT LEGAL ADVICE. This describes, accurately, what this specific application
-  actually does with a user's data — it is a starting point drafted from the
-  code, not a reviewed contract. Have it checked by a qualified professional
-  for the jurisdiction you operate in before relying on it.
-
-  Keep it in step with reality: if the app starts storing something new, this
-  page is one of the places that has to change.
-*/}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -122,7 +111,9 @@
             By creating an account you confirm that you have read and agree to these
             terms.
         </p>
-
+         <p class="note mt-4 text-center" style="color: var(--ink-faint);">
+            Budget Tracker v{{.Version}}
+        </p>
         <p class="mt-6">
             <a href="/register" class="btn btn-primary btn-block">Back to sign up</a>
         </p>

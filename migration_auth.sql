@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS settings (
     budget_limit DECIMAL(10,2) NOT NULL DEFAULT 0,
     currency VARCHAR(10) NOT NULL DEFAULT 'NGN',
     categories TEXT,
-    theme VARCHAR(10) NOT NULL DEFAULT 'system',
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 

@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/rand"
 	"database/sql"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -24,19 +26,37 @@ import (
 	"time"
 
 	"github.com/gorilla/sessions"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
-
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-// The two kinds of entry the ledger holds. They are the only values the
-// database accepts — migration 008 puts a CHECK constraint on the column — so
-// the Go side treats anything else as the default rather than inventing a
-// third.
+// appVersion is shown in the footer of Settings and Terms, and returned by
+// /healthz. Bump it before each deploy so a bug report can name the build.
+const appVersion = "2.2.1"
+
 const (
 	kindExpense = "expense"
 	kindIncome  = "income"
+
+	// noCategorySentinel is the value the category filter carries to mean
+	// "entries with an empty category". An out-of-band value rather than a
+	// second boolean on ExpenseFilters, because the sentinel only has to
+	// survive a URL round trip.
+	noCategorySentinel = "__none__"
+
+	// Contact details for the support page. Kept as constants here rather
+	// than hard-coded in the template, so one edit changes them everywhere.
+	//
+	// IMPORTANT: replace all three with real details before going live.
+	// supportWhatsApp must be the international format with no "+" and no
+	// spaces — wa.me rejects both. supportPhone is the display value; the
+	// tel: link is derived by stripping spaces.
+	supportEmail    = "chekusjoseph@gmail.com"
+	supportPhone    = "+234 9130 789 611"
+	supportWhatsApp = "2349130789611"
 )
 
 // normalizeKind maps whatever arrived in a form to a storable kind, defaulting
@@ -98,6 +118,9 @@ type PageChrome struct {
 	CurrencySymbol string
 	Month          string
 	Filters        ExpenseFilters
+	// Version is stamped onto every page's chrome so a template that shows
+	// the footer can print it without the handler passing it separately.
+	Version string
 }
 
 type PageData struct {
@@ -170,11 +193,19 @@ type CategoryTotal struct {
 	Total    float64
 }
 
+// CategoryOption is one entry in the category filter select. Value is what the
+// form submits; Label is what the user reads. They differ in one place: the
+// sentinel that means "the empty category" is submitted as "__none__" and
+// shown as "Uncategorized".
+type CategoryOption struct {
+	Value string
+	Label string
+}
+
 type SettingsData struct {
 	BudgetLimit float64
 	Currency    string // ISO code, as stored — binds the settings <select>
 	Categories  []string
-	Theme       string // "system", "light", "dark"
 	PageChrome
 
 	// CategoryLimits is the per-category monthly cap, keyed by category name.
@@ -224,6 +255,18 @@ type ResetPasswordPageData struct {
 	Token string
 }
 
+// SupportPageData is what support.html receives. All four contact fields
+// are derived from the three support* constants in main.go, so the template
+// never has to build a URL or strip a space.
+type SupportPageData struct {
+	PageChrome
+	Email        string
+	Phone        string // display value, e.g. "+234 800 000 0000"
+	PhoneLink    string // tel: compatible, no spaces
+	WhatsApp     string // wa.me number, no +, no spaces
+	WhatsAppText string // pre-filled message, URL-encoded
+}
+
 var db *sql.DB
 var tmpl *template.Template
 var store *sessions.CookieStore
@@ -252,11 +295,6 @@ func dbReady() bool {
 	return db != nil
 }
 
-// buildDSN resolves the PostgreSQL connection string. DATABASE_URL takes
-// precedence (paste the Supabase connection string verbatim); otherwise one is
-// assembled from the discrete DB_* variables, which is handy for a local
-// Postgres instance. Returns an error when nothing usable is configured, so the
-// caller can boot the server without a database rather than refuse to start.
 func buildDSN() (string, error) {
 	if dsn := strings.TrimSpace(os.Getenv("DATABASE_URL")); !isPlaceholderValue(dsn) {
 		return dsn, nil
@@ -268,10 +306,6 @@ func buildDSN() (string, error) {
 		return "", fmt.Errorf("database environment values are still placeholders or missing (set DATABASE_URL, or DB_HOST/DB_USER/DB_PASSWORD/DB_NAME)")
 	}
 
-	// An empty password is legitimate (local peer/trust auth), so it is not
-	// checked above — but a copied placeholder is not. Left alone it would be
-	// sent verbatim and surface later as a generic "ping failed", hiding the
-	// actual cause.
 	if pw := os.Getenv("DB_PASSWORD"); pw != "" && isPlaceholderValue(pw) {
 		return "", fmt.Errorf("DB_PASSWORD is still a placeholder value (set DATABASE_URL, or a real DB_PASSWORD)")
 	}
@@ -281,8 +315,6 @@ func buildDSN() (string, error) {
 		dbPort = "5432"
 	}
 
-	// Supabase requires TLS. Local instances generally have no certificate, so
-	// default to disabling it for loopback addresses only.
 	sslmode := strings.TrimSpace(os.Getenv("DB_SSLMODE"))
 	if sslmode == "" {
 		host := strings.TrimSpace(os.Getenv("DB_HOST"))
@@ -311,10 +343,23 @@ func requireDB(w http.ResponseWriter) bool {
 	return true
 }
 
-// healthzHandler is a liveness probe for the hosting platform and for external
-// uptime monitors. It returns 200 whenever the process is serving, so a
-// database blip cannot make the platform tear the service down; the database
-// state is reported in the body instead.
+func openPostgresDB(dsn string) (*sql.DB, error) {
+	config, err := postgresConfig(dsn)
+	if err != nil {
+		return nil, err
+	}
+	return stdlib.OpenDB(*config), nil
+}
+
+func postgresConfig(dsn string) (*pgx.ConnConfig, error) {
+	config, err := pgx.ParseConfig(dsn)
+	if err != nil {
+		return nil, err
+	}
+	config.DefaultQueryExecMode = pgx.QueryExecModeExec
+	return config, nil
+}
+
 func healthzHandler(w http.ResponseWriter, r *http.Request) {
 	dbStatus := "ok"
 	if db == nil {
@@ -333,7 +378,72 @@ func healthzHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":   "ok",
 		"database": dbStatus,
+		"version":  appVersion,
 	})
+}
+
+// ---------------------------------------------------------------------------
+// Response compression and static asset caching
+// ---------------------------------------------------------------------------
+
+// gzipMiddleware compresses text responses. HTML and CSS are highly
+// compressible — typically a 70-85% reduction — while images, fonts and
+// already-compressed assets are not, and are left alone.
+//
+// It sits outside securityHeaders so that error pages produced by any handler
+// are also compressed. It skips compression when the client has not advertised
+// gzip support, and deletes Content-Length on the way out because the length of
+// the uncompressed body is not the length of the compressed one — leaving it
+// would truncate the response.
+func gzipMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		// Already-compressed formats gain nothing from gzip; skipping them
+		// saves CPU on the server and bytes on the wire either way.
+		switch {
+		case strings.HasSuffix(r.URL.Path, ".png"),
+			strings.HasSuffix(r.URL.Path, ".jpg"),
+			strings.HasSuffix(r.URL.Path, ".jpeg"),
+			strings.HasSuffix(r.URL.Path, ".ico"),
+			strings.HasSuffix(r.URL.Path, ".woff"),
+			strings.HasSuffix(r.URL.Path, ".woff2"),
+			strings.HasSuffix(r.URL.Path, ".svg"):
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		if err != nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+		defer gz.Close()
+
+		w.Header().Set("Content-Encoding", "gzip")
+		// Vary tells caches that this response differs by Accept-Encoding, so a
+		// client that cannot read gzip is not handed a gzipped body.
+		w.Header().Add("Vary", "Accept-Encoding")
+		// Content-Length of the uncompressed body would be wrong for the
+		// compressed one; removing it lets the client use chunked encoding.
+		w.Header().Del("Content-Length")
+
+		next.ServeHTTP(&gzipResponseWriter{ResponseWriter: w, Writer: gz}, r)
+	})
+}
+
+type gzipResponseWriter struct {
+	http.ResponseWriter
+	io.Writer
+}
+
+func (g *gzipResponseWriter) Write(b []byte) (int, error) {
+	if g.Header().Get("Content-Type") == "" {
+		g.Header().Set("Content-Type", http.DetectContentType(b))
+	}
+	return g.Writer.Write(b)
 }
 
 func main() {
@@ -346,7 +456,7 @@ func main() {
 		log.Printf("%v; starting app without DB connectivity so the server boots", dsnErr)
 	} else {
 		var err error
-		db, err = sql.Open("pgx", dsn)
+		db, err = openPostgresDB(dsn)
 		if err != nil {
 			log.Printf("database configuration error: %v; starting app without a live database connection", err)
 		} else {
@@ -356,9 +466,6 @@ func main() {
 				db = nil
 			} else {
 				log.Println("database connection established")
-				// Bring the schema up to date before serving. A failure is not
-				// fatal: the server still boots and shows the "database not
-				// ready" page rather than crash-looping the instance.
 				if err := applyMigrations(context.Background(), db); err != nil {
 					log.Printf("migrations failed: %v; some pages will error until the schema is fixed", err)
 				}
@@ -371,10 +478,11 @@ func main() {
 	}
 
 	initSessionStore()
-	enableSharedRateLimits() // before the sweeper starts, so it sees the final setup
+	enableSharedRateLimits()
 	startRateLimiterSweeper()
 
 	tmpl = template.Must(template.New("index.html").Funcs(template.FuncMap{
+		"tile": tileIndex,
 		"mulf": func(a, b float64) float64 { return a * b },
 		"divf": func(a, b float64, _ ...float64) float64 {
 			if b == 0 {
@@ -383,17 +491,6 @@ func main() {
 			return a / b
 		},
 		"subtract": func(a, b float64) float64 { return a - b },
-		// money renders an amount with the user's currency: {{money $.CurrencySymbol .Amount}}.
-		// Taking the symbol as an argument (rather than closing over a global)
-		// keeps it correct for the anonymous maps the archive and export pages
-		// are built from, and makes the currency explicit at every call site.
-		//
-		// money keeps two decimals (amounts, balances); money0 drops them, for
-		// headline figures where the cents are noise — the same split the
-		// templates had with printf "%.2f" / "%.0f".
-		// A negative amount puts the sign in front of the symbol, not after it:
-		// "₦-37,000.00" reads as a typo, and the one figure that can go negative
-		// — a month's net — is also the one most likely to be glanced at.
 		"money": func(symbol string, v float64) string {
 			if v < 0 {
 				return "-" + symbol + commaGroupsPrec(-v, 2)
@@ -407,6 +504,7 @@ func main() {
 			return symbol + commaGroupsPrec(v, 0)
 		},
 	}).ParseFiles(
+		"templates/trends.html",
 		"templates/head.html",
 		"templates/index.html",
 		"templates/expenses_list.html",
@@ -422,12 +520,16 @@ func main() {
 		"templates/reset-password.html",
 		"templates/terms.html",
 		"templates/export.html",
+		"templates/billing.html",
+		"templates/support.html",
+		"templates/goals.html",
 	))
 	verifyTemplatesRender()
 
 	mux := http.NewServeMux()
-	// Authenticated routes
 	mux.HandleFunc("/", requireAuth(indexHandler))
+
+	mux.HandleFunc("/trends", requireAuth(trendsHandler))
 	mux.HandleFunc("/add", requireAuth(addHandler))
 	mux.HandleFunc("/edit/", requireAuth(editHandler))
 	mux.HandleFunc("/delete/", requireAuth(deleteHandler))
@@ -445,8 +547,12 @@ func main() {
 	mux.HandleFunc("/export/pdf", requireAuth(exportPDFHandler))
 	mux.HandleFunc("/api/categories", requireAuth(categoriesHandler))
 	mux.HandleFunc("/api/expenses-raw", requireAuth(expensesRawHandler))
+	mux.HandleFunc("/support", requireAuth(supportHandler))
+	mux.HandleFunc("/goals", requireAuth(goalsHandler))
+	mux.HandleFunc("/goals/create", requireAuth(goalsCreateHandler))
+	mux.HandleFunc("/goals/toggle/", requireAuth(goalsToggleHandler))
+	mux.HandleFunc("/goals/delete/", requireAuth(goalsDeleteHandler))
 
-	// Public routes
 	mux.HandleFunc("/healthz", healthzHandler)
 	mux.HandleFunc("/login", loginHandler)
 	mux.HandleFunc("/register", registerHandler)
@@ -455,11 +561,22 @@ func main() {
 	mux.HandleFunc("/forgot-password", forgotPasswordHandler)
 	mux.HandleFunc("/reset-password", resetPasswordHandler)
 
-	// Paystack billing (billing.go). Inert unless PAYSTACK_SECRET_KEY is set.
 	setupBilling(mux)
 
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	mux.Handle("/reports/", http.StripPrefix("/reports/", http.FileServer(http.Dir("reports"))))
+	// Static assets. A request that carries a version query (?v=N) is a
+	// content-addressed URL: bumping the N in head.html produces a different
+	// URL, so the browser can cache the response forever without ever serving
+	// a stale file. Requests without the query are cached for a day, which
+	// covers anything not yet on the versioned pattern.
+	staticFS := http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
+	mux.Handle("/static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("v") != "" {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else {
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+		}
+		staticFS.ServeHTTP(w, r)
+	}))
 
 	go autoMonthlyReset()
 
@@ -470,7 +587,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           securityHeaders(mux),
+		Handler:           gzipMiddleware(securityHeaders(mux)),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,
@@ -480,19 +597,11 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
-// ---------- Auth / sessions ----------
-
 func isTruthy(v string) bool {
 	v = strings.ToLower(strings.TrimSpace(v))
 	return v == "1" || v == "true" || v == "yes" || v == "on"
 }
 
-// externalBaseURL returns the origin the app is reachable at, e.g.
-// "https://budget-tracker.onrender.com". Hosting platforms terminate TLS in
-// front of the app, so r.TLS is nil even on an HTTPS request — deriving the
-// scheme from the request alone would produce http:// password-reset links.
-// APP_BASE_URL is the explicit override; RENDER_EXTERNAL_URL is set
-// automatically by Render.
 func externalBaseURL(r *http.Request) string {
 	for _, env := range []string{"APP_BASE_URL", "RENDER_EXTERNAL_URL"} {
 		if base := strings.TrimRight(strings.TrimSpace(os.Getenv(env)), "/"); base != "" {
@@ -514,14 +623,10 @@ func externalBaseURL(r *http.Request) string {
 	return scheme + "://" + r.Host
 }
 
-// secureCookieMode reports whether session cookies should carry the Secure
-// flag, which browsers require for cookies to be sent over HTTPS only.
-// It must stay off for plain-HTTP local development or logins break.
 func secureCookieMode() bool {
 	if v := strings.TrimSpace(os.Getenv("SESSION_COOKIE_SECURE")); v != "" {
 		return isTruthy(v)
 	}
-	// Render sets RENDER=true on every service it runs, and all of them are HTTPS.
 	if isTruthy(os.Getenv("RENDER")) {
 		return true
 	}
@@ -531,30 +636,14 @@ func secureCookieMode() bool {
 	return false
 }
 
-// ---------------------------------------------------------------------------
-// reCAPTCHA
-// ---------------------------------------------------------------------------
-
-// recaptchaSiteKey is the public half of the reCAPTCHA key pair. It is safe to
-// render into the page; Google uses it to tie the widget to this domain.
 func recaptchaSiteKey() string {
 	return strings.TrimSpace(os.Getenv("RECAPTCHA_SITE_KEY"))
 }
 
-// recaptchaSecretKey is the server-side half. It must never reach the browser.
 func recaptchaSecretKey() string {
 	return strings.TrimSpace(os.Getenv("RECAPTCHA_SECRET_KEY"))
 }
 
-// recaptchaRequired reports whether this instance must actually verify the
-// challenge before it will create an account.
-//
-// On a real deployment (HTTPS — the same signal that decides the session
-// cookie's Secure flag) a missing secret key makes signup *refuse*, rather
-// than quietly letting the check through. Failing open is the worse of the two
-// failures here: the site looks protected while accepting anything, and nobody
-// notices until the spam arrives. Locally the check is skipped so development
-// does not need keys.
 func recaptchaRequired() bool {
 	if recaptchaSecretKey() != "" {
 		return true
@@ -562,7 +651,6 @@ func recaptchaRequired() bool {
 	return secureCookieMode()
 }
 
-// recaptchaResponse is the subset of Google's siteverify reply we act on.
 type recaptchaResponse struct {
 	Success bool     `json:"success"`
 	Score   float64  `json:"score"`
@@ -570,22 +658,8 @@ type recaptchaResponse struct {
 	Errors  []string `json:"error-codes"`
 }
 
-// recaptchaClient has a timeout because it talks to a third party on the
-// signup path: without one, a hung Google endpoint would hold the request open
-// indefinitely instead of failing the signup.
 var recaptchaClient = &http.Client{Timeout: 10 * time.Second}
 
-// clientIP returns the caller's address, preferring the proxy header Render's
-// load balancer sets.
-//
-// The *right-most* X-Forwarded-For entry is the one to trust, not the
-// left-most. A client may send its own X-Forwarded-For, and a proxy appends
-// the address it actually saw to whatever arrived — so the header reaching us
-// is <anything the client claimed>, <real client>. Reading the left-most entry
-// would let a caller pick their own value, which matters because the login
-// rate limiter buckets by this string: a forged entry per request would be an
-// unlimited supply of fresh buckets. The right-most entry is the one our
-// single trusted hop appended, so it cannot be chosen by the caller.
 func clientIP(r *http.Request) string {
 	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
 		parts := strings.Split(fwd, ",")
@@ -599,9 +673,6 @@ func clientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-// verifyRecaptcha checks the token the widget submitted. Every failure returns
-// a message written for the person at the keyboard, because each one is
-// something they can act on (tick the box, try again).
 func verifyRecaptcha(r *http.Request, token string) error {
 	secret := recaptchaSecretKey()
 	if secret == "" {
@@ -635,7 +706,6 @@ func verifyRecaptcha(r *http.Request, token string) error {
 	defer resp.Body.Close()
 
 	var out recaptchaResponse
-	// Capped so a malformed or hostile reply cannot stream into memory.
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<16)).Decode(&out); err != nil {
 		log.Printf("recaptcha: could not decode siteverify reply: %v", err)
 		return fmt.Errorf("We couldn't verify that challenge. Please try again.")
@@ -648,43 +718,14 @@ func verifyRecaptcha(r *http.Request, token string) error {
 	return nil
 }
 
-// ---------------------------------------------------------------------------
-// Login rate limiting
-// ---------------------------------------------------------------------------
-
-// Brute-force protection for the sign-in form. Two budgets run side by side:
-//
-//   - per username, so nobody can sit on one account guessing passwords;
-//   - per client IP, so nobody can take a single guessed password (or a leaked
-//     password list) and try it against many accounts — a spray that never
-//     trips the per-username budget, because each name is only tried once.
-//
-// The windows are deliberately short. A long or permanent lockout would hand
-// an attacker a denial-of-service: they could shut a victim out of their own
-// account just by failing logins on that name. Fifteen minutes makes that a
-// nuisance rather than a lockout, while still turning an online guessing rate
-// from thousands per minute into a handful per quarter hour — far below the
-// rate at which a password can realistically be found.
-//
-// State is in memory, so it is per-process and resets on restart. For a single
-// always-on instance that is the right trade: a database round trip on every
-// failed login would cost far more than the protection is worth, and losing a
-// few counters to a deploy is harmless. Running two instances would need this
-// moved to shared storage to stay correct.
 const (
 	loginWindow     = 15 * time.Minute
 	maxFailsPerUser = 5
 	maxFailsPerIP   = 20
 
-	// Resets ride the same window and limiter type, at a lower budget: see
-	// allRateLimiters for why they are capped at all.
 	maxResetsPerEmail = 3
 	maxResetsPerIP    = 10
 
-	// maxRateKeys caps how many keys are tracked at once. Without it the map
-	// is itself a denial-of-service target — an attacker generating a fresh
-	// username or forged IP per request could grow it without bound. See
-	// evictLocked for what happens at the cap.
 	maxRateKeys = 10000
 )
 
@@ -693,17 +734,11 @@ type failWindow struct {
 	resetAt time.Time
 }
 
-// rateLimiter is a fixed-window failure counter. A nil-by-zero value is not
-// usable; construct one with newRateLimiter.
 type rateLimiter struct {
 	max int
 
-	// shared names this limiter's rows in the rate_limits table. Empty means
-	// in-memory only. Set by enableSharedRateLimits when the table is usable.
 	shared string
 
-	// now is time.Now in production. It is a field so tests can move the clock
-	// instead of sleeping for loginWindow.
 	now func() time.Time
 
 	mu      sync.Mutex
@@ -714,8 +749,6 @@ func newRateLimiter(max int) *rateLimiter {
 	return &rateLimiter{max: max, now: time.Now, buckets: make(map[string]*failWindow)}
 }
 
-// retryAfter reports how long key must wait before it may try again, or 0 if
-// it may try now. It does not record an attempt.
 func (l *rateLimiter) retryAfter(key string) time.Duration {
 	if d, ok := l.sharedRetryAfter(key); ok {
 		return d
@@ -730,8 +763,6 @@ func (l *rateLimiter) retryAfter(key string) time.Duration {
 	return w.resetAt.Sub(now)
 }
 
-// fail records one failed attempt and returns how long the caller must wait —
-// 0 while the budget lasts, then the remainder of the window once it is spent.
 func (l *rateLimiter) fail(key string) time.Duration {
 	if d, ok := l.sharedFail(key); ok {
 		return d
@@ -743,8 +774,6 @@ func (l *rateLimiter) fail(key string) time.Duration {
 
 	w, ok := l.buckets[key]
 	if !ok || !now.Before(w.resetAt) {
-		// A fresh window. If the map is at its cap, make room first rather
-		// than letting a new key grow it further.
 		if len(l.buckets) >= maxRateKeys {
 			l.evictLocked(now)
 		}
@@ -758,8 +787,6 @@ func (l *rateLimiter) fail(key string) time.Duration {
 	return w.resetAt.Sub(now)
 }
 
-// reset clears key, called after a successful sign-in so that someone who
-// mistyped a few times and then got it right starts clean.
 func (l *rateLimiter) reset(key string) {
 	l.sharedReset(key)
 	l.mu.Lock()
@@ -767,10 +794,7 @@ func (l *rateLimiter) reset(key string) {
 	delete(l.buckets, key)
 }
 
-// sweep drops expired windows so idle keys do not accumulate. Called on a
-// ticker; fail() also evicts when it needs room.
 func (l *rateLimiter) sweep() {
-	l.sharedSweep()
 	now := l.now()
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -785,20 +809,12 @@ func (l *rateLimiter) sweepLocked(now time.Time) {
 	}
 }
 
-// evictLocked makes room at the cap by dropping expired windows first, then —
-// if every window is still live, which means a genuine flood — half the map in
-// whatever order the range gives. Discarding a live counter is a deliberate
-// concession: it briefly thins the protection for some keys, but it keeps
-// memory bounded, and the per-key budget has already done its work for the
-// windows being dropped. Caller must hold l.mu.
 func (l *rateLimiter) evictLocked(now time.Time) {
 	l.sweepLocked(now)
 	if len(l.buckets) < maxRateKeys {
 		return
 	}
 	for k := range l.buckets {
-		// Deleting during a range is well-defined in Go: entries removed
-		// before they are reached are simply not produced.
 		delete(l.buckets, k)
 		if len(l.buckets) <= maxRateKeys/2 {
 			return
@@ -806,13 +822,6 @@ func (l *rateLimiter) evictLocked(now time.Time) {
 	}
 }
 
-// Global limiters, one per budget. Shared across requests, so they must be
-// safe for concurrent use — which is why every accessor takes the mutex.
-//
-// The password-reset budgets are tighter than the login ones because the
-// endpoint sends mail to an address the caller chooses: without a cap it is a
-// way to flood someone's inbox, and to burn through the transactional-email
-// quota the whole app depends on. A real person asks for a reset once.
 var (
 	loginLimiterUser = newRateLimiter(maxFailsPerUser)
 	loginLimiterIP   = newRateLimiter(maxFailsPerIP)
@@ -821,22 +830,16 @@ var (
 	resetLimiterIP    = newRateLimiter(maxResetsPerIP)
 )
 
-// allRateLimiters is what the background sweeper walks, so adding a budget
-// cannot leave it unswept and slowly growing.
 var allRateLimiters = []*rateLimiter{
 	loginLimiterUser, loginLimiterIP,
 	resetLimiterEmail, resetLimiterIP,
 }
 
-// userRateKey and ipRateKey namespace the two budgets. Without distinct
-// prefixes a username and an IP could collide on the same string.
 func userRateKey(username string) string {
 	return "user:" + strings.ToLower(strings.TrimSpace(username))
 }
 func ipRateKey(r *http.Request) string { return "ip:" + clientIP(r) }
 
-// waitingForLogin returns the longer of the two lockouts currently in force
-// for this request, or 0 if it may proceed.
 func waitingForLogin(r *http.Request, username string) time.Duration {
 	if d := loginLimiterUser.retryAfter(userRateKey(username)); d > 0 {
 		return d
@@ -844,10 +847,6 @@ func waitingForLogin(r *http.Request, username string) time.Duration {
 	return loginLimiterIP.retryAfter(ipRateKey(r))
 }
 
-// recordLoginFailure charges one attempt against both budgets and returns how
-// long the caller must now wait. Both are always charged: the per-IP budget is
-// what catches a spray spread across many usernames, so it must count every
-// failure, not only the ones that exhausted a single account's budget.
 func recordLoginFailure(r *http.Request, username string) time.Duration {
 	a := loginLimiterUser.fail(userRateKey(username))
 	b := loginLimiterIP.fail(ipRateKey(r))
@@ -857,9 +856,6 @@ func recordLoginFailure(r *http.Request, username string) time.Duration {
 	return a
 }
 
-// loginLockoutMessage is written for the person at the keyboard: it says what
-// happened and, importantly, how long they should wait before retrying.
-// Rounded up so "1 minute" is never shown for 20 seconds remaining.
 func loginLockoutMessage(wait time.Duration) string {
 	minutes := int(math.Ceil(wait.Minutes()))
 	if minutes < 1 {
@@ -871,9 +867,6 @@ func loginLockoutMessage(wait time.Duration) string {
 	return fmt.Sprintf("Too many failed sign-in attempts. Please wait %d minutes and try again.", minutes)
 }
 
-// resetLockoutMessage is the same idea for the password-reset form. It is
-// deliberately about *requests*, not failures: nothing here fails, the form is
-// just being used more often than a person would.
 func resetLockoutMessage(wait time.Duration) string {
 	minutes := int(math.Ceil(wait.Minutes()))
 	if minutes < 1 {
@@ -885,15 +878,11 @@ func resetLockoutMessage(wait time.Duration) string {
 	return fmt.Sprintf("Too many reset requests. Please wait %d minutes and try again.", minutes)
 }
 
-// tooManyAttempts renders the login page with a 429. The status and the
-// Retry-After header are set before the body so that a browser or a CLI client
-// sees them even though the response carries a full HTML page.
 func tooManyAttempts(w http.ResponseWriter, wait time.Duration) {
 	writeRetryAfter(w, wait)
 	tmpl.ExecuteTemplate(w, "login.html", AuthPageData{Error: loginLockoutMessage(wait)})
 }
 
-// tooManyResets does the same for the forgot-password page.
 func tooManyResets(w http.ResponseWriter, wait time.Duration) {
 	writeRetryAfter(w, wait)
 	tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{Error: resetLockoutMessage(wait)})
@@ -904,16 +893,11 @@ func writeRetryAfter(w http.ResponseWriter, wait time.Duration) {
 	w.WriteHeader(http.StatusTooManyRequests)
 }
 
-// resetRateKey and resetIPRateKey namespace the reset budgets separately from
-// the login ones. Sharing a limiter would let an attacker exhaust someone's
-// login attempts using the reset form — or the reverse — with no password
-// guessing involved at all.
 func resetRateKey(email string) string {
 	return "reset:" + strings.ToLower(strings.TrimSpace(email))
 }
 func resetIPRateKey(r *http.Request) string { return "reset-ip:" + clientIP(r) }
 
-// waitingForReset is waitingForLogin's counterpart on the reset form.
 func waitingForReset(r *http.Request, email string) time.Duration {
 	if d := resetLimiterEmail.retryAfter(resetRateKey(email)); d > 0 {
 		return d
@@ -921,8 +905,6 @@ func waitingForReset(r *http.Request, email string) time.Duration {
 	return resetLimiterIP.retryAfter(resetIPRateKey(r))
 }
 
-// chargeReset records one reset request against both budgets and returns the
-// longer of the two waits once a budget is spent.
 func chargeReset(r *http.Request, email string) time.Duration {
 	a := resetLimiterEmail.fail(resetRateKey(email))
 	b := resetLimiterIP.fail(resetIPRateKey(r))
@@ -932,14 +914,8 @@ func chargeReset(r *http.Request, email string) time.Duration {
 	return a
 }
 
-// sweepInterval is how often expired rate-limit windows are dropped. It is
-// much shorter than loginWindow because the sweep is what bounds memory during
-// an attack, and it is cheap: two passes over a map that is usually tiny.
 const sweepInterval = time.Minute
 
-// startRateLimiterSweeper runs the two sweeps on a ticker for the life of the
-// process. It never stops, which is fine — the process exiting is the only
-// shutdown this app has, and a goroutine blocked on a ticker costs nothing.
 func startRateLimiterSweeper() {
 	go func() {
 		ticker := time.NewTicker(sweepInterval)
@@ -948,6 +924,7 @@ func startRateLimiterSweeper() {
 			for _, l := range allRateLimiters {
 				l.sweep()
 			}
+			sweepSharedRateLimits(time.Now())
 		}
 	}()
 }
@@ -986,9 +963,21 @@ func currentUser(r *http.Request) (id int, username string, ok bool) {
 	return idVal, nameVal, true
 }
 
+// initChrome fills in the shared chrome fields that every handler needs and
+// none of them should have to remember. Currently just the version.
+func initChrome(c *PageChrome) {
+	c.Version = appVersion
+}
+
 func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, _, ok := currentUser(r); !ok {
+		userID, _, ok := currentUser(r)
+		if !ok || !sessionStillValid(r, userID) {
+			session := getSession(r)
+			session.Options.MaxAge = -1
+			if err := session.Save(r, w); err != nil {
+				log.Printf("failed to clear stale session: %v", err)
+			}
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
@@ -1017,9 +1006,6 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		confirm := r.FormValue("confirm_password")
 		accepted := r.FormValue("accept_terms") != ""
 
-		// Carried back into the form on every rejected attempt below, so a
-		// failed signup never costs the user their typing. The password is the
-		// one field that cannot be echoed back.
 		echo := AuthPageData{
 			Username:         username,
 			Email:            email,
@@ -1052,10 +1038,6 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Checked before bcrypt and before the insert — those are the two
-		// expensive parts of signup, and a bot should not get to spend them.
-		// reCAPTCHA tokens are single-use, so this has to come after the cheap
-		// validation above and can never be retried with the same token.
 		if recaptchaRequired() {
 			if err := verifyRecaptcha(r, r.FormValue("g-recaptcha-response")); err != nil {
 				reject(err.Error())
@@ -1071,25 +1053,42 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// PostgreSQL has no LastInsertId; RETURNING id is the equivalent.
+		tx, err := db.BeginTx(r.Context(), nil)
+		if err != nil {
+			serverError(w, err)
+			return
+		}
+		defer tx.Rollback()
+
 		var userID int
-		err = db.QueryRow(
+		err = tx.QueryRowContext(r.Context(),
 			`INSERT INTO users (username, email, password_hash, terms_accepted_at)
 			 VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id`,
 			username, email, string(hash),
 		).Scan(&userID)
 		if err != nil {
-			reject("That username or email is already taken.")
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+				reject("That username or email is already taken.")
+			} else {
+				serverError(w, err)
+			}
 			return
 		}
 
-		if _, err := saveSettingsTx(userID, defaultSettings()); err != nil {
-			log.Printf("failed to create default settings for user %d: %v", userID, err)
+		if _, err := upsertSettings(tx, userID, defaultSettings()); err != nil {
+			serverError(w, err)
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			serverError(w, err)
+			return
 		}
 
 		session := getSession(r)
 		session.Values["user_id"] = userID
 		session.Values["username"] = username
+		session.Values["sv"] = 0
 		if err := session.Save(r, w); err != nil {
 			serverError(w, err)
 			return
@@ -1100,11 +1099,10 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "register.html", AuthPageData{RecaptchaSiteKey: recaptchaSiteKey()})
 }
 
-// termsHandler serves the Terms and Conditions the signup form links to.
-// Public on purpose: you have to be able to read them before you have an
-// account to sign in with.
 func termsHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl.ExecuteTemplate(w, "terms.html", nil)
+	tmpl.ExecuteTemplate(w, "terms.html", map[string]interface{}{
+		"Version": appVersion,
+	})
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -1120,26 +1118,18 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		username := strings.TrimSpace(r.FormValue("username"))
 		password := r.FormValue("password")
 
-		// Checked before touching the database, so a locked-out caller costs
-		// one map lookup rather than a query and a bcrypt comparison. That
-		// ordering is the point of the limiter: bcrypt is deliberately slow,
-		// and without this an attacker makes the server do that work for free.
 		if wait := waitingForLogin(r, username); wait > 0 {
 			tooManyAttempts(w, wait)
 			return
 		}
 
-		var id int
+		var id, sessionVersion int
 		var passwordHash string
-		err := db.QueryRow("SELECT id, password_hash FROM users WHERE username = $1", username).Scan(&id, &passwordHash)
+		err := db.QueryRow(
+			"SELECT id, password_hash, session_version FROM users WHERE username = $1", username,
+		).Scan(&id, &passwordHash, &sessionVersion)
 		if err != nil {
-			// Burn the same bcrypt time as a wrong password, so response time
-			// does not reveal which usernames exist (see dummyHash).
 			bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
-			// Same message and same accounting whether the account is missing
-			// or the password is wrong. Charging the budget in both cases is
-			// what stops the limiter being used to discover which usernames
-			// exist: the response is identical either way.
 			if wait := recordLoginFailure(r, username); wait > 0 {
 				tooManyAttempts(w, wait)
 				return
@@ -1156,15 +1146,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Clear this account's failures. The per-IP budget is deliberately not
-		// cleared: one valid account is not evidence that the other attempts
-		// from this address were innocent, and letting a success wipe the
-		// address would hand a sprayer a reset button.
 		loginLimiterUser.reset(userRateKey(username))
 
 		session := getSession(r)
 		session.Values["user_id"] = id
 		session.Values["username"] = username
+		session.Values["sv"] = sessionVersion
 		if err := session.Save(r, w); err != nil {
 			serverError(w, err)
 			return
@@ -1188,11 +1175,6 @@ func changePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, username, _ := currentUser(r)
 
-	// Every branch below re-renders the same page with different feedback, and
-	// that page carries the shared chrome, so the currency has to be present in
-	// all of them. Routing them through one closure is what keeps a branch from
-	// being forgotten — which is exactly how the currency label was missed here
-	// when it was added.
 	settings, err := loadSettings(userID)
 	if err != nil {
 		serverError(w, err)
@@ -1201,6 +1183,7 @@ func changePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	render := func(d ChangePasswordPageData) {
 		d.Username = username
 		d.CurrencySymbol = currencySymbol(settings.Currency)
+		initChrome(&d.PageChrome)
 		if err := tmpl.ExecuteTemplate(w, "change-password.html", d); err != nil {
 			log.Printf("failed to render change-password template: %v", err)
 		}
@@ -1234,9 +1217,22 @@ func changePasswordHandler(w http.ResponseWriter, r *http.Request) {
 			serverError(w, err)
 			return
 		}
-		if _, err := db.Exec("UPDATE users SET password_hash = $1 WHERE id = $2", string(newHash), userID); err != nil {
+		var newVersion int
+		if err := db.QueryRow(
+			`UPDATE users
+				 SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL,
+				     session_version = session_version + 1
+				 WHERE id = $2
+				 RETURNING session_version`,
+			string(newHash), userID,
+		).Scan(&newVersion); err != nil {
 			serverError(w, err)
 			return
+		}
+		session := getSession(r)
+		session.Values["sv"] = newVersion
+		if err := session.Save(r, w); err != nil {
+			log.Printf("failed to re-stamp session: %v", err)
 		}
 
 		render(ChangePasswordPageData{Success: "Password updated."})
@@ -1244,8 +1240,6 @@ func changePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	render(ChangePasswordPageData{})
 }
-
-// ---------- Password reset ----------
 
 const resetTokenTTL = 15 * time.Minute
 
@@ -1265,11 +1259,6 @@ func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
 
-		// Charged before anything else — before the empty-email return and
-		// before the lookup — so that a known address and an unknown one cost
-		// the same and behave the same. Charging only on a hit would turn this
-		// into an account-discovery oracle, undoing the equal-response design
-		// below.
 		if wait := waitingForReset(r, email); wait > 0 {
 			tooManyResets(w, wait)
 			return
@@ -1279,8 +1268,6 @@ func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Always show the same success message whether or not the email exists,
-		// so this endpoint can't be used to discover which emails are registered.
 		successMsg := "If an account exists with that email, a reset link has been sent."
 
 		if email == "" {
@@ -1316,10 +1303,11 @@ func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 
 		resetLink := fmt.Sprintf("%s/reset-password?token=%s", externalBaseURL(r), token)
 
-		if err := sendResetEmail(email, resetLink); err != nil {
-			log.Printf("failed to send reset email to %s: %v", email, err)
-			// Don't leak the failure to the client — same generic message either way.
-		}
+		go func() {
+			if err := sendResetEmail(email, resetLink); err != nil {
+				log.Printf("failed to send reset email: %v", err)
+			}
+		}()
 
 		tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{Success: successMsg})
 		return
@@ -1333,21 +1321,28 @@ func resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Cache-Control", "no-store")
+
+	invalid := func() {
+		tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{
+			Error: "This reset link is invalid or has expired.", Valid: false,
+		})
+	}
+
 	if r.Method == http.MethodPost {
 		token := r.FormValue("token")
 		newPassword := r.FormValue("new_password")
 		confirm := r.FormValue("confirm_password")
+		tokenHash := hashResetToken(token)
 
 		var userID int
-		var expires time.Time
 		err := db.QueryRow(
-			"SELECT id, reset_token_expires FROM users WHERE reset_token = $1",
-			hashResetToken(token),
-		).Scan(&userID, &expires)
-		if err == sql.ErrNoRows || (err == nil && time.Now().After(expires)) {
-			tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{
-				Error: "This reset link is invalid or has expired.", Valid: false,
-			})
+			"SELECT id FROM users WHERE reset_token = $1 AND reset_token_expires > $2",
+			tokenHash, time.Now(),
+		).Scan(&userID)
+		if err == sql.ErrNoRows {
+			invalid()
 			return
 		}
 		if err != nil {
@@ -1373,11 +1368,20 @@ func resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 			serverError(w, err)
 			return
 		}
-		if _, err := db.Exec(
-			"UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2",
-			string(newHash), userID,
-		); err != nil {
+
+		res, err := db.Exec(
+			`UPDATE users
+				 SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL,
+				     session_version = session_version + 1
+				 WHERE id = $2 AND reset_token = $3 AND reset_token_expires > $4`,
+			string(newHash), userID, tokenHash, time.Now(),
+		)
+		if err != nil {
 			serverError(w, err)
+			return
+		}
+		if n, err := res.RowsAffected(); err == nil && n == 0 {
+			invalid()
 			return
 		}
 
@@ -1385,37 +1389,34 @@ func resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// GET: validate the token before showing the form
 	token := r.URL.Query().Get("token")
 	if token == "" {
 		tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{Valid: false})
 		return
 	}
 
-	var expires time.Time
-	err := db.QueryRow("SELECT reset_token_expires FROM users WHERE reset_token = $1", hashResetToken(token)).Scan(&expires)
-	if err == sql.ErrNoRows || (err == nil && time.Now().After(expires)) {
-		tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{
-			Error: "This reset link is invalid or has expired.", Valid: false,
-		})
-		return
-	}
+	var exists bool
+	err := db.QueryRow(
+		"SELECT EXISTS (SELECT 1 FROM users WHERE reset_token = $1 AND reset_token_expires > $2)",
+		hashResetToken(token), time.Now(),
+	).Scan(&exists)
 	if err != nil {
 		serverError(w, err)
+		return
+	}
+	if !exists {
+		invalid()
 		return
 	}
 
 	tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{Valid: true, Token: token})
 }
 
-// ---------- Settings ----------
-
 func defaultSettings() SettingsData {
 	return SettingsData{
 		BudgetLimit: 0,
 		Currency:    "NGN",
 		Categories:  []string{"Food", "Transport", "Bills"},
-		Theme:       "system",
 	}
 }
 
@@ -1423,13 +1424,13 @@ func loadSettings(userID int) (SettingsData, error) {
 	var s SettingsData
 	var categoriesStr string
 	err := db.QueryRow(
-		"SELECT budget_limit, currency, categories, theme FROM settings WHERE user_id = $1",
+		"SELECT budget_limit, currency, categories FROM settings WHERE user_id = $1",
 		userID,
-	).Scan(&s.BudgetLimit, &s.Currency, &categoriesStr, &s.Theme)
+	).Scan(&s.BudgetLimit, &s.Currency, &categoriesStr)
 
 	if err == sql.ErrNoRows {
 		s = defaultSettings()
-		if _, err2 := saveSettingsTx(userID, s); err2 != nil {
+		if _, err2 := upsertSettings(db, userID, s); err2 != nil {
 			return s, err2
 		}
 		return s, nil
@@ -1443,37 +1444,27 @@ func loadSettings(userID int) (SettingsData, error) {
 	return s, nil
 }
 
-func saveSettingsTx(userID int, s SettingsData) (sql.Result, error) {
+type settingsExecer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
+func upsertSettings(exec settingsExecer, userID int, s SettingsData) (sql.Result, error) {
 	s.Categories = normalizeCategories(s.Categories)
-	return db.Exec(`
-		INSERT INTO settings (user_id, budget_limit, currency, categories, theme)
-		VALUES ($1, $2, $3, $4, $5)
+	return exec.Exec(`
+		INSERT INTO settings (user_id, budget_limit, currency, categories)
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (user_id) DO UPDATE SET
 			budget_limit = EXCLUDED.budget_limit,
 			currency = EXCLUDED.currency,
-			categories = EXCLUDED.categories,
-			theme = EXCLUDED.theme
-	`, userID, s.BudgetLimit, s.Currency, strings.Join(s.Categories, ","), s.Theme)
+			categories = EXCLUDED.categories
+	`, userID, s.BudgetLimit, s.Currency, strings.Join(s.Categories, ","))
 }
 
 func saveSettings(userID int, s SettingsData) error {
-	_, err := saveSettingsTx(userID, s)
+	_, err := upsertSettings(db, userID, s)
 	return err
 }
 
-// saveCategoryBudgets stores the per-category limits submitted by the settings
-// form. categories and limits are parallel slices, in document order.
-//
-// A limit of zero is a deletion. Every reader treats "no row" and "limit is
-// zero" the same way — the category simply has no bar — so keeping a zero row
-// would only give the settings screen a row for every category ever given a
-// limit and then cleared.
-//
-// Categories the form did not mention are left alone, which is deliberate: the
-// form is not the only thing that knows about limits. A category can be removed
-// from the list while expenses still carry it, and deleting its limit would
-// quietly uncap spending that is still being measured. The way to remove a bar
-// is to set its limit to zero.
 func saveCategoryBudgets(userID int, categories []string, limits []float64) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -1507,22 +1498,13 @@ func saveCategoryBudgets(userID int, categories []string, limits []float64) erro
 	return tx.Commit()
 }
 
-// clearCategoryBudgets drops every limit the user has set. Used by "reset all
-// settings", where leaving limits behind would mean the reset did not reset
-// everything it said it would.
 func clearCategoryBudgets(userID int) error {
 	_, err := db.Exec("DELETE FROM category_budgets WHERE user_id = $1", userID)
 	return err
 }
 
-// ---------- Helpers ----------
-
 func currentMonth() string { return time.Now().Format("2006-01") }
 
-// homePath builds the redirect target after a delete or a restore, so the user
-// lands back on the month they were looking at. Falls back to the current month
-// when no month was submitted, and only accepts a well-formed YYYY-MM — the
-// value arrives from the request and ends up in a Location header.
 func homePath(month, deletedID string) string {
 	values := url.Values{}
 	if _, err := time.Parse("2006-01", month); err == nil {
@@ -1537,14 +1519,6 @@ func homePath(month, deletedID string) string {
 	return "/"
 }
 
-// returnPath is where a destructive action sends the user next: back to
-// whatever they were looking at. That is normally the month view, but if the
-// form carried filters it is the same search results — deleting one hit from a
-// search should not throw the rest of the results away.
-//
-// The filters are rebuilt from the posted hidden fields rather than replayed
-// from a stored URL, so a hand-edited value cannot turn the redirect into a way
-// off the site.
 func returnPath(r *http.Request, month, deletedID string) string {
 	filters := filtersFromForm(r)
 	if !filters.Active() {
@@ -1573,11 +1547,6 @@ func addMonth(ym string, n int) string {
 	return t.AddDate(0, n, 0).Format("2006-01")
 }
 
-// normalizeMonth returns ym when it is a well-formed "YYYY-MM", and the current
-// month otherwise. Request-supplied months reach SQL only as bind parameters,
-// so this is not about injection — it is about rejecting junk before it is
-// turned into a date range, where a malformed value would surface as a query
-// error rather than the empty result it has always produced.
 func normalizeMonth(ym string) string {
 	if _, err := time.Parse("2006-01", ym); err != nil {
 		return currentMonth()
@@ -1585,20 +1554,9 @@ func normalizeMonth(ym string) string {
 	return ym
 }
 
-// monthRange returns the half-open interval [start, end) covering the "YYYY-MM"
-// month ym, as "YYYY-MM-DD" strings to bind as ::timestamp parameters.
-//
-// Filtering with `created_at >= start AND created_at < end` rather than
-// `to_char(created_at,'YYYY-MM') = ym` leaves the column bare, so the
-// (user_id, created_at DESC) index can bound the scan by date instead of the
-// planner evaluating to_char() on every row the user owns. created_at is a
-// naive timestamp (see migrations/README.md), so the bound is cast to
-// ::timestamp and no time-zone conversion is involved.
 func monthRange(ym string) (string, string) {
 	start, err := time.Parse("2006-01", ym)
 	if err != nil {
-		// Callers pass normalizeMonth's output; fall back rather than emit a
-		// zero time if that ever stops being true.
 		start = time.Now()
 	}
 	return start.Format("2006-01-02"), start.AddDate(0, 1, 0).Format("2006-01-02")
@@ -1659,11 +1617,6 @@ func loadExpensesByMonth(userID int, month string) (PageData, error) {
 	}, nil
 }
 
-// ---------- Per-category budgets ----------
-
-// categoryLimits reads the stored per-category limits. A limit of zero is not
-// returned at all: zero means "no limit set", not "spend nothing", so the
-// caller never has to special-case it.
 func categoryLimits(userID int) (map[string]float64, error) {
 	rows, err := db.Query(
 		`SELECT category, limit_amount FROM category_budgets
@@ -1687,17 +1640,6 @@ func categoryLimits(userID int) (map[string]float64, error) {
 	return limits, rows.Err()
 }
 
-// categoryBudgetProgress pairs each limit with what has been spent against it
-// this month.
-//
-// Only expenses count. Income carries a category too — a refund, a salary — but
-// a limit is a cap on spending, so paying yourself into the "Food" category
-// must not buy back room in the Food bar.
-//
-// The order is the user's own category order, with any category that has a
-// limit but is no longer in the list following, alphabetically. Sorting the
-// bars by how full they are would make them swap places every time an expense
-// was added — which is exactly the moment someone is watching them.
 func categoryBudgetProgress(userID int, month string, order []string) ([]CategoryBudget, error) {
 	limits, err := categoryLimits(userID)
 	if err != nil {
@@ -1742,10 +1684,6 @@ func categoryBudgetProgress(userID int, month string, order []string) ([]Categor
 		}
 	}
 
-	// Limits whose category is no longer in the list. They still matter: the
-	// expenses that carry that category are still being counted, and dropping
-	// the bar would hide spending rather than stop it. Ordered so the list does
-	// not reshuffle — ranging over a map in Go is deliberately random.
 	var rest []string
 	for name := range limits {
 		if !seen[name] && limits[name] > 0 {
@@ -1760,9 +1698,40 @@ func categoryBudgetProgress(userID int, month string, order []string) ([]Categor
 	return budgets, nil
 }
 
-// budgetWarnFraction is where a bar turns amber: 80% of the limit. One constant
-// so the monthly bar and every category bar agree on what "nearly there" means.
 const budgetWarnFraction = 0.8
+
+// safeToSpend divides what's left of the monthly budget by the days remaining
+// in the current month, including today. It answers "can I afford this
+// today?", which a lump sum that only shrinks does not.
+//
+// Only meaningful for the current month: a past month has no days left to
+// divide over, and a future month has nothing spent against it yet. The
+// handler checks data.Month == currentMonth() before setting the value, so
+// the template only sees a number when it's true.
+//
+// The divisor never drops below 1. On the last day of the month the whole
+// remaining amount is "safe to spend today", which is what someone at the
+// end of the month needs to see.
+func safeToSpend(budget, spent float64, month string) float64 {
+	if budget <= 0 {
+		return 0
+	}
+	remaining := budget - spent
+	if remaining <= 0 {
+		return 0
+	}
+	start, err := time.Parse("2006-01", month)
+	if err != nil {
+		return 0
+	}
+	// Last day of the month: one month forward, one day back.
+	lastDay := start.AddDate(0, 1, -1).Day()
+	daysRemaining := lastDay - time.Now().Day() + 1
+	if daysRemaining < 1 {
+		daysRemaining = 1
+	}
+	return remaining / float64(daysRemaining)
+}
 
 func newCategoryBudget(category string, limit, spent float64) CategoryBudget {
 	b := CategoryBudget{
@@ -1771,8 +1740,6 @@ func newCategoryBudget(category string, limit, spent float64) CategoryBudget {
 		Spent:     spent,
 		Remaining: limit - spent,
 	}
-	// Capped so the bar cannot overflow its track; the uncapped figure is kept
-	// alongside it, which is how a category at 240% still reads as 240%.
 	b.PercentUsed = spent / limit * 100
 	b.PercentOfLimit = b.PercentUsed
 	if b.PercentOfLimit > 100 {
@@ -1783,43 +1750,23 @@ func newCategoryBudget(category string, limit, spent float64) CategoryBudget {
 	return b
 }
 
-// ---------------------------------------------------------------------------
-// Search and filtering
-// ---------------------------------------------------------------------------
-
-// ExpenseFilters is the parsed state of the filter form on the home screen.
-//
-// The filters deliberately search *every* month rather than narrowing the one
-// on screen. "Where did I put that £80?" is a question about all of your
-// history; answering it only within the month you happen to be looking at
-// would make the feature useless for its main purpose. When any filter is
-// active the home screen switches to a results view, and the month switcher —
-// which has no meaning for a cross-month result set — is not shown.
 type ExpenseFilters struct {
-	Query    string // free text, matched against the description
+	Query    string
 	Category string
-	Kind     string // "" for everything, otherwise kindExpense or kindIncome
-	From     string // "YYYY-MM-DD", inclusive
-	To       string // "YYYY-MM-DD", inclusive
+	Kind     string
+	From     string
+	To       string
 }
 
-// Active reports whether anything is being filtered. This is what decides
-// between the month view and the results view.
 func (f ExpenseFilters) Active() bool {
 	return f.Query != "" || f.Category != "" || f.Kind != "" || f.From != "" || f.To != ""
 }
 
-// archiveShouldSearch decides whether the archive should render the filtered
-// results view before it falls back to the monthly list. The route used to
-// short-circuit on an empty month before checking the active filters, which made
-// a fresh search on /archive show the month summary instead of the matching rows.
 func archiveShouldSearch(month string, filters ExpenseFilters) bool {
 	_ = month
 	return filters.Active()
 }
 
-// Values returns the filters as a query string, for round-tripping them
-// through a redirect or into a form's action.
 func (f ExpenseFilters) Values() url.Values {
 	values := url.Values{}
 	if f.Query != "" {
@@ -1840,40 +1787,16 @@ func (f ExpenseFilters) Values() url.Values {
 	return values
 }
 
-// parseFilters reads the filter form. Values that cannot be used are dropped
-// rather than rejected: a half-typed date or a stray character should narrow
-// the search less, not fail the request. The parsed struct is what gets echoed
-// back into the form, so the user sees what was actually applied.
 func parseFilters(r *http.Request) ExpenseFilters {
 	return parseFiltersFrom(r.URL.Query().Get, true)
 }
 
-// filtersFromForm reads the same filters back out of a submitted form, where
-// they travel as hidden inputs rather than in the query string. The field names
-// differ in one place for a reason: the add/edit modal already has a "category"
-// field for the entry's own category and a "kind" field for the entry's own
-// kind, so the filter's copies are posted as "category_filter" and "kind_filter".
-// Everything that carries filters uses those names so that one reader serves
-// them all.
-//
-// The plain names are deliberately not accepted here — see parseFiltersFrom.
 func filtersFromForm(r *http.Request) ExpenseFilters {
 	return parseFiltersFrom(func(key string) string {
 		return r.FormValue(key)
 	}, false)
 }
 
-// parseFiltersFrom is the shared body of the two readers above, taking a lookup
-// rather than a request so that the GET and POST paths cannot drift apart in
-// how they interpret a date or when they swap a reversed range.
-//
-// allowPlainNames says whether a bare "category" or "kind" may stand in for the
-// _filter form of the name. It is true for the query string, where the GET form
-// posts those names and nothing else uses them, and false for a submitted form,
-// where they belong to the entry being saved. Allowing them there made saving an
-// edited entry redirect into a search the user never asked for: the entry's own
-// category and kind were read back as filters, so an edit landed on
-// "/?category=Food&kind=expense" instead of the month it came from.
 func parseFiltersFrom(get func(string) string, allowPlainNames bool) ExpenseFilters {
 	f := ExpenseFilters{
 		Query:    strings.TrimSpace(get("q")),
@@ -1882,13 +1805,6 @@ func parseFiltersFrom(get func(string) string, allowPlainNames bool) ExpenseFilt
 		To:       strings.TrimSpace(get("to")),
 	}
 
-	// Only the two real kinds are accepted. An unrecognised value narrows
-	// nothing rather than emptying the results, which is what a user typing a
-	// URL by hand should get.
-	//
-	// Same two-name arrangement as the category above, and for the same reason:
-	// the add/edit modal posts "kind" to mean the kind of the entry being
-	// saved, so a form carrying both uses "kind_filter" for the search's.
 	kind := strings.TrimSpace(get("kind_filter"))
 	if kind == "" && allowPlainNames {
 		kind = strings.TrimSpace(get("kind"))
@@ -1900,9 +1816,6 @@ func parseFiltersFrom(get func(string) string, allowPlainNames bool) ExpenseFilt
 		f.Kind = kindIncome
 	}
 
-	// The GET form names its category field "category" — there is no expense
-	// being posted alongside it to collide with. Fall back to it when the
-	// hidden-input name produced nothing.
 	if f.Category == "" && allowPlainNames {
 		f.Category = strings.TrimSpace(get("category"))
 	}
@@ -1918,26 +1831,14 @@ func parseFiltersFrom(get func(string) string, allowPlainNames bool) ExpenseFilt
 		f.To = ""
 	}
 
-	// "From June, to March" is meaningless as written and almost certainly a
-	// slip. Swapping the two answers the question the user meant to ask; an
-	// empty result would just look broken. ISO dates compare correctly as
-	// strings, so no re-parsing is needed.
 	if f.From != "" && f.To != "" && f.From > f.To {
 		f.From, f.To = f.To, f.From
 	}
 	return f
 }
 
-// searchResultLimit caps how many rows a search returns. Without it a search
-// that matches everything would stream the entire table into one page. The
-// query asks for one row more than the limit so the caller can tell the
-// difference between "exactly this many" and "there are more".
 const searchResultLimit = 500
 
-// likeEscape neutralises the characters LIKE and ILIKE treat as wildcards, so
-// that searching for "50%" looks for the text "50%" instead of matching every
-// row that starts with "50". The backslash itself has to go first, or it would
-// escape the escapes added after it.
 func likeEscape(s string) string {
 	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }
@@ -1950,8 +1851,6 @@ func searchQueryClause(start int, term string) (string, []any) {
 	), []any{q, q, q, q}
 }
 
-// searchResult is what a search found: the rows, their two totals, and whether
-// the list was cut short.
 type searchResult struct {
 	Expenses  []Expense
 	Spent     float64
@@ -1959,13 +1858,6 @@ type searchResult struct {
 	Truncated bool
 }
 
-// searchExpenses returns the expenses matching f.
-//
-// The WHERE clause is assembled from a fixed set of fragments, each
-// contributing its own placeholder to args — no part of the user's input is
-// ever concatenated into the SQL itself. The clauses are joined in a stable
-// order so that the same search always produces the same statement, which is
-// what lets Postgres reuse a prepared plan across requests.
 func searchExpenses(userID int, f ExpenseFilters) (searchResult, error) {
 	where := []string{"user_id = $1", "deleted_at IS NULL"}
 	args := []any{userID}
@@ -1980,7 +1872,12 @@ func searchExpenses(userID int, f ExpenseFilters) (searchResult, error) {
 		where = append(where, clause)
 		args = append(args, values...)
 	}
-	if f.Category != "" {
+	if f.Category == noCategorySentinel {
+		// An out-of-band value, not a category name. Matching it as a literal
+		// string would return nothing; the intent is the rows whose category
+		// is empty.
+		where = append(where, "category = ''")
+	} else if f.Category != "" {
 		add("category = $%d", f.Category)
 	}
 	if f.Kind != "" {
@@ -1990,10 +1887,6 @@ func searchExpenses(userID int, f ExpenseFilters) (searchResult, error) {
 		add("created_at >= $%d::date", f.From)
 	}
 	if f.To != "" {
-		// Inclusive of the whole of the "to" day: >= midnight and < the
-		// following midnight. Written as an interval rather than a second
-		// date literal so the boundary stays correct across month ends and
-		// across the DST change a fixed interval would get wrong.
 		add("created_at < ($%d::date + interval '1 day')", f.To)
 	}
 
@@ -2032,10 +1925,6 @@ func searchExpenses(userID int, f ExpenseFilters) (searchResult, error) {
 
 	result.Truncated = len(result.Expenses) > searchResultLimit
 	if result.Truncated {
-		// Drop the extra row used to detect the cut-off, and take it back out
-		// of the totals: the figures shown have to be the sum of the rows the
-		// user can actually see, or the two contradict each other on screen.
-		// It comes out of whichever total it went into.
 		extra := result.Expenses[searchResultLimit]
 		if extra.Income() {
 			result.Received -= extra.Amount
@@ -2047,11 +1936,6 @@ func searchExpenses(userID int, f ExpenseFilters) (searchResult, error) {
 	return result, nil
 }
 
-// categoryOptions is the category list for the filter select. The active
-// filter is appended when it is not already in the list — a category can be
-// removed from settings while expenses still carry it, and without this the
-// select would fall back to "All categories" while a category filter was in
-// fact being applied, leaving the user no way to see or clear it.
 func normalizeCategories(categories []string) []string {
 	seen := map[string]struct{}{}
 	out := make([]string, 0, len(categories))
@@ -2069,26 +1953,30 @@ func normalizeCategories(categories []string) []string {
 	return out
 }
 
-func categoryOptions(configured []string, selected string) []string {
-	options := append([]string{}, configured...)
+func categoryOptions(configured []string, selected string) []CategoryOption {
+	options := make([]CategoryOption, 0, len(configured)+1)
+	for _, c := range configured {
+		options = append(options, CategoryOption{Value: c, Label: c})
+	}
 	if selected == "" {
 		return options
 	}
-	for _, c := range options {
-		if c == selected {
+	for _, o := range options {
+		if o.Value == selected {
 			return options
 		}
 	}
-	return append(options, selected)
+	// The selected value is not in the configured list. Two cases: a real
+	// category that was removed from settings but still tags some expenses,
+	// or the sentinel meaning "the empty category". Both are appended so the
+	// select reflects what is actually being filtered.
+	label := selected
+	if selected == noCategorySentinel {
+		label = "Uncategorized"
+	}
+	return append(options, CategoryOption{Value: selected, Label: label})
 }
 
-// parseExpenseDate reads the date field of the add and edit forms. ok is false
-// for a blank, unparseable or future date, and the caller decides what that
-// means: the add form falls back to now, the edit form leaves the stored
-// value alone.
-//
-// The time of day is taken from now rather than midnight so a backfilled
-// expense still sorts among that day's entries the way its neighbours do.
 func parseExpenseDate(raw string) (time.Time, bool) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -2106,8 +1994,6 @@ func parseExpenseDate(raw string) (time.Time, bool) {
 	return candidate, true
 }
 
-// ---------- Handlers ----------
-
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireDB(w) {
 		return
@@ -2116,14 +2002,12 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	month := normalizeMonth(r.URL.Query().Get("month"))
 	filters := parseFilters(r)
 
-	// Every page that renders nav.html needs this, and the filter form needs
-	// it in both views, so it is set once here rather than in each branch.
 	templateData := map[string]interface{}{
 		"Username":     username,
 		"Filters":      filters,
 		"CurrentMonth": currentMonth(),
-		// Set after a delete so the page can offer an undo. Absent otherwise.
-		"DeletedID": r.URL.Query().Get("deleted"),
+		"DeletedID":    r.URL.Query().Get("deleted"),
+		"Version":      appVersion,
 	}
 
 	if filters.Active() {
@@ -2147,13 +2031,12 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		templateData["ResultLimit"] = searchResultLimit
 		templateData["CurrencySymbol"] = currencySymbol(settings.Currency)
 		templateData["CategoryOptions"] = categoryOptions(settings.Categories, filters.Category)
-		// The shared expense list reads .Month for the delete form's round-trip.
-		// There is no month on a cross-month search, but leaving the key out
-		// would print "<no value>" into the form rather than an empty one.
 		templateData["Month"] = ""
 
 		if err := tmpl.ExecuteTemplate(w, "index.html", templateData); err != nil {
-			log.Printf("failed to render index template: %v", err)
+			if !isClientDisconnect(err) {
+				log.Printf("failed to render index template: %v", err)
+			}
 		}
 		return
 	}
@@ -2178,10 +2061,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	templateData["CategoryBudgets"] = data.CategoryBudgets
 	templateData["CurrencySymbol"] = data.CurrencySymbol
 
-	// A budget is a cap on *spending*, so it is measured against what went out
-	// and not against the month's net. Income raises the money available, but
-	// it does not license spending past the limit the user set — the limit is
-	// the plan, and the plan is about outgoings.
 	if data.BudgetLimit > 0 {
 		remaining := data.BudgetLimit - data.Spent
 		percent := (data.Spent / data.BudgetLimit) * 100
@@ -2190,54 +2069,37 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		templateData["HasBudget"] = true
 		templateData["Remaining"] = remaining
-		// The hero figure is "left to spend", which is the same magnitude as the
-		// overspend when the limit is passed — so the template can print one
-		// value and change only the label around it.
 		templateData["OverAmount"] = math.Abs(remaining)
 		templateData["Percent"] = percent
-		// Warn at 80% of the limit. Never blocks an expense — see the brief.
 		templateData["WarnAt"] = data.BudgetLimit * budgetWarnFraction
+
+		// Safe-to-spend is a per-day figure, so it only makes sense while the
+		// month has days left and money in it. Both conditions are checked
+		// here rather than in the template, so a stale value cannot be shown
+		// on a past month's view.
+		if data.Month == currentMonth() && remaining > 0 {
+			templateData["SafeToSpend"] = safeToSpend(data.BudgetLimit, data.Spent, data.Month)
+		}
 	}
 
 	if err := tmpl.ExecuteTemplate(w, "index.html", templateData); err != nil {
-		log.Printf("failed to render index template: %v", err)
+		if !isClientDisconnect(err) {
+			log.Printf("failed to render index template: %v", err)
+		}
 	}
 }
 
-// verifyTemplatesRender executes every page once at startup against a
-// representative data value, and refuses to start if any of them fails.
-//
-// This exists because html/template fails at *execution* time, not parse time.
-// A page handed a value that lacks a field the shared chrome reads renders
-// correctly right up to that point and then stops — serving a truncated
-// document with a 200 status. Nothing surfaces it: go build is happy, the
-// browser shows a half-page without complaining, and the symptom reads like
-// broken markup rather than a missing field. That is exactly how adding the
-// currency label to nav.html silently truncated the change-password page.
-//
-// Rendering each page once here turns that from a silently wrong page into a
-// process that will not boot. A deploy that cannot boot is rolled back, so it
-// also becomes a break that cannot be shipped.
-//
-// The data below is hand-written rather than produced by calling the handlers,
-// which would need a database. That means it has to be kept in step with them
-// by hand; the payoff is that forgetting a field fails loudly here instead of
-// quietly on one page.
 func verifyTemplatesRender() {
 	sample := Expense{
 		ID: 1, Description: "Sample expense", Amount: 12.5, Category: "Food",
 		Kind: kindExpense, CreatedAt: "2026-01-01 12:00:00", Date: "2026-01-01",
 	}
-	// A second row of the other kind, so the list's income branches — the sign,
-	// the icon, the green — are actually executed rather than merely parsed.
 	sampleIncome := Expense{
 		ID: 2, Description: "Sample income", Amount: 250, Category: "Salary",
 		Kind: kindIncome, CreatedAt: "2026-01-02 09:00:00", Date: "2026-01-02",
 	}
 	noFilters := ExpenseFilters{}
 
-	// The home screen's month view, in both budget states, the undo toast, and
-	// the search results view — four genuinely different sets of branches.
 	home := func() map[string]interface{} {
 		return map[string]interface{}{
 			"Username": "sam", "CurrencySymbol": "₦", "Filters": noFilters,
@@ -2246,11 +2108,11 @@ func verifyTemplatesRender() {
 			"Spent": 12.5, "Received": 250.0, "Net": 237.5,
 			"Expenses":    []Expense{sample, sampleIncome},
 			"BudgetLimit": 100.0, "Categories": []string{"Food"},
-			"CategoryOptions": []string{"Food"},
+			"CategoryOptions": []CategoryOption{{Value: "Food", Label: "Food"}},
 			"CategoryBudgets": []CategoryBudget{
 				newCategoryBudget("Food", 100, 12.5),
-				newCategoryBudget("Transport", 40, 55), // over, to render the over branch
-				newCategoryBudget("Bills", 50, 42),     // near, to render the near branch
+				newCategoryBudget("Transport", 40, 55),
+				newCategoryBudget("Bills", 50, 42),
 			},
 		}
 	}
@@ -2260,6 +2122,9 @@ func verifyTemplatesRender() {
 	withBudget["OverAmount"] = 87.5
 	withBudget["Percent"] = 12.5
 	withBudget["WarnAt"] = 80.0
+	// Renders the safe-to-spend line, so the {{if .SafeToSpend}} branch is
+	// actually executed at startup rather than merely parsed.
+	withBudget["SafeToSpend"] = 12.50
 
 	withUndo := home()
 	withUndo["DeletedID"] = "1"
@@ -2280,7 +2145,7 @@ func verifyTemplatesRender() {
 	archiveMonths := map[string]interface{}{
 		"Username": "sam", "CurrencySymbol": "₦", "Details": nil,
 		"Months":  []monthSummary{{Month: "2026-01", Label: "January 2026", Count: 1, Spent: 12.5, Received: 250}},
-		"Filters": ExpenseFilters{}, "CategoryOptions": []string{"Food"},
+		"Filters": ExpenseFilters{}, "CategoryOptions": []CategoryOption{{Value: "Food", Label: "Food"}},
 	}
 	archiveDetail := map[string]interface{}{
 		"Username": "sam", "CurrencySymbol": "₦", "Months": nil,
@@ -2290,18 +2155,17 @@ func verifyTemplatesRender() {
 			BudgetLimit: 100, Categories: []string{"Food"},
 			CategoryBudgets: []CategoryBudget{
 				newCategoryBudget("Food", 100, 12.5),
-				newCategoryBudget("Transport", 40, 55), // over, to render the over branch
-				newCategoryBudget("Bills", 50, 42),     // near, to render the near branch
+				newCategoryBudget("Transport", 40, 55),
+				newCategoryBudget("Bills", 50, 42),
 			},
 			PageChrome: PageChrome{Month: "2026-01", CurrencySymbol: "₦"},
 		},
 		"Label": "January 2026", "Month": "2026-01",
-		"Filters": ExpenseFilters{}, "CategoryOptions": []string{"Food"},
+		"Filters": ExpenseFilters{}, "CategoryOptions": []CategoryOption{{Value: "Food", Label: "Food"}},
 	}
 
 	settings := SettingsData{
 		BudgetLimit: 100, Currency: "NGN", Categories: []string{"Food", "Transport", "Bills"},
-		Theme:          "system",
 		PageChrome:     PageChrome{Username: "sam", CurrencySymbol: "₦"},
 		CurrencyList:   currencyOptions,
 		CategoryLimits: map[string]float64{"Food": 100},
@@ -2312,9 +2176,9 @@ func verifyTemplatesRender() {
 		data interface{}
 	}{
 		{"index.html", withBudget},
-		{"index.html", home()},    // no budget set: the other hero
-		{"index.html", withUndo},  // the undo toast
-		{"index.html", searching}, // the results view
+		{"index.html", home()},
+		{"index.html", withUndo},
+		{"index.html", searching},
 		{"archive.html", archiveMonths},
 		{"archive.html", archiveDetail},
 		{"report.html", ReportData{
@@ -2339,6 +2203,33 @@ func verifyTemplatesRender() {
 		{"forgot-password.html", ForgotPasswordPageData{Success: "Sent."}},
 		{"reset-password.html", ResetPasswordPageData{Valid: true, Token: "token"}},
 		{"reset-password.html", ResetPasswordPageData{Valid: false}},
+		{"goals.html", GoalsPageData{
+			PageChrome:   PageChrome{Username: "sam", CurrencySymbol: "₦"},
+			DefaultMonth: "2026-10",
+			CurrentMonth: "2026-10",
+			CurrentYear:  "2026",
+			HasAny:       true,
+			ActiveGroups: []GoalGroup{
+				{Period: "2026-10", Scope: "month", Label: "October 2026", Goals: []Goal{
+					{ID: 1, Title: "Pay rent", Note: "Before the 5th", HasAmount: true, Amount: 80000},
+					{ID: 2, Title: "Read a book"},
+				}},
+				{Period: "2026", Scope: "year", Label: "2026", Goals: []Goal{
+					{ID: 3, Title: "Save for a car", HasAmount: true, Amount: 500000},
+				}},
+			},
+			Completed: []Goal{
+				{ID: 4, Title: "Set up a budget", Completed: true},
+			},
+		}},
+		{"support.html", SupportPageData{
+			PageChrome:   PageChrome{Username: "sam", CurrencySymbol: "₦"},
+			Email:        "support@example.com",
+			Phone:        "+234 800 000 0000",
+			PhoneLink:    "+2348000000000",
+			WhatsApp:     "2348000000000",
+			WhatsAppText: "Hi%2C%20I%20need%20help%20with%20Budget%20Tracker.",
+		}},
 		{"terms.html", nil},
 	}
 
@@ -2360,10 +2251,6 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, _, _ := currentUser(r)
 
-	// There is deliberately no budget check here. Passing the monthly limit is
-	// a warning shown on the home screen, never a reason to refuse the entry —
-	// blocking it would push the user to track expenses somewhere else.
-
 	description := strings.TrimSpace(r.FormValue("description"))
 	amount, err := strconv.ParseFloat(strings.TrimSpace(r.FormValue("amount")), 64)
 	if err != nil || amount < 0 {
@@ -2371,13 +2258,8 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	category := strings.TrimSpace(r.FormValue("category"))
-	// Money in or money out. Anything unrecognised is treated as an expense —
-	// see normalizeKind.
 	kind := normalizeKind(r.FormValue("kind"))
 
-	// The date field lets a user backfill an expense from earlier in the month.
-	// Anything unparseable, or in the future, falls back to now rather than
-	// failing the submission.
 	createdAt := time.Now()
 	if d, ok := parseExpenseDate(r.FormValue("date")); ok {
 		createdAt = d
@@ -2392,20 +2274,9 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Adding always lands on the month the expense went into, which is what
-	// the modal tells the user will happen.
 	http.Redirect(w, r, homePath(createdAt.Format("2006-01"), ""), http.StatusSeeOther)
 }
 
-// editHandler updates an expense in place, driven by the same modal as
-// addHandler. The two share a form, so they share a validation shape: the same
-// description/amount/category rules, and the same refusal to reject a value
-// the add form would have accepted.
-//
-// Ownership is enforced in the WHERE clause rather than by reading the row
-// first and checking afterwards. A row belonging to someone else matches
-// nothing, so there is no window between the check and the write, and no code
-// path where the check can be forgotten.
 func editHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireDB(w) {
 		return
@@ -2431,13 +2302,7 @@ func editHandler(w http.ResponseWriter, r *http.Request) {
 	category := strings.TrimSpace(r.FormValue("category"))
 	kind := normalizeKind(r.FormValue("kind"))
 
-	// created_at is only rewritten when the date actually changed. The date
-	// input carries a day and no time, so writing it unconditionally would
-	// stamp today's clock time onto an expense the user only wanted to
-	// re-price — quietly reordering it among that day's entries. Comparing
-	// against the value the form was rendered with means "I edited the
-	// amount" leaves the timestamp exactly as it was.
-	var newCreatedAt any // NULL tells Postgres to keep the existing value
+	var newCreatedAt any
 	if raw := strings.TrimSpace(r.FormValue("date")); raw != "" && raw != strings.TrimSpace(r.FormValue("orig_date")) {
 		if d, ok := parseExpenseDate(raw); ok {
 			newCreatedAt = d
@@ -2456,17 +2321,11 @@ func editHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Nothing matched: the expense is not this user's, is already deleted, or
-	// the id was guessed. Redirect as if it worked rather than reporting a
-	// difference — the caller learns nothing either way.
 	if n, err := res.RowsAffected(); err == nil && n == 0 {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	// Back to where the user was. If there is a search to return to, land back
-	// on its results; otherwise land on the month the expense now belongs to —
-	// which is the month it was already in, unless the date was changed.
 	if filters := filtersFromForm(r); filters.Active() {
 		http.Redirect(w, r, "/?"+filters.Values().Encode(), http.StatusSeeOther)
 		return
@@ -2479,9 +2338,6 @@ func editHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, homePath(target, ""), http.StatusSeeOther)
 }
 
-// deleteHandler soft-deletes: the row keeps its place in the table with
-// deleted_at set, so the undo toast can bring it back. Every read of expenses
-// therefore filters on deleted_at IS NULL.
 func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireDB(w) {
 		return
@@ -2507,8 +2363,6 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Nothing was updated — the row is already gone, so there is nothing to
-	// offer an undo for.
 	if n, err := res.RowsAffected(); err == nil && n == 0 {
 		http.Redirect(w, r, returnPath(r, r.FormValue("month"), ""), http.StatusSeeOther)
 		return
@@ -2517,7 +2371,6 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, returnPath(r, r.FormValue("month"), strconv.Itoa(id)), http.StatusSeeOther)
 }
 
-// restoreHandler reverses a soft delete while the undo toast is still on screen.
 func restoreHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireDB(w) {
 		return
@@ -2544,10 +2397,6 @@ func restoreHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, returnPath(r, r.FormValue("month"), ""), http.StatusSeeOther)
 }
 
-// categoriesHandler backs the category select in the add-expense modal. The
-// modal lives in the shared chrome, which every page renders with a different
-// data shape, so the categories are fetched rather than threaded through seven
-// handlers.
 func categoriesHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireDB(w) {
 		return
@@ -2581,9 +2430,6 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Spending only, and over all time. This is a spending report: an income
-	// entry would sit in a category breakdown as if it were something bought,
-	// and would push every category's share down. The report page says so.
 	rows, err := db.Query(
 		"SELECT amount, category FROM expenses WHERE user_id = $1 AND kind = 'expense' AND deleted_at IS NULL",
 		userID,
@@ -2624,8 +2470,6 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	for cat, t := range categoryTotals {
 		breakdown = append(breakdown, CategoryTotal{Category: cat, Total: t})
 	}
-	// A map iterates in random order, which would reshuffle the chart and the
-	// list beneath it on every single load. Biggest category first.
 	sort.Slice(breakdown, func(i, j int) bool {
 		if breakdown[i].Total == breakdown[j].Total {
 			return breakdown[i].Category < breakdown[j].Category
@@ -2633,8 +2477,6 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		return breakdown[i].Total > breakdown[j].Total
 	})
 
-	// The chart wants a compact [{"category":…,"total":…}, …] shape. Marshalled
-	// here rather than in the template so escaping stays in one place.
 	chartRows := make([]struct {
 		Category string  `json:"category"`
 		Total    float64 `json:"total"`
@@ -2662,6 +2504,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		PageChrome: PageChrome{
 			Username:       username,
 			CurrencySymbol: currencySymbol(settings.Currency),
+			Version:        appVersion,
 		},
 	}); err != nil {
 		log.Printf("failed to render report template: %v", err)
@@ -2681,10 +2524,8 @@ func settingsHandler(w http.ResponseWriter, r *http.Request) {
 	settings.Username = username
 	settings.CurrencySymbol = currencySymbol(settings.Currency)
 	settings.CurrencyList = currencyOptions
+	settings.Version = appVersion
 
-	// The category rows each carry a limit box beside the name, so the form
-	// needs the current limits as well as the names. A category with no row
-	// comes back as the zero value from the map, which is exactly "no limit".
 	limits, err := categoryLimits(userID)
 	if err != nil {
 		serverError(w, err)
@@ -2707,22 +2548,6 @@ func savedSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil || budget < 0 {
 			budget = 0
 		}
-		theme := r.FormValue("theme")
-		if theme == "" {
-			theme = "system"
-		}
-		// Categories round-trip as a comma-joined string: saveSettingsTx joins
-		// them and loadSettings splits on ",". A comma inside a name would
-		// therefore split it into two on the next load, so strip commas and
-		// blank entries here rather than storing a value that cannot survive
-		// the round trip.
-		//
-		// The limit box beside each name is a second array in the same document
-		// order, so the two are read together and junk is dropped from both at
-		// once: dropping a blank name without dropping its limit would slide
-		// every later limit onto the wrong category. Read from PostForm rather
-		// than Form so a query string cannot interleave values and break that
-		// alignment.
 		rawNames := r.PostForm["category"]
 		rawLimits := r.PostForm["category_limit"]
 		categories := make([]string, 0, len(rawNames))
@@ -2737,9 +2562,6 @@ func savedSettingsHandler(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			seen[c] = struct{}{}
-			// An unparseable or negative box means "no limit", which the save
-			// below turns into a deletion. The input is type=number, so this is
-			// really only reached by a browser that ignores the type.
 			var limit float64
 			if i < len(rawLimits) {
 				if v, err := strconv.ParseFloat(strings.TrimSpace(rawLimits[i]), 64); err == nil && v > 0 {
@@ -2749,11 +2571,6 @@ func savedSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			categories = append(categories, c)
 			limits = append(limits, limit)
 		}
-		// Only a code from currencyOptions is storable: anything else would be
-		// echoed back as its own raw text ("XYZ 1,200.00") by currencySymbol,
-		// so an unrecognised value collapses to the default rather than being
-		// persisted. A missing field (a cached copy of an older form, which had
-		// no picker) keeps what is already saved instead of resetting it.
 		existing, err := loadSettings(userID)
 		if err != nil {
 			serverError(w, err)
@@ -2770,7 +2587,6 @@ func savedSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			BudgetLimit: budget,
 			Currency:    currency,
 			Categories:  categories,
-			Theme:       theme,
 		}
 		if err := saveSettings(userID, newSettings); err != nil {
 			serverError(w, err)
@@ -2791,6 +2607,7 @@ func savedSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	settings.Username = username
 	settings.CurrencySymbol = currencySymbol(settings.Currency)
+	settings.Version = appVersion
 	tmpl.ExecuteTemplate(w, "saved-settings.html", settings)
 }
 
@@ -2806,8 +2623,6 @@ func clearHandler(w http.ResponseWriter, r *http.Request) {
 
 	month := normalizeMonth(r.FormValue("month"))
 
-	// A confirmed reset is a real delete, not a soft one — the user has been
-	// asked, and keeping the rows would only confuse the month totals.
 	start, end := monthRange(month)
 	_, err := db.Exec(
 		"DELETE FROM expenses WHERE user_id = $1 AND created_at >= $2::timestamp AND created_at < $3::timestamp",
@@ -2826,12 +2641,7 @@ func clearHandler(w http.ResponseWriter, r *http.Request) {
 	newSettings := SettingsData{
 		BudgetLimit: 0,
 		Currency:    existing.Currency,
-		// Clearing a month resets the budget (the confirm dialog says so) but
-		// must not touch the category list — that lives in Settings and is not
-		// mentioned by the dialog, so silently restoring the defaults would
-		// destroy the user's setup as a side effect of an unrelated action.
-		Categories: existing.Categories,
-		Theme:      existing.Theme,
+		Categories:  existing.Categories,
 	}
 	if err := saveSettings(userID, newSettings); err != nil {
 		serverError(w, err)
@@ -2872,19 +2682,11 @@ func archiveHandler(w http.ResponseWriter, r *http.Request) {
 			"Username":        username,
 			"CurrencySymbol":  currencySymbol(settings.Currency),
 			"CategoryOptions": categoryOptions(settings.Categories, filters.Category),
+			"Version":         appVersion,
 		})
 		return
 	}
 	if month == "" {
-		// A month appears once it has any entry — income as well as spending.
-		// Filtering the list to spending-only months would hide a month the
-		// home screen is perfectly happy to show, which reads as data loss.
-		//
-		// The two kinds are counted and summed apart, so a month's headline
-		// figure stays a spending figure rather than a net that no single row
-		// on the screen corresponds to. FILTER is SQL's way of saying "the sum
-		// of the rows where", and COALESCE covers a month with only one kind:
-		// SUM over no rows is NULL, which would scan into a float64 as an error.
 		rows, err := db.Query(
 			`SELECT to_char(created_at,'YYYY-MM') AS ym,
 			        COUNT(*) FILTER (WHERE kind = 'expense'),
@@ -2903,13 +2705,9 @@ func archiveHandler(w http.ResponseWriter, r *http.Request) {
 		defer rows.Close()
 		type MonthSummary struct {
 			Month, Label string
-			// Count and Spent describe spending; Received is separate for the
-			// same reason the home screen keeps them separate — a month's
-			// headline is what went out, and netting the two would print a
-			// figure that matches no single row in the month.
-			Count    int
-			Spent    float64
-			Received float64
+			Count        int
+			Spent        float64
+			Received     float64
 		}
 		var months []MonthSummary
 		for rows.Next() {
@@ -2935,6 +2733,7 @@ func archiveHandler(w http.ResponseWriter, r *http.Request) {
 			"Months": months, "Details": nil, "Username": username,
 			"CurrencySymbol": currencySymbol(settings.Currency),
 			"Filters":        filters, "CategoryOptions": categoryOptions,
+			"Version": appVersion,
 		})
 		return
 	}
@@ -2952,31 +2751,30 @@ func archiveHandler(w http.ResponseWriter, r *http.Request) {
 		"Months": nil, "Details": data, "Label": monthLabel(month), "Month": month, "Username": username,
 		"CurrencySymbol": data.CurrencySymbol,
 		"Filters":        filters, "CategoryOptions": categoryOptions(settings.Categories, filters.Category),
+		"Version": appVersion,
 	})
 }
 
 func autoMonthlyReset() {
-	// main() deliberately supports booting with no database (db == nil) so the
-	// server can serve a "database not ready" page. Without this guard the
-	// goroutine would sleep until 00:05 on the 1st and then panic the process
-	// on the first db.Exec.
 	if !dbReady() {
 		return
 	}
+	wipe := isTruthy(os.Getenv("AUTO_MONTHLY_RESET"))
 	for {
 		now := time.Now()
 		next := time.Date(now.Year(), now.Month()+1, 1, 0, 5, 0, 0, now.Location())
 		time.Sleep(time.Until(next))
-		prevMonth := addMonth(currentMonth(), -1)
-		start, end := monthRange(prevMonth)
-		if _, err := db.Exec("DELETE FROM expenses WHERE created_at >= $1::timestamp AND created_at < $2::timestamp", start, end); err != nil {
-			log.Printf("auto-reset failed for %s: %v", prevMonth, err)
-		} else {
-			log.Printf("auto-reset: cleared expenses for %s", prevMonth)
+
+		if wipe {
+			prevMonth := addMonth(currentMonth(), -1)
+			start, end := monthRange(prevMonth)
+			if _, err := db.Exec("DELETE FROM expenses WHERE created_at >= $1::timestamp AND created_at < $2::timestamp", start, end); err != nil {
+				log.Printf("auto-reset failed for %s: %v", prevMonth, err)
+			} else {
+				log.Printf("auto-reset: cleared expenses for %s", prevMonth)
+			}
 		}
 
-		// Soft-deleted rows are invisible to every query, so without this they
-		// would accumulate forever. Well past the undo window by now.
 		if _, err := db.Exec("DELETE FROM expenses WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL '30 days'"); err != nil {
 			log.Printf("purge of soft-deleted expenses failed: %v", err)
 		}
@@ -2993,24 +2791,15 @@ func resetSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, _, _ := currentUser(r)
 
-	existing, err := loadSettings(userID)
-	if err != nil {
-		serverError(w, err)
-		return
-	}
 	newSettings := SettingsData{
 		BudgetLimit: 0,
 		Currency:    "NGN",
 		Categories:  []string{"Food", "Transport", "Bills"},
-		Theme:       existing.Theme,
 	}
 	if err := saveSettings(userID, newSettings); err != nil {
 		serverError(w, err)
 		return
 	}
-	// Limits live in their own table, so "reset everything" has to clear them
-	// explicitly — the default categories carry no limits, and saveCategoryBudgets
-	// only touches the categories it is handed.
 	if err := clearCategoryBudgets(userID); err != nil {
 		serverError(w, err)
 		return
@@ -3041,14 +2830,53 @@ func resetBudgetHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/saved", http.StatusSeeOther)
 }
 
+// supportHandler serves the contact page. It is behind requireAuth because
+// publishing contact details to anonymous visitors invites scraping; users
+// reach it from Settings, from Billing, and from the Terms page.
+func supportHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireDB(w) {
+		return
+	}
+	userID, username, _ := currentUser(r)
+
+	settings, err := loadSettings(userID)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+
+	// A pre-filled WhatsApp message saves the user from having to explain
+	// what app they are writing about. Spaces are encoded by hand because
+	// wa.me rejects the "+"-encoded spaces that url.QueryEscape emits.
+	msg := "Hi, I need help with Budget Tracker."
+	msg = strings.ReplaceAll(url.QueryEscape(msg), "+", "%20")
+
+	data := SupportPageData{
+		PageChrome: PageChrome{
+			Username:       username,
+			CurrencySymbol: currencySymbol(settings.Currency),
+			Version:        appVersion,
+		},
+		Email:        supportEmail,
+		Phone:        supportPhone,
+		PhoneLink:    strings.ReplaceAll(supportPhone, " ", ""),
+		WhatsApp:     supportWhatsApp,
+		WhatsAppText: msg,
+	}
+
+	if err := tmpl.ExecuteTemplate(w, "support.html", data); err != nil {
+		if !isClientDisconnect(err) {
+			log.Printf("failed to render support template: %v", err)
+		}
+	}
+}
+
 func expensesRawHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireDB(w) {
 		return
 	}
 	userID, _, _ := currentUser(r)
 
-	// Spending only. This feeds the report page's chart and table, which are a
-	// breakdown of what was bought by category — income has no place in it.
 	rows, err := db.Query(
 		`SELECT amount, category, to_char(created_at,'YYYY-MM-DD HH24:MI:SS') FROM expenses WHERE user_id = $1 AND kind = 'expense' AND deleted_at IS NULL ORDER BY created_at ASC`,
 		userID,
@@ -3077,8 +2905,6 @@ func expensesRawHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
-// ---------- Export ----------
-
 func exportPageHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireDB(w) {
 		return
@@ -3086,8 +2912,6 @@ func exportPageHandler(w http.ResponseWriter, r *http.Request) {
 	userID, username, _ := currentUser(r)
 	month := normalizeMonth(r.URL.Query().Get("month"))
 
-	// The page shows a worked example of the export's money format, so it needs
-	// the same glyph everything else renders with.
 	settings, err := loadSettings(userID)
 	if err != nil {
 		serverError(w, err)
@@ -3102,6 +2926,7 @@ func exportPageHandler(w http.ResponseWriter, r *http.Request) {
 		"NextMonth":      addMonth(month, 1),
 		"CurrentMonth":   currentMonth(),
 		"CurrencySymbol": currencySymbol(settings.Currency),
+		"Version":        appVersion,
 	}); err != nil {
 		log.Printf("failed to render export template: %v", err)
 	}
@@ -3140,20 +2965,10 @@ func exportCSVHandler(w http.ResponseWriter, r *http.Request) {
 	writer := csv.NewWriter(w)
 	defer writer.Flush()
 
-	// Amounts stay unformatted numbers so a spreadsheet reads them as
-	// numbers, but the column header names the currency. knownCurrency()
-	// guards the header: it comes from the stored code, and a legacy or hand
-	// edited row could hold anything at all. Restricting it to the offered
-	// list means the header can never start with "=" or carry a comma.
 	code := strings.ToUpper(strings.TrimSpace(settings.Currency))
 	if !knownCurrency(code) {
 		code = "NGN"
 	}
-	// Kind is a column rather than a second file: a spreadsheet is where
-	// someone will want to pivot by it, and splitting the export in two would
-	// make "what happened in March" a question you cannot answer from one
-	// sheet. Amounts stay positive in both kinds; the Kind column carries the
-	// direction.
 	writer.Write([]string{"Kind", "Description", "Amount (" + code + ")", "Category", "Date"})
 
 	var spent, received float64
@@ -3176,26 +2991,16 @@ func exportCSVHandler(w http.ResponseWriter, r *http.Request) {
 		count++
 	}
 
-	// Two totals, not one. A single figure over a file that contains both
-	// kinds would be a net, and nothing in the sheet sums to it.
 	writer.Write([]string{})
 	writer.Write([]string{"Total spent", fmt.Sprintf("%.2f", spent), "", "", ""})
 	writer.Write([]string{"Total received", fmt.Sprintf("%.2f", received), "", "", ""})
 	writer.Write([]string{"Count", fmt.Sprintf("%d", count), "", "", ""})
 }
 
-// commaGroups formats a value with thousands separators and two decimals, e.g.
-// 1234567.5 -> "1,234,567.50". Go's fmt has no grouping verb, and the exported
-// report is the one place that shows columns of large numbers, so grouping
-// keeps the figures scannable. A negative sign stays outside the grouping.
-// commaGroups formats v with thousands separators. It is commaGroupsPrec at
-// the two decimals money is normally shown with.
 func commaGroups(v float64) string {
 	return commaGroupsPrec(v, 2)
 }
 
-// commaGroupsPrec formats v with thousands separators and prec decimals.
-// prec 0 prints no decimal point at all.
 func commaGroupsPrec(v float64, prec int) string {
 	s := strconv.FormatFloat(v, 'f', prec, 64)
 	sign := ""
@@ -3216,17 +3021,6 @@ func commaGroupsPrec(v float64, prec int) string {
 	return sign + b.String() + frac
 }
 
-// ---------------------------------------------------------------------------
-// Currency
-// ---------------------------------------------------------------------------
-
-// Currency codes are stored in settings.currency (an ISO-4217 code). The
-// templates never see the code — they get the glyph — so all of the mapping
-// lives here rather than being repeated in eleven templates.
-//
-// The set is deliberately small. Every entry is one somebody has to keep
-// correct, and the fallback below is honest, so there is no reason to guess at
-// hundreds of them.
 var currencySymbols = map[string]string{
 	"NGN": "₦",
 	"USD": "$",
@@ -3242,14 +3036,11 @@ var currencySymbols = map[string]string{
 	"AUD": "A$",
 }
 
-// CurrencyOption is one entry in the settings currency picker.
 type CurrencyOption struct {
 	Code  string
 	Label string
 }
 
-// currencyOptions drives the settings dropdown, in display order. Kept next to
-// currencySymbols so adding a currency is one edit in one place.
 var currencyOptions = []CurrencyOption{
 	{"NGN", "Nigerian Naira (₦)"},
 	{"USD", "US Dollar ($)"},
@@ -3265,12 +3056,6 @@ var currencyOptions = []CurrencyOption{
 	{"CNY", "Chinese Yuan (¥)"},
 }
 
-// currencySymbol returns the glyph to render for an ISO code.
-//
-// An unknown or empty code falls back to the code itself followed by a space
-// ("CHF 1,200.00"), which is ugly but never *wrong* — the alternative,
-// defaulting the unfamiliar to a symbol, would print someone else's currency
-// on the user's numbers.
 func currencySymbol(code string) string {
 	code = strings.ToUpper(strings.TrimSpace(code))
 	if code == "" {
@@ -3282,8 +3067,6 @@ func currencySymbol(code string) string {
 	return code + " "
 }
 
-// knownCurrency reports whether code is one the settings form offers. Anything
-// else is rejected on save rather than silently stored.
 func knownCurrency(code string) bool {
 	code = strings.ToUpper(strings.TrimSpace(code))
 	for _, o := range currencyOptions {
@@ -3302,9 +3085,6 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
 	month := normalizeMonth(r.URL.Query().Get("month"))
 	start, end := monthRange(month)
 
-	// The export is built as a string rather than through html/template, so the
-	// glyph is escaped here by hand — the same treatment every other
-	// interpolated value in this function gets.
 	settings, err := loadSettings(userID)
 	if err != nil {
 		serverError(w, err)
@@ -3312,7 +3092,6 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	symbol := template.HTMLEscapeString(currencySymbol(settings.Currency))
 
-	// Date only: the export is scoped to one month, so the time of day is noise.
 	rows, err := db.Query(
 		`SELECT description, amount, category, kind, to_char(created_at,'DD Mon YYYY') FROM expenses
 		 WHERE user_id = $1 AND deleted_at IS NULL AND created_at >= $2::timestamp AND created_at < $3::timestamp
@@ -3350,11 +3129,6 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// The breakdown is of spending, and its percentages are shares of what was
-	// spent. Income is listed in the table above — it happened, and hiding it
-	// would make the printed page disagree with the screen — but including it
-	// here would make every category's share of the month smaller purely
-	// because money came in.
 	catMap := map[string]float64{}
 	for _, e := range expenses {
 		if e.Kind == kindIncome {
@@ -3375,8 +3149,6 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		cats = append(cats, catRow{cat, total, pct})
 	}
-	// Map iteration order is random; without this the printed report would
-	// reorder its own breakdown every time it was generated.
 	sort.Slice(cats, func(i, j int) bool {
 		if cats[i].Total == cats[j].Total {
 			return cats[i].Category < cats[j].Category
@@ -3387,9 +3159,6 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
 	label := monthLabel(month)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-	// Only shown when there is income to show. A permanent "Received ₦0.00"
-	// tile would be a fifth thing to read on a page that has nothing to say
-	// about it.
 	receivedKPI := ""
 	if received > 0 {
 		receivedKPI = fmt.Sprintf(
@@ -3403,11 +3172,6 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
 <meta charset="UTF-8">
 <title>Expenses %s</title>
 <style>
-  /* Self-contained report stylesheet: no external font or framework, so the
-     printed PDF renders identically offline. Deliberately light-only — this is
-     a print artifact, so it commits to ink on white rather than following the
-     viewer's colour scheme. Colours reuse the app's own tokens
-     (static/css/input.css) so the export matches the product. */
   :root{
     color-scheme:light;
     --ink:#0f172a;
@@ -3426,23 +3190,18 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
     line-height:1.5;color:var(--ink);background:var(--surface);-webkit-font-smoothing:antialiased}
   .sheet{max-width:720px;margin:0 auto;padding:40px 32px 48px}
   .num{font-variant-numeric:tabular-nums}
-
   .print-btn{display:inline-flex;align-items:center;gap:8px;margin-bottom:28px;background:var(--brand);
     color:#fff;border:0;border-radius:8px;padding:10px 18px;font:inherit;font-size:13px;
     font-weight:500;cursor:pointer}
   .print-btn:hover{background:var(--brand-strong)}
   .print-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
   .print-btn svg{width:16px;height:16px}
-
   .doc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;
     padding-bottom:18px;border-bottom:1px solid var(--line-strong);margin-bottom:26px}
   .doc-title{font-size:20px;font-weight:600;letter-spacing:-0.01em}
   .doc-sub{margin-top:3px;font-size:13px;color:var(--ink-muted)}
   .doc-meta{text-align:right;font-size:12px;color:var(--ink-muted);line-height:1.75;white-space:nowrap}
   .doc-meta strong{color:var(--ink);font-weight:600}
-
-  /* KPI row. Values wear ink, never the series colour — the accent is reserved
-     for the bars, so the numbers stay legible and print-safe. */
   .kpis{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;margin-bottom:30px}
   .kpi{border:1px solid var(--line);border-radius:10px;padding:14px 16px}
   .kpi--lead{background:var(--brand-soft);border-color:transparent}
@@ -3450,7 +3209,6 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
     color:var(--ink-muted);margin-bottom:6px}
   .kpi-value{font-size:24px;font-weight:600;letter-spacing:-0.01em}
   .kpi--lead .kpi-value{font-size:30px}
-
   table{width:100%%;border-collapse:collapse;margin-bottom:30px}
   thead th{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
     color:var(--ink-muted);text-align:left;padding:0 12px 9px;border-bottom:1px solid var(--line-strong)}
@@ -3462,22 +3220,17 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
   td.empty{padding:22px 12px;color:var(--ink-muted);text-align:center}
   tfoot td{padding:12px;border-top:1px solid var(--line-strong);font-weight:600;font-size:13.5px}
   tfoot td.amount{font-variant-numeric:tabular-nums}
-
   .section-title{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
     color:var(--ink-muted);margin-bottom:14px}
   .cat-row{display:grid;grid-template-columns:136px 1fr 88px 48px;align-items:center;gap:12px;padding:5px 0}
   .cat-name{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .cat-track{background:var(--brand-soft);border-radius:4px;height:10px}
-  /* One hue: a single series needs no legend — the section title names it. The
-     bar is square at the baseline (left) and 4px-rounded at the data end. */
   .cat-bar{background:var(--brand);height:10px;border-radius:0 4px 4px 0;min-width:3px}
   .cat-total{font-size:12.5px;font-weight:500;text-align:right;white-space:nowrap;
     font-variant-numeric:tabular-nums}
   .cat-pct{font-size:11.5px;color:var(--ink-muted);text-align:right;font-variant-numeric:tabular-nums}
-
   .doc-foot{margin-top:36px;padding-top:14px;border-top:1px solid var(--line);font-size:11px;
     color:var(--ink-muted);display:flex;justify-content:space-between;gap:16px}
-
   @media print{
     @page{size:A4;margin:14mm}
     body{font-size:11.5px}
@@ -3532,10 +3285,6 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `<tr><td class="empty" colspan="5">No entries recorded for this month.</td></tr>`)
 	}
 
-	// The totals add up the column above them. Spending leads, matching the lead
-	// KPI, but income gets its own line whenever there is any: a single total
-	// over a table containing income rows would be a net, and no column in the
-	// table sums to it.
 	fmt.Fprintf(w, `</tbody>
 <tfoot><tr><td colspan="4">Total spent</td><td class="amount">%s%s</td></tr>`,
 		symbol, commaGroups(spent))

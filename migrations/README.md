@@ -11,8 +11,14 @@ builds on the one before it, so **they must be applied in order**.
 | 004 | `004_add_password_reset.sql` | `users.email` and the reset-token columns |
 | 005 | `005_index_expenses_by_user_and_date.sql` | Index for the per-user, per-month reads |
 | 006 | `006_add_soft_delete.sql` | `expenses.deleted_at`, and a partial index over live rows |
+| 007 | `007_add_terms_acceptance.sql` | Records acceptance of the signup terms |
+| 008 | `008_add_income.sql` | Adds income entries and the entry kind |
+| 009 | `009_add_category_budgets.sql` | Per-category spending limits |
+| 010 | `010_rate_limits.sql` | Shared login and password-reset rate limits |
+| 011 | `011_session_version.sql` | Invalidates sessions after password changes or resets |
+| 012 | `012_remove_account_theme.sql` | Removes the obsolete account-level theme preference |
 
-Running all six against an empty database produces the complete schema the
+Running all twelve against an empty database produces the complete schema the
 app expects.
 
 ## Applying them
@@ -46,11 +52,10 @@ and reporting a confusing cascade of errors.
 already run, so it is on you not to re-run or skip one. To compensate, every
 statement here is idempotent (`CREATE TABLE IF NOT EXISTS`,
 `ADD COLUMN IF NOT EXISTS`), so re-running a file does nothing rather than
-erroring halfway through. Idempotency is exactly what makes it safe for the app
-to apply the whole set on every boot; that same startup path takes a PostgreSQL
-advisory lock (`migrationLockID` in `migrations.go`) so that two instances
-racing during a rolling deploy cannot collide — `CREATE TABLE IF NOT EXISTS` is
-not race-free on its own. If this sequence grows much further, switch to a real
+erroring halfway through. The app applies the set in one transaction and uses
+a transaction-scoped PostgreSQL advisory lock to prevent concurrent instances
+from colliding during a rolling deploy. This also works with transaction
+poolers. If this sequence grows much further, switch to a real
 tool — [`golang-migrate`](https://github.com/golang-migrate/migrate) or
 [`goose`](https://github.com/pressly/goose) both integrate with a Go project and
 add the tracking table for you.
@@ -65,7 +70,7 @@ workaround.
 
 ## Final schema
 
-The state after all six migrations. This is the contract with `main.go` —
+The state after all twelve migrations. This is the contract with `main.go` —
 the queries there name every column explicitly.
 
 ```sql
@@ -77,13 +82,14 @@ users
     email               VARCHAR(255) UNIQUE           -- nullable
     reset_token         VARCHAR(64)                   -- nullable
     reset_token_expires TIMESTAMP                     -- nullable
+    session_version    INTEGER NOT NULL DEFAULT 0
 
 settings
     user_id             INTEGER PRIMARY KEY REFERENCES users(id)
     budget_limit        NUMERIC(10,2) NOT NULL DEFAULT 0
     currency            VARCHAR(10) NOT NULL DEFAULT 'NGN'
     categories          VARCHAR(500) NOT NULL DEFAULT 'Food,Transport,Bills'
-    theme               VARCHAR(10) NOT NULL DEFAULT 'system'
+
 
 expenses
     id                  SERIAL PRIMARY KEY

@@ -16,12 +16,16 @@
 
   /* ---------------------------------------------------------------- nav --- */
   /* The server does not tell us which page we are on, so derive it from the
-     path. archive/settings have sub-paths that should keep their tab lit. */
+     path. Sub-paths of a tab — /settings/saved, /archive?month=… — must keep
+     the parent tab lit, which is why the check is prefix-based rather than an
+     exact match. */
   function markActiveNav() {
     var path = window.location.pathname;
     var match = '/';
 
-    if (path.indexOf('/report') === 0) match = '/report';
+    if (path.indexOf('/trends') === 0) match = '/trends';
+    else if (path.indexOf('/goals') === 0) match = '/goals';
+    else if (path.indexOf('/report') === 0) match = '/report';
     else if (path.indexOf('/archive') === 0) match = '/archive';
     else if (path.indexOf('/export') === 0) match = '/export';
     else if (path.indexOf('/settings') === 0) match = '/settings';
@@ -31,6 +35,93 @@
         el.setAttribute('aria-current', 'page');
       } else {
         el.removeAttribute('aria-current');
+      }
+    });
+  }
+
+  /* ---------------------------------------------------- nav prefetch --- */
+  /* Speculatively fetch a nav destination when the pointer arrives, so the
+     click feels instant — the page is usually in the browser's HTTP cache
+     before the user commits to navigating. Deliberately tied to mouseenter,
+     not to hover: hover fires repeatedly on the boundary between overlapping
+     elements, and the listener is removed on the first call anyway, so a
+     single prefetch per link is the most we can issue.
+
+     On touch devices there is no mouseenter, so nothing happens — which is
+     correct, since the tap either navigates immediately or the pointer
+     leaves without a hit. No prefetch for a click the user never made.
+
+     The browser silently ignores an unknown rel, so this is safe on engines
+     that do not implement prefetch. */
+  function wireNavPrefetch() {
+    var prefetched = Object.create(null);
+
+    document.querySelectorAll('.nav-item[href]').forEach(function (el) {
+      el.addEventListener('mouseenter', function () {
+        var href = el.getAttribute('href');
+        if (!href || href.charAt(0) !== '/') return;
+        if (prefetched[href]) return;
+        prefetched[href] = true;
+
+        var link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = href;
+        document.head.appendChild(link);
+      });
+    });
+  }
+
+  /* -------------------------------------------------------- account menu --- */
+  /* The account name in the header is a button that opens a dropdown with
+     settings, export, support and sign out. Closing on outside click and on
+     Escape is what makes it feel like a native menu rather than a stuck
+     overlay.
+
+     The dropdown is rendered in the DOM and hidden with the `hidden`
+     attribute, so the CSS animation on open still fires and the menu
+     participates in normal tab order once shown. */
+  function wireAccountMenu() {
+    var trigger = document.getElementById('account-trigger');
+    var dropdown = document.getElementById('account-dropdown');
+    if (!trigger || !dropdown) return;
+
+    function openMenu() {
+      dropdown.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      document.addEventListener('mousedown', onOutsideClick);
+      document.addEventListener('keydown', onKeydown);
+    }
+
+    function closeMenu() {
+      dropdown.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+      document.removeEventListener('mousedown', onOutsideClick);
+      document.removeEventListener('keydown', onKeydown);
+    }
+
+    /* A click anywhere that is neither the trigger nor inside the dropdown
+       dismisses the menu. mousedown rather than click so the menu closes on
+       the press, not the release — clicking a menu item and having the menu
+       still be open for a moment feels wrong. */
+    function onOutsideClick(e) {
+      if (trigger.contains(e.target) || dropdown.contains(e.target)) return;
+      closeMenu();
+    }
+
+    function onKeydown(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeMenu();
+        trigger.focus();
+      }
+    }
+
+    trigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (dropdown.hidden) {
+        openMenu();
+      } else {
+        closeMenu();
       }
     });
   }
@@ -67,7 +158,6 @@
     var form = document.querySelector('form[role="search"][action="/archive"]');
     if (!form) return;
 
-    var searchInput = form.querySelector('#archive-q');
     var filterFields = form.querySelectorAll('select, input[type="date"]');
     var timer = null;
 
@@ -82,10 +172,6 @@
       }, 200);
     }
 
-    if (searchInput) {
-//       searchInput.addEventListener('input', submitSearch);
-    }
-
     filterFields.forEach(function (field) {
       field.addEventListener('change', submitSearch);
     });
@@ -96,6 +182,13 @@
   var lastFocused = null;
 
   var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  /* offsetParent is null for elements inside position:fixed containers, which
+     would silently exclude valid controls from the trap. getClientRects() is
+     the correct test for "is this actually rendered". */
+  function isVisible(el) {
+    return el.getClientRects().length > 0;
+  }
 
   function openModal(modal) {
     if (!modal) return;
@@ -133,7 +226,7 @@
     if (e.key === 'Tab') {
       var items = Array.prototype.filter.call(
         openModalEl.querySelectorAll(FOCUSABLE),
-        function (el) { return el.offsetParent !== null; }
+        isVisible
       );
       if (!items.length) return;
 
@@ -414,25 +507,32 @@
     }
   }
 
-  /* ------------------------------------------------------------- settings --- */
-  function wireSettings() {
+  /* ---------------------------------------------------------- theme picker --- */
+  /* Split out from the categories wirer below. They share a page today, but
+     each governs a different control and neither should be able to stop the
+     other running if its markup is missing. */
+  function wireThemePicker() {
     var themeInput = document.getElementById('theme-input');
     if (!themeInput) return;
 
-    /* ---- Appearance ---- */
     var buttons = document.querySelectorAll('.theme-btn');
     var prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
 
+    function resolve(theme) {
+      return theme === 'dark' || (theme === 'system' && prefersDark.matches);
+    }
+
     function applyTheme(theme) {
-      var dark = theme === 'dark' || (theme === 'system' && prefersDark.matches);
-      document.documentElement.classList.toggle('dark', dark);
+      document.documentElement.classList.toggle('dark', resolve(theme));
     }
 
     function selectTheme(theme) {
       themeInput.value = theme;
-      /* The same key head.html reads before first paint, so the choice
-         survives the next navigation without a flash. */
-      localStorage.setItem('bt-theme', theme);
+      /* head.html reads the same key before first paint. Storing the raw
+         choice — 'light' | 'dark' | 'system' — means head.html can decide
+         what "system" means for itself, which is what keeps the preference
+         intact across a navigation. */
+      try { localStorage.setItem('bt-theme', theme); } catch (e) {}
       buttons.forEach(function (button) {
         button.setAttribute('aria-pressed', String(button.dataset.theme === theme));
       });
@@ -450,8 +550,10 @@
     });
 
     selectTheme(themeInput.value || 'system');
+  }
 
-    /* ---- Categories ---- */
+  /* ------------------------------------------------------------- settings --- */
+  function wireCategoryRows() {
     var list = document.getElementById('category-list');
     var addBtn = document.getElementById('add-category-row');
     var rowTemplate = document.getElementById('category-row-template');
@@ -528,13 +630,16 @@
   /* --------------------------------------------------------------- boot --- */
   function init() {
     markActiveNav();
+    wireNavPrefetch();
+    wireAccountMenu();
     wireDateTriggers();
     wireArchiveSearch();
     wireModals();
     wireAddExpense();
     wireConfirmForm('clear-form', 'clear-modal');
     wireConfirmForm('reset-settings-form', 'reset-settings-modal');
-    wireSettings();
+    wireThemePicker();
+    wireCategoryRows();
     wireUndoToast();
     wireSkeletons();
   }

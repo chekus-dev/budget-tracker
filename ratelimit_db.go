@@ -25,6 +25,10 @@ import (
 // A rate-limit check sits on the login path, so it must never hang it.
 const rateLimitQueryTimeout = 2 * time.Second
 
+// Sweeping is best-effort background maintenance, not part of a request. Give
+// poolers and transient database load longer to answer than login checks get.
+const rateLimitSweepTimeout = 10 * time.Second
+
 // enableSharedRateLimits switches the four global limiters to database-backed
 // counters. Call it once at startup, before startRateLimiterSweeper, so the
 // sweeper goroutine sees the final configuration.
@@ -150,18 +154,25 @@ func (l *rateLimiter) sharedReset(key string) {
 	}
 }
 
-// sharedSweep drops this bucket's expired windows. Every instance runs the
-// sweeper; deleting already-deleted rows is a no-op, so that is fine.
-func (l *rateLimiter) sharedSweep() {
-	if l.shared == "" || !dbReady() {
+// sweepSharedRateLimits drops expired rows in one best-effort query.
+//
+// The query does not filter by bucket. An earlier version collected the
+// enabled buckets from allRateLimiters and deleted only rows in those, but
+// the table exists solely for this app's limiters, and coupling the sweep to
+// package-global state meant a row whose limiter had been reconfigured (or
+// was never registered, as in a test) could never be swept. An expired
+// counter is dead weight regardless of which bucket wrote it.
+func sweepSharedRateLimits(now time.Time) {
+	if !dbReady() {
 		return
 	}
-	ctx, cancel := rateLimitCtx()
+
+	ctx, cancel := context.WithTimeout(context.Background(), rateLimitSweepTimeout)
 	defer cancel()
 	if _, err := db.ExecContext(ctx,
-		"DELETE FROM rate_limits WHERE bucket = $1 AND reset_at <= $2::timestamptz",
-		l.shared, l.now(),
+		"DELETE FROM rate_limits WHERE reset_at <= $1::timestamptz",
+		now,
 	); err != nil {
-		log.Printf("rate limit (%s): shared sweep() failed: %v", l.shared, err)
+		log.Printf("rate limit: shared cleanup failed (expired rows will be cleaned on a later sweep): %v", err)
 	}
 }

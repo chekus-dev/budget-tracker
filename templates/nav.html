@@ -3,50 +3,55 @@
   Shared chrome for every signed-in screen: the navigation (bottom tab bar on
   mobile, left sidebar on desktop), the floating "add expense" button and its
   modal, and the toast host.
-
-  Receives the page's data. .Username decides whether the signed-in chrome is
-  rendered at all; .CurrencySymbol labels the amount field; .Month and .Filters
-  are optional and only used to send an edit back where it came from, so a page
-  that supplies neither still works.
 */}}
 
 <nav class="tabbar" aria-label="Main">
   <div class="sidebar-brand">
     <span class="brand-mark" aria-hidden="true">₦</span>
-    <span>Budget Tracker</span>
+    <span class="sidebar-brand-name">Budget</span>
   </div>
-  <a href="/" class="nav-item" data-nav="/">
-    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#home"/></svg>
-    <span>Home</span>
+
+  <div class="sidebar-nav">
+    <a href="/" class="nav-item" data-nav="/">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#home"/></svg>
+      <span>Home</span>
+    </a>
+    <a href="/trends" class="nav-item" data-nav="/trends">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chart"/></svg>
+      <span>Trends</span>
+    </a>
+    <a href="/goals" class="nav-item" data-nav="/goals">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#target"/></svg>
+      <span>Goals</span>
+    </a>
+    <a href="/archive" class="nav-item" data-nav="/archive">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#archive"/></svg>
+      <span>Archive</span>
+    </a>
+    <a href="/settings" class="nav-item" data-nav="/settings">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#settings"/></svg>
+      <span>Settings</span>
+    </a>
+  </div>
+
+  <a href="/billing" class="sidebar-upgrade">
+    <span class="sidebar-upgrade-icon" aria-hidden="true">
+      <svg class="icon"><use href="/static/icons.svg#banknote"/></svg>
+    </span>
+    <span class="sidebar-upgrade-title">Upgrade to Premium</span>
+    <span class="sidebar-upgrade-desc">Unlock more features and unlimited budgets</span>
+    <span class="sidebar-upgrade-cta">Upgrade</span>
   </a>
-  <a href="/report" class="nav-item" data-nav="/report">
-    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chart"/></svg>
-    <span>Report</span>
-  </a>
-  <a href="/archive" class="nav-item" data-nav="/archive">
-    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#archive"/></svg>
-    <span>Archive</span>
-  </a>
-  <a href="/export" class="nav-item" data-nav="/export">
-    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#export"/></svg>
-    <span>Export</span>
-  </a>
-  <a href="/settings" class="nav-item" data-nav="/settings">
-    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#settings"/></svg>
-    <span>Settings</span>
-  </a>
-  {{if .Username}}
-  <form action="/logout" method="POST" class="contents">
-    <button type="submit" class="nav-item">
+
+  <form action="/logout" method="POST" class="sidebar-logout-form">
+    <button type="submit" class="sidebar-logout">
       <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#logout"/></svg>
-      <span>Log out</span>
+      <span>Log Out</span>
     </button>
   </form>
-  {{end}}
 </nav>
 
 {{if .Username}}
-<!-- One "+" reaches Add Expense from any screen. -->
 <button type="button" class="fab" id="fab-add" aria-haspopup="dialog" aria-controls="add-modal">
   <svg class="icon icon-lg" aria-hidden="true"><use href="/static/icons.svg#plus"/></svg>
   <span class="visually-hidden">Add expense</span>
@@ -68,18 +73,7 @@
       </button>
     </div>
 
-    {{/* One form, two jobs. app.js swaps the action between /add and /edit/<id>
-         and relabels the submit button when the modal is opened for an edit,
-         and swaps the kind between an expense and income. Sharing the markup
-         means the paths cannot drift apart: a field added for adding is a field
-         added for editing, and a field added for spending is a field added for
-         income. */}}
     <form action="/add" method="POST" class="stack-tight" id="add-form">
-      {{/* Where to return after an edit: the month on screen, and any active
-           search, so editing a result does not throw the results away. The
-           search's own fields are suffixed _filter where they would otherwise
-           collide with the entry's — "category" and "kind" below both mean the
-           thing being saved. */}}
       <input type="hidden" name="month" value="{{if .Month}}{{.Month}}{{end}}">
       <input type="hidden" name="orig_date" id="edit-orig-date" value="">
       {{with .Filters}}
@@ -90,8 +84,6 @@
       <input type="hidden" name="to" value="{{.To}}">
       {{end}}
 
-      {{/* Which way the money went. A hidden input so the form still submits a
-           kind without JavaScript; the buttons are what set it. */}}
       <div>
         <span class="label" id="add-kind-label">Type</span>
         <input type="hidden" name="kind" id="add-kind" value="expense">
@@ -149,4 +141,64 @@
 <div class="toast-host" id="toast-host" role="status" aria-live="polite"></div>
 
 <script src="/static/app.js" defer></script>
+{{end}}
+
+
+{{/*
+  The account header every signed-in screen opens with. It is now a button
+  that opens a dropdown menu rather than plain text — the dropdown is where
+  Support, Settings, and Log Out live, matching the arrangement in the
+  reference design.
+
+  The menu is present in the DOM but hidden with the `hidden` attribute, so
+  it works with JavaScript disabled only in the sense that the account name
+  is still visible; the menu itself requires JS to open. That is an accepted
+  trade: the same actions are all reachable from the Settings page and the
+  sidebar, so a no-JS user loses nothing.
+*/}}
+{{define "account-bar"}}
+<div class="account-menu" id="account-menu">
+  <button type="button" class="account-trigger" id="account-trigger"
+          aria-haspopup="menu" aria-expanded="false" aria-controls="account-dropdown">
+    <span class="trend-avatar" aria-hidden="true">{{printf "%.1s" .Username}}</span>
+    <span class="trend-account-name">{{.Username}}</span>
+    <svg class="icon icon-sm account-chevron" aria-hidden="true">
+      <use href="/static/icons.svg#chevron-right"/>
+    </svg>
+  </button>
+
+  <div class="account-dropdown" id="account-dropdown" role="menu" hidden>
+    <div class="account-dropdown-head" role="presentation">
+      <span class="trend-avatar" aria-hidden="true">{{printf "%.1s" .Username}}</span>
+      <span class="account-dropdown-copy">
+        <span class="account-dropdown-name">{{.Username}}</span>
+        <span class="account-dropdown-sub">Signed in</span>
+      </span>
+    </div>
+
+    <a href="/settings" class="account-menu-item" role="menuitem">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#settings"/></svg>
+      <span>Account settings</span>
+    </a>
+
+    <a href="/export" class="account-menu-item" role="menuitem">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#export"/></svg>
+      <span>Your data</span>
+    </a>
+
+    <a href="/support" class="account-menu-item" role="menuitem">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#mail"/></svg>
+      <span>Support</span>
+    </a>
+
+    <div class="account-menu-divider" role="separator"></div>
+
+    <form action="/logout" method="POST">
+      <button type="submit" class="account-menu-item is-danger" role="menuitem">
+        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#logout"/></svg>
+        <span>Sign out</span>
+      </button>
+    </form>
+  </div>
+</div>
 {{end}}

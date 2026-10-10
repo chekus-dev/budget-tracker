@@ -9,25 +9,28 @@
     {{template "nav.html" .}}
 
     <main class="app-main">
+
+        <div class="trend-top">
+            {{template "account-bar" .}}
+            <div class="trend-year" role="group" aria-label="Month">
+                <a class="trend-year-btn" href="/export?month={{.PrevMonth}}" aria-label="Previous month">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
+                </a>
+                <span class="trend-year-label">{{.Label}}</span>
+                {{if lt .Month .CurrentMonth}}
+                <a class="trend-year-btn" href="/export?month={{.NextMonth}}" aria-label="Next month">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                </a>
+                {{else}}
+                <span class="trend-year-btn" aria-disabled="true" aria-label="Next month">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                </span>
+                {{end}}
+            </div>
+        </div>
         <div class="page-head">
             <h1 class="page-title">Export</h1>
             <p class="page-sub">Download your ledger for {{.Label}}</p>
-        </div>
-
-        <div class="month-switch mb-6">
-            <a class="month-switch-btn" href="/export?month={{.PrevMonth}}" aria-label="Previous month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
-            </a>
-            <span class="month-switch-label">{{.Label}}</span>
-            {{if lt .Month .CurrentMonth}}
-            <a class="month-switch-btn" href="/export?month={{.NextMonth}}" aria-label="Next month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
-            </a>
-            {{else}}
-            <span class="month-switch-btn" aria-disabled="true" aria-label="Next month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
-            </span>
-            {{end}}
         </div>
 
         <div class="stack">

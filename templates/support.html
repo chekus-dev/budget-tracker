@@ -1,0 +1,154 @@
+{{define "support.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Contact support — Budget Tracker</title>
+    {{template "head.html" .}}
+</head>
+<body class="has-chrome">
+    {{template "nav.html" .}}
+
+    <main class="app-main">
+
+        <div class="trend-top">
+            {{template "account-bar" .}}
+        </div>
+
+        <div class="page-head">
+            <h1 class="page-title">Contact support</h1>
+            <p class="page-sub">Reach a real person. Usually a reply within one working day.</p>
+        </div>
+
+        {{/* Three ways to reach the same person. Order is deliberate: email
+             is the one that leaves a record and is easiest to attach details
+             to, so it comes first; WhatsApp is fastest for a quick question;
+             phone is last because it is the most intrusive on both sides.
+             Each card's icon tile is colour-coded so the channel is
+             identifiable before the label is read. */}}
+        <div class="contact-grid">
+
+            <a class="contact-card" href="mailto:{{.Email}}?subject=Support%20request%20%E2%80%94%20Budget%20Tracker">
+                <span class="contact-card-icon">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#mail"/></svg>
+                </span>
+                <span class="contact-card-body">
+                    <span class="contact-card-label">Email</span>
+                    <span class="contact-card-value">{{.Email}}</span>
+                    <span class="contact-card-hint">Best for anything you can attach a screenshot to</span>
+                </span>
+            </a>
+
+            <a class="contact-card" href="https://wa.me/{{.WhatsApp}}?text={{.WhatsAppText}}" target="_blank" rel="noopener">
+                <span class="contact-card-icon is-whatsapp">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#whatsapp"/></svg>
+                </span>
+                <span class="contact-card-body">
+                    <span class="contact-card-label">WhatsApp</span>
+                    <span class="contact-card-value">{{.Phone}}</span>
+                    <span class="contact-card-hint">Fastest for a quick question</span>
+                </span>
+            </a>
+
+            <a class="contact-card" href="tel:{{.PhoneLink}}">
+                <span class="contact-card-icon is-phone">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#phone"/></svg>
+                </span>
+                <span class="contact-card-body">
+                    <span class="contact-card-label">Phone</span>
+                    <span class="contact-card-value">{{.Phone}}</span>
+                    <span class="contact-card-hint">Weekdays, 9am–6pm WAT</span>
+                </span>
+            </a>
+
+        </div>
+
+        {{/* What to include. Written as three short lists rather than prose
+             so a person can scan it and paste the right thing without
+             reading a paragraph. */}}
+        <section class="card mb-4">
+            <h2 class="card-title mb-4">What to include in your message</h2>
+            <div class="summary-list">
+
+                <div class="summary-row is-stacked">
+                    <span class="summary-label">If something is broken</span>
+                    <span class="summary-value">
+                        What you were doing, what you expected, what actually happened. A screenshot of the whole browser window helps more than a cropped one.
+                    </span>
+                </div>
+
+                <div class="summary-row is-stacked">
+                    <span class="summary-label">If it is about a payment</span>
+                    <span class="summary-value">
+                        The email you signed up with, and the reference code from your payment receipt. Do not send card details — no one needs them.
+                    </span>
+                </div>
+
+                <div class="summary-row is-stacked">
+                    <span class="summary-label">If it is about your account</span>
+                    <span class="summary-value">
+                        Your username. Never send your password — nothing you ask for will require it, and no legitimate message ever will.
+                    </span>
+                </div>
+
+            </div>
+        </section>
+
+        {{/* Response expectations. Setting them here prevents the "why has
+             nobody replied" follow-up at hour two, and it is honest about
+             what the app actually promises. */}}
+        <section class="card mb-4">
+            <h2 class="card-title mb-4">When to expect a reply</h2>
+            <div class="summary-list">
+                <div class="summary-row">
+                    <span class="summary-label">Email</span>
+                    <span class="summary-value">Within one working day</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">WhatsApp</span>
+                    <span class="summary-value">Usually within a few hours</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Phone</span>
+                    <span class="summary-value">Weekdays, 9am–6pm WAT</span>
+                </div>
+            </div>
+        </section>
+
+        {{/* FAQ. The five questions people ask before reaching out. Answered
+             here so a support message can be reserved for things these do
+             not cover. Collapsed by default so they do not push the contact
+             cards off screen on a phone. */}}
+        <section class="card mb-4">
+            <h2 class="card-title mb-4">Common questions</h2>
+            <div class="stack">
+                <details class="faq">
+                    <summary>My data is missing — where did it go?</summary>
+                    <p class="note mt-2">Check the month selector on the Home screen. Transactions are grouped by the month they were logged against, and a past month is still there even when today's view is empty. If a specific entry is gone, look at Archive — deletions are recoverable for 30 days before being permanently removed.</p>
+                </details>
+                <details class="faq">
+                    <summary>I paid for Premium but it is not active</summary>
+                    <p class="note mt-2">Payments usually activate within a few seconds. If it has been more than five minutes, send us a message with the email you paid with and the reference code from your receipt, and we will apply it manually.</p>
+                </details>
+                <details class="faq">
+                    <summary>Can I export my transactions?</summary>
+                    <p class="note mt-2">Yes. Open <a href="/export">Export</a> and download a month as a CSV spreadsheet or a print-ready PDF report. Both are yours to keep — nothing about your data is locked in.</p>
+                </details>
+                <details class="faq">
+                    <summary>How do I delete my account?</summary>
+                    <p class="note mt-2">Send an email from the address you signed up with and we will delete the account and everything in it within seven days. This cannot be undone, so consider exporting first.</p>
+                </details>
+                <details class="faq">
+                    <summary>Is there a mobile app?</summary>
+                    <p class="note mt-2">Not yet. The web app works on a phone — open it in your browser and use "Add to Home Screen" for an app-like icon. A native app is on the roadmap but has no date.</p>
+                </details>
+            </div>
+        </section>
+
+        <p class="hint text-center mt-6">
+            You can also read the <a href="/terms">terms and conditions</a>.
+        </p>
+
+    </main>
+</body>
+</html>
+{{end}}

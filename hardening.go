@@ -4,15 +4,18 @@ package main
 // (same package) and apply the edits listed in EDITS.md.
 
 import (
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"syscall"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -83,6 +86,16 @@ func sessionStillValid(r *http.Request, userID int) bool {
 }
 
 // ---------- HTTP ----------
+
+// isClientDisconnect identifies expected response-write failures after a
+// browser, proxy, or caller has closed the connection. Other template errors
+// still need to be logged because they may indicate a broken page.
+func isClientDisconnect(err error) bool {
+	return errors.Is(err, context.Canceled) ||
+		errors.Is(err, net.ErrClosed) ||
+		errors.Is(err, syscall.EPIPE) ||
+		errors.Is(err, syscall.ECONNRESET)
+}
 
 // serverError logs the real error and shows the visitor a generic one. Raw
 // database errors in a response body leak table and column names.

@@ -1,10 +1,15 @@
 package main
 
 import (
+	"compress/gzip"
+	"context"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
 	"strings"
+	"syscall"
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
@@ -146,6 +151,26 @@ func TestHardening_SessionStillValid_NoDatabaseFailsOpen(t *testing.T) {
 
 // ---------- HTTP ----------
 
+func TestHardening_ClientDisconnectDetection(t *testing.T) {
+	for _, err := range []error{
+		wrappedError{cause: syscall.EPIPE},
+		wrappedError{cause: syscall.ECONNRESET},
+		context.Canceled,
+	} {
+		if !isClientDisconnect(err) {
+			t.Errorf("isClientDisconnect(%v) = false, want true", err)
+		}
+	}
+	if isClientDisconnect(errors.New("template execution failed")) {
+		t.Fatal("an unrelated template error must not be treated as a client disconnect")
+	}
+}
+
+type wrappedError struct{ cause error }
+
+func (e wrappedError) Error() string { return "wrapped: " + e.cause.Error() }
+func (e wrappedError) Unwrap() error { return e.cause }
+
 func TestHardening_SecurityHeaders(t *testing.T) {
 	called := false
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -211,6 +236,37 @@ func TestHardening_ServerErrorHidesInternals(t *testing.T) {
 type errString string
 
 func (e errString) Error() string { return string(e) }
+
+func TestGzipMiddleware_PreservesHTMLContentType(t *testing.T) {
+	handler := gzipMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, "<!DOCTYPE html><html><body>Dashboard</body></html>")
+	}))
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
+		t.Fatalf("Content-Type = %q, want text/html; charset=utf-8", got)
+	}
+	if got := rec.Header().Get("Content-Encoding"); got != "gzip" {
+		t.Fatalf("Content-Encoding = %q, want gzip", got)
+	}
+
+	reader, err := gzip.NewReader(rec.Body)
+	if err != nil {
+		t.Fatalf("open compressed response: %v", err)
+	}
+	defer reader.Close()
+	body, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("read compressed response: %v", err)
+	}
+	if !strings.Contains(string(body), "Dashboard") {
+		t.Fatalf("decompressed body = %q, want dashboard HTML", body)
+	}
+}
 
 // ---------- Content-Security-Policy ----------
 

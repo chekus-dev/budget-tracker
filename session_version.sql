@@ -1,5 +1,4 @@
--- Rename to match your migration numbering (e.g. 010_session_version.sql)
--- and put it where applyMigrations() looks for files.
+-- Equivalent to migrations/011_session_version.sql for manual application.
 --
 -- Bumped on every password change/reset; a session cookie carrying an older
 -- value is rejected by requireAuth. Existing rows start at 0, which matches

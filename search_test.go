@@ -206,8 +206,7 @@ func TestCategoryOptionsAppendsAMissingSelection(t *testing.T) {
 	// Without this the select would read "All categories" while a filter was
 	// in fact being applied, leaving the user no way to see or clear it.
 	got := categoryOptions(configured, "Legacy")
-	if len(got) != 3 || got[2] != "Legacy" {
-		t.Errorf("missing selection not appended: %v", got)
+    if len(got) != 3 || got[2].Value != "Legacy" || got[2].Label != "Legacy" {		t.Errorf("missing selection not appended: %v", got)
 	}
 
 	// No duplicate when it is already there.

@@ -1,11 +1,4 @@
 {{define "expenses_list.html"}}
-{{/*
-  The expense list. Rendered inline by index.html and archive.html.
-
-  Note: no <style> block. This partial used to carry its own :root token
-  declarations, which meant the CSS was re-injected into the DOM on every
-  AJAX refresh and could stomp the page's own rules.
-*/}}
 {{if .Expenses}}
 <ul class="expense-list">
     {{range .Expenses}}
@@ -17,22 +10,13 @@
         <div class="expense-body">
             <div class="expense-title">{{.Description}}</div>
             <div class="expense-meta">
-                {{.CreatedAt}}{{if .Category}} · {{.Category}}{{end}}
+                {{printf "%.16s" .CreatedAt}}{{if .Category}} · {{.Category}}{{end}}
             </div>
         </div>
 
-        {{/* The sign is what tells the two apart at a glance for anyone who
-             cannot rely on the colour, so it is never left off. */}}
         <span class="expense-amount">{{if .Income}}+{{else}}−{{end}}{{money $.CurrencySymbol .Amount}}</span>
 
         <span class="expense-actions">
-            {{/* Everything the edit modal needs is carried on this button, so
-                 opening it is a local operation with no round trip — and the
-                 row the user clicked is exactly the row that gets edited.
-
-                 html/template escapes each attribute for its context, so a
-                 description containing a quote or an angle bracket comes back
-                 out of dataset as the original text. */}}
             <button type="button" class="btn-icon" data-edit-expense
                     data-id="{{.ID}}"
                     data-kind="{{.Kind}}"
@@ -45,18 +29,7 @@
             </button>
 
             <form action="/delete/{{.ID}}" method="POST">
-                {{/* Carried through so the redirect lands back on the month the
-                     user was actually looking at, not on the current one. */}}
                 <input type="hidden" name="month" value="{{$.Month}}">
-                {{/* And if a search is in force, back on its results too. The
-                     filter's category and kind are posted with a _filter suffix
-                     because this button sits next to fields named category and
-                     kind in the add/edit modal, and one reader serves every form
-                     that carries filters.
-
-                     $ is the page's data, not the list's: the home screen puts
-                     a Filters value there and every other page leaves it out,
-                     so the block simply does not render on the archive. */}}
                 {{with $.Filters}}
                 <input type="hidden" name="q" value="{{.Query}}">
                 <input type="hidden" name="category_filter" value="{{.Category}}">
@@ -74,9 +47,6 @@
     {{end}}
 </ul>
 {{else}}
-{{/* Two different kinds of nothing: a search that matched no rows is a
-     different problem from a ledger with nothing in it, and telling the user to
-     tap + would be the wrong advice for the first. */}}
 {{if $.Searching}}
 <div class="empty">
     <span class="empty-icon">

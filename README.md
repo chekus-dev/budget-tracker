@@ -45,7 +45,7 @@ This README documents the project honestly — including the setbacks — becaus
 - Delete an expense and undo it from a toast that stays on screen for a few
   seconds
 - Sign in, register, and reset a forgotten password by email
-- Light, dark and system themes across every screen
+- Light and dark themes across every screen; the preference is remembered per browser
 - Generate a spending report and monthly chart from the same data, using a
   separate Python script
 
@@ -294,9 +294,8 @@ refuse to start:
 openssl rand -base64 32
 ```
 
-> Use the **Session pooler** (or **Direct connection**) string, on port 5432.
-> The **Transaction pooler** on port 6543 does not work well with the prepared
-> statements a long-running server keeps open.
+> Direct and pooler connection strings are supported. The app disables named
+> prepared statements so Supabase's Transaction pooler can be used as well.
 
 #### Optional: signup bot protection
 
@@ -569,12 +568,9 @@ are planned rather than already built:
   escaping and the date handling behind search (`search_test.go`); run
   them with `go test ./...`. The HTTP handlers and the database logic
   still have none. Adding those is a deliberate next step.
-- **The theme preference is per-browser.** It is applied from
-  `localStorage` before the first paint, which is what stops the page
-  flashing the wrong colours; the choice is also saved to the account,
-  but a browser that has never opened the settings page starts on
-  `system`. Serving the theme with the page would fix this at the cost
-  of a settings read on every request.
+- **The theme preference is per-browser.** Light or dark is applied from
+  `localStorage` before the first paint, and new browsers default to dark.
+  Appearance is intentionally not stored in account settings.
 - **Soft-deleted rows are only purged nightly.** An expense deleted in
   the last 30 days is still present in the `expenses` table with
   `deleted_at` set. It is invisible everywhere in the app, but it is

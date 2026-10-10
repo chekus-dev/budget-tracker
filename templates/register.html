@@ -51,8 +51,6 @@
                     <p class="field-error" id="confirm-error" role="alert" hidden></p>
                 </div>
 
-                {{/* Required on the server too — `required` here is only a
-                     convenience, and is trivially bypassed with curl. */}}
                 <div class="auth-field consent">
                     <input type="checkbox" id="accept_terms" name="accept_terms" value="1"
                            class="checkbox" required {{if .TermsChecked}}checked{{end}}>
@@ -62,10 +60,6 @@
                     </label>
                 </div>
 
-                {{/* reCAPTCHA v2 checkbox. Omitted entirely when no site key is
-                     configured, so local development without keys still renders
-                     a usable form — the server is what decides whether the
-                     challenge is actually required (see recaptchaRequired). */}}
                 {{if .RecaptchaSiteKey}}
                 <div class="auth-field">
                     <div class="captcha">
@@ -76,9 +70,6 @@
                         <p class="hint">Verification needs JavaScript. Please enable it to sign up.</p>
                     </noscript>
                 </div>
-                {{/* Must run before api.js scans the page: pick the compact
-                     widget on narrow phones (the full one is 304px wide) and
-                     match the site's dark mode. */}}
                 <script>
                 (function () {
                     var el = document.querySelector('.g-recaptcha');
@@ -97,7 +88,6 @@
         </div>
     </main>
 
-    {{/* Friendly inline checks. The server re-validates everything. */}}
     <script>
     (function () {
         var form = document.getElementById('register-form');

@@ -7,14 +7,23 @@
 </head>
 <body class="has-chrome">
     {{template "nav.html" .}}
+         <p class="hint text-center mt-6" style="color: var(--ink-faint);">
+            Budget Tracker v{{.Version}}
+        </p>
 
     <main class="app-main">
+
+        <div class="trend-top">
+            {{template "account-bar" .}}
+        </div>
         <div class="page-head">
             <h1 class="page-title">Settings</h1>
-            <p class="page-sub">Your monthly limit, currency, appearance and categories</p>
+            <p class="page-sub">Your budget, appearance, data and account</p>
         </div>
 
         <form action="/settings/saved" method="POST">
+
+            <h2 class="card-title mb-2">Budget</h2>
 
             <section class="card mb-4">
                 <label class="label" for="budget">Monthly budget limit</label>
@@ -41,35 +50,6 @@
                 <p class="hint mt-2">
                     Amounts will look like <span class="figure figure-sm">{{money .CurrencySymbol 1200}}</span>.
                 </p>
-            </section>
-
-            <section class="card mb-4">
-                <div class="label" id="appearance-label">Appearance</div>
-                <p class="hint">
-                    Applies to this browser. System follows your device setting.
-                    <br>
-                    Your choice is saved to your account too, so signing in elsewhere
-                    restores it — but each browser remembers its own until you open
-                    this page.
-                </p>
-
-                <input type="hidden" name="theme" id="theme-input"
-                       value="{{if .Theme}}{{.Theme}}{{else}}system{{end}}">
-
-                <div class="theme-grid" role="group" aria-labelledby="appearance-label">
-                    <button type="button" class="theme-btn" data-theme="light" aria-pressed="false">
-                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg#sun"/></svg>
-                        Light
-                    </button>
-                    <button type="button" class="theme-btn" data-theme="dark" aria-pressed="false">
-                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg#moon"/></svg>
-                        Dark
-                    </button>
-                    <button type="button" class="theme-btn" data-theme="system" aria-pressed="false">
-                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg#monitor"/></svg>
-                        System
-                    </button>
-                </div>
             </section>
 
             <section class="card mb-4">
@@ -106,16 +86,74 @@
                 </button>
             </section>
 
+            <h2 class="card-title mb-2 mt-8">Appearance</h2>
+
+            <section class="card mb-4">
+                <div class="label" id="appearance-label">Theme</div>
+                <p class="hint">
+                    Applies to this browser. System follows your device setting.
+                    <br>
+                    Your choice is saved to your account too, so signing in elsewhere
+                    restores it — but each browser remembers its own until you open
+                    this page.
+                </p>
+
+                <input type="hidden" name="theme" id="theme-input"
+                       value="system">
+
+                <div class="theme-grid" role="group" aria-labelledby="appearance-label">
+                    <button type="button" class="theme-btn" data-theme="light" aria-pressed="false">
+                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg#sun"/></svg>
+                        Light
+                    </button>
+                    <button type="button" class="theme-btn" data-theme="dark" aria-pressed="false">
+                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg#moon"/></svg>
+                        Dark
+                    </button>
+                    <button type="button" class="theme-btn" data-theme="system" aria-pressed="false">
+                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg#monitor"/></svg>
+                        System
+                    </button>
+                </div>
+            </section>
+
             <button type="submit" class="btn btn-primary btn-block">Save settings</button>
+        </form>
+
+        <h2 class="card-title mb-2 mt-8">Your data</h2>
+
+        <a href="/export" class="card link-card mb-4">
+            <span class="tile">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#export"/></svg>
+            </span>
+            <span class="link-card-body">
+                <span class="link-card-title">Export</span>
+                <span class="link-card-desc">Download a month of entries</span>
+            </span>
+            <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+        </a>
+
+        <h2 class="card-title mb-2 mt-8">Account</h2>
+
+        <a href="/account/change-password" class="card link-card mb-4">
+            <span class="tile">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#settings"/></svg>
+            </span>
+            <span class="link-card-body">
+                <span class="link-card-title">Change password</span>
+                <span class="link-card-desc">Signs you out on your other devices</span>
+            </span>
+            <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+        </a>
+
+        <form action="/logout" method="POST">
+            <button type="submit" class="btn btn-soft btn-block">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#logout"/></svg>
+                Log out{{if .Username}} ({{.Username}}){{end}}
+            </button>
         </form>
     </main>
 
-    {{/* Source for the "Add category" button — cloned by app.js so the markup
-         for a row is written once, in HTML, rather than assembled in JS.
-
-         A new row carries an empty category_limit as well as an empty name, so
-         the two arrays the form submits stay the same length. Without it, every
-         later row's limit would be read against the wrong category. */}}
     <template id="category-row-template">
         <div class="category-item">
             <input type="text" name="category" placeholder="New category" class="input" aria-label="Category name">

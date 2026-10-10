@@ -1,0 +1,156 @@
+{{define "goals.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Goals — Budget Tracker</title>
+    {{template "head.html" .}}
+</head>
+<body class="has-chrome">
+    {{template "nav.html" .}}
+
+    <main class="app-main">
+
+        <div class="trend-top">
+            {{template "account-bar" .}}
+        </div>
+
+        <div class="page-head">
+            <h1 class="page-title">Goals</h1>
+            <p class="page-sub">What you mean to do this month and this year</p>
+        </div>
+
+        {{/* Active goals, grouped by the period they belong to. The current
+             month's group comes first because that is the one a person is
+             actually living in; the query orders by period descending and
+             the handler groups in that order. */}}
+        {{if .ActiveGroups}}
+        {{range .ActiveGroups}}
+        <section class="goal-group" aria-labelledby="goal-group-{{.Period}}">
+            <div class="goal-group-head">
+                <h2 class="goal-group-title" id="goal-group-{{.Period}}">{{.Label}}</h2>
+                <span class="goal-group-count">{{len .Goals}} open</span>
+            </div>
+            <ul class="goal-list">
+                {{range .Goals}}
+                <li class="goal-row">
+                    <form action="/goals/toggle/{{.ID}}" method="POST" class="goal-toggle-form">
+                        <button type="submit" class="goal-check"
+                                aria-label="Mark {{.Title}} complete">
+                            {{if .Completed}}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>
+                            {{end}}
+                        </button>
+                    </form>
+                    <div class="goal-body">
+                        <div class="goal-title">{{.Title}}</div>
+                        {{if .Note}}<div class="goal-note">{{.Note}}</div>{{end}}
+                        {{if .HasAmount}}
+                        <span class="goal-meta">{{money $.CurrencySymbol .Amount}}</span>
+                        {{end}}
+                    </div>
+                    <form action="/goals/delete/{{.ID}}" method="POST">
+                        <button type="submit" class="btn-icon is-danger">
+                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#trash"/></svg>
+                            <span class="visually-hidden">Delete {{.Title}}</span>
+                        </button>
+                    </form>
+                </li>
+                {{end}}
+            </ul>
+        </section>
+        {{end}}
+        {{else}}
+        <div class="empty mb-6">
+            <span class="empty-icon">
+                <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg#target"/></svg>
+            </span>
+            <p class="empty-title">No goals yet</p>
+            <p class="empty-sub">Add one below. Goals are things to do this month or this year — save for something, pay something off, or just remember to do something.</p>
+        </div>
+        {{end}}
+
+        {{/* Completed goals, folded away. Collapsed by default because the
+             open ones are what a person came here for, but kept on the page
+             because seeing what you finished is its own reward. */}}
+        {{if .Completed}}
+        <details class="goal-completed">
+            <summary>{{len .Completed}} completed</summary>
+            <ul class="goal-list mt-4">
+                {{range .Completed}}
+                <li class="goal-row is-done">
+                    <form action="/goals/toggle/{{.ID}}" method="POST" class="goal-toggle-form">
+                        <button type="submit" class="goal-check"
+                                aria-label="Mark {{.Title}} not complete">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>
+                        </button>
+                    </form>
+                    <div class="goal-body">
+                        <div class="goal-title">{{.Title}}</div>
+                        {{if .HasAmount}}
+                        <span class="goal-meta">{{money $.CurrencySymbol .Amount}}</span>
+                        {{end}}
+                    </div>
+                    <form action="/goals/delete/{{.ID}}" method="POST">
+                        <button type="submit" class="btn-icon is-danger">
+                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#trash"/></svg>
+                            <span class="visually-hidden">Delete {{.Title}}</span>
+                        </button>
+                    </form>
+                </li>
+                {{end}}
+            </ul>
+        </details>
+        {{end}}
+
+        {{/* Add form. Always visible at the bottom of the list, so a user
+             who has just scrolled past their goals can add the next one
+             without hunting for a button. */}}
+        <section class="card mt-6">
+            <h2 class="card-title mb-4">New goal</h2>
+            <form action="/goals/create" method="POST" class="stack-tight">
+                <div>
+                    <label class="label" for="goal-title">What do you want to do?</label>
+                    <input class="input" type="text" id="goal-title" name="title"
+                           placeholder="Pay off rent, save for a car, read 12 books…"
+                           required maxlength="200">
+                </div>
+
+                <div>
+                    <label class="label" for="goal-note">Note (optional)</label>
+                    <input class="input" type="text" id="goal-note" name="note"
+                           placeholder="Anything you want to remember" maxlength="500">
+                </div>
+
+                <div>
+                    <label class="label" for="goal-amount">Amount (optional, {{.CurrencySymbol}})</label>
+                    <input class="input" type="number" id="goal-amount" name="target_amount"
+                           inputmode="decimal" step="0.01" min="0.01" placeholder="0.00">
+                    <p class="hint">Leave blank if the goal is not about money.</p>
+                </div>
+
+                <div>
+                    <label class="label" for="goal-period">When</label>
+                    <div class="date-field">
+                        <input class="input" type="month" id="goal-period" name="period"
+                               value="{{.DefaultMonth}}">
+                        <button type="button" class="date-trigger" data-date-target="goal-period" aria-label="Choose a month">
+                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#calendar"/></svg>
+                        </button>
+                    </div>
+                    <label class="goal-whole-year mt-2">
+                        <input type="checkbox" name="whole_year" value="1" class="checkbox">
+                        <span>Cover the whole year instead of just this month</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block mt-2">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#plus"/></svg>
+                    Add goal
+                </button>
+            </form>
+        </section>
+
+    </main>
+</body>
+</html>
+{{end}}

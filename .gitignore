@@ -1,29 +1,38 @@
-# Environment variables / secrets
+# Secrets — never commit these
 .env
+.env.local
+.env.*.local
 
-# Go build artifacts
+# Go build output
+/budget
+/tmp/
 *.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-web-server-in-go-with-mysql-database
+*.test
+*.out
 
-# Python virtual environment
-venv/
-__pycache__/
-*.pyc
-
-# Generated reports (regenerable from the database)
-reports/*.png
-reports/*.csv
-
-# Node / Tailwind build
+# Node
 node_modules/
-# Compiled stylesheet: rebuilt by `npm run build:css` at deploy (see render.yaml).
-# Track only the source, so a stale build can never be committed.
-static/css/app.css
+npm-debug.log*
 
-# OS/editor cruft
-.DS_Store
+# Editor
+.vscode/
+.idea/
 *.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local database dumps
+*.sql.gz
+*.dump
+
+# Local backups and stray copies
+*.bak
+*.bak-*
+*.old
+*.current
+*.orig
+
+# Compiled binary at the repo root (any name, no extension)
+/web-server-in-go-with-mysql-datebase

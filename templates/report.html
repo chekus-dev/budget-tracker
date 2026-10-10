@@ -9,16 +9,15 @@
     {{template "nav.html" .}}
 
     <main class="app-main">
+
+        <div class="trend-top">
+            {{template "account-bar" .}}
+        </div>
         <div class="page-head">
             <h1 class="page-title">Report</h1>
             <p class="page-sub">All spending on your account, by category</p>
         </div>
 
-        {{/* Income is deliberately absent here rather than a switch away. A
-             report is a share-of-total, and "34% of your spending" stops
-             meaning anything the moment a salary is folded into the
-             denominator — every bar would shrink the month you got paid. The
-             export screen has the whole ledger, both kinds. */}}
         <div class="stat-grid mb-6">
             <div class="stat-card">
                 <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#receipt"/></svg></div>
@@ -46,19 +45,20 @@
         <section class="card mb-4">
             <h2 class="card-title mb-4">Spending by category</h2>
 
-            {{/* The chart is decoration over this list — the list is what a
-                 screen reader can actually read, so it is never hidden. */}}
             <div class="h-[280px] relative">
                 <canvas id="categoryChart" role="img" aria-label="Bar chart of spending by category"></canvas>
             </div>
 
             <hr class="divider">
 
-            <ul class="expense-list">
+            <ul class="trend-rows">
                 {{range .CategoryTotals}}
-                <li class="flex items-center justify-between gap-3 py-2">
-                    <span class="chip is-static">{{.Category}}</span>
-                    <span class="expense-amount">{{money $.CurrencySymbol .Total}}</span>
+                <li class="trend-row">
+                    <span class="trend-tile trend-tile-{{tile .Category}}" aria-hidden="true">{{printf "%.1s" .Category}}</span>
+                    <div class="trend-row-body">
+                        <div class="trend-row-name">{{.Category}}</div>
+                    </div>
+                    <span class="trend-row-amount">{{money $.CurrencySymbol .Total}}</span>
                 </li>
                 {{end}}
             </ul>
@@ -88,21 +88,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script>
         (function () {
-            /* Rendered by reportHandler as json.Marshal output, which escapes
-               <, > and & — so it cannot break out of this script element. */
             var rows = {{.CategoryJSON}};
             var canvas = document.getElementById('categoryChart');
             if (!canvas || !rows.length) return;
 
-            /* Chart.js paints to a canvas and cannot read CSS variables, so
-               resolve them once against the current theme. */
             var css = getComputedStyle(document.documentElement);
-            var brand = css.getPropertyValue('--brand').trim() || '#185fa5';
-            var muted = css.getPropertyValue('--ink-muted').trim() || '#5b6b82';
-            var line = css.getPropertyValue('--line').trim() || '#e2e8f0';
+            var brand = css.getPropertyValue('--brand').trim() || '#4F46E5';
+            var muted = css.getPropertyValue('--ink-muted').trim() || '#6B7280';
+            var line = css.getPropertyValue('--line').trim() || '#E5E7EB';
 
-            /* html/template escapes this for the JS string context, so the
-               glyph is safe here even if the currency code is unusual. */
             var currency = function (n) {
                 return '{{.CurrencySymbol}}' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
             };
@@ -115,9 +109,6 @@
                         label: 'Spent',
                         data: rows.map(function (r) { return r.total; }),
                         backgroundColor: brand,
-                        /* Rounded at the value end, square where it meets the
-                           axis — a bar rounded at the baseline reads as if it
-                           floats off it. */
                         borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
                         maxBarThickness: 24
                     }]

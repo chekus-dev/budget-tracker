@@ -9,6 +9,28 @@
     {{template "nav.html" .}}
 
     <main class="app-main">
+
+        <div class="trend-top">
+            {{template "account-bar" .}}
+            {{if and .Details (not .Searching)}}
+            <div class="trend-year" role="group" aria-label="Month">
+                <a class="trend-year-btn" href="/archive?month={{.Details.PrevMonth}}" aria-label="Previous month">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
+                </a>
+                <span class="trend-year-label">{{.Label}}</span>
+                {{if lt .Month .Details.CurrentMonth}}
+                <a class="trend-year-btn" href="/archive?month={{.Details.NextMonth}}" aria-label="Next month">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                </a>
+                {{else}}
+                <span class="trend-year-btn" aria-disabled="true" aria-label="Next month">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                </span>
+                {{end}}
+            </div>
+            {{end}}
+        </div>
+
         <form class="archive-search" action="/archive" method="GET" role="search">
             <div class="archive-search-main">
                 <label class="label" for="archive-q">Search entries</label>
@@ -24,7 +46,7 @@
                     <select class="input" id="archive-category" name="category" onchange="this.form.submit()">
                         <option value="">All categories</option>
                         {{range .CategoryOptions}}
-                        <option value="{{.}}"{{if eq . $.Filters.Category}} selected{{end}}>{{.}}</option>
+                        <option value="{{.Value}}"{{if eq .Value $.Filters.Category}} selected{{end}}>{{.Label}}</option>
                         {{end}}
                     </select>
                 </div>
@@ -93,29 +115,12 @@
         </div>
 
         {{else if .Details}}
-        {{/* ---------- A single month in detail ---------- */}}
         <div class="page-head">
             <h1 class="page-title">{{.Label}}</h1>
             <p class="page-sub">
                 {{len .Details.Expenses}} entr{{if ne (len .Details.Expenses) 1}}ies{{else}}y{{end}}
                 · {{money .Details.CurrencySymbol .Details.Spent}} spent{{if .Details.Received}} · {{money .Details.CurrencySymbol .Details.Received}} received{{end}}
             </p>
-        </div>
-
-        <div class="month-switch mb-6">
-            <a class="month-switch-btn" href="/archive?month={{.Details.PrevMonth}}" aria-label="Previous month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
-            </a>
-            <span class="month-switch-label">{{.Label}}</span>
-            {{if lt .Month .Details.CurrentMonth}}
-            <a class="month-switch-btn" href="/archive?month={{.Details.NextMonth}}" aria-label="Next month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
-            </a>
-            {{else}}
-            <span class="month-switch-btn" aria-disabled="true" aria-label="Next month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
-            </span>
-            {{end}}
         </div>
 
         {{template "expenses_list.html" .Details}}
@@ -128,7 +133,6 @@
         </p>
 
         {{else}}
-        {{/* ---------- The list of months ---------- */}}
         <div class="page-head">
             <h1 class="page-title">Archive</h1>
             <p class="page-sub">Every month with recorded activity</p>

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE,
     reset_token VARCHAR(64),
     reset_token_expires TIMESTAMP,
+    session_version INTEGER NOT NULL DEFAULT 0,
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -33,8 +34,7 @@ CREATE TABLE IF NOT EXISTS settings (
     user_id INTEGER PRIMARY KEY REFERENCES users(id),
     budget_limit NUMERIC(10,2) NOT NULL DEFAULT 0,
     currency VARCHAR(10) NOT NULL DEFAULT 'NGN',
-    categories VARCHAR(500) NOT NULL DEFAULT 'Food,Transport,Bills',
-    theme VARCHAR(10) NOT NULL DEFAULT 'system'
+    categories VARCHAR(500) NOT NULL DEFAULT 'Food,Transport,Bills'
 );
 
 -- ============================================================

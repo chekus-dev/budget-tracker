@@ -1,0 +1,461 @@
+{{define "trends.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Trends — Budget Tracker</title>
+    {{template "head.html" .}}
+</head>
+<body class="has-chrome">
+    {{template "nav.html" .}}
+
+    <main class="app-main">
+
+        <div class="trend-top">
+            {{template "account-bar" .}}
+
+            <div class="trend-year" role="group" aria-label="Year">
+                {{if .HasPrev}}
+                <a class="trend-year-btn" href="{{.PrevHref}}" aria-label="Previous year, {{.PrevYear}}">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
+                </a>
+                {{end}}
+                <span class="trend-year-label">{{.Year}}</span>
+                {{if .HasNext}}
+                <a class="trend-year-btn" href="{{.NextHref}}" aria-label="Next year, {{.NextYear}}">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                </a>
+                {{else}}
+                <span class="trend-year-btn" aria-disabled="true" aria-label="Next year">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                </span>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="page-head">
+            <h1 class="page-title">Trends</h1>
+            <p class="page-sub">
+                {{if eq .View "balance"}}Income vs expenses, month by month
+                {{else if eq .View "target"}}How each month compared to your budget
+                {{else}}Where your money went this year{{end}}
+            </p>
+        </div>
+
+        <div class="trend-tabs" role="group" aria-label="Trends view">
+            {{range .Tabs}}
+            <a class="trend-tab{{if .Active}} is-active{{end}}" href="{{.Href}}"{{if .Active}} aria-current="true"{{end}}>
+                {{.Label}}
+            </a>
+            {{end}}
+        </div>
+
+        {{if .HasData}}
+        <div class="stat-grid stat-grid-three mb-4">
+            <div class="stat-card">
+                <div class="stat-icon is-safe">
+                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#trending-up"/></svg>
+                </div>
+                <div class="stat-label">Avg monthly income</div>
+                <div class="stat-value">{{money0 .CurrencySymbol .AvgIncome}}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon is-over">
+                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#trending-down"/></svg>
+                </div>
+                <div class="stat-label">Avg monthly expense</div>
+                <div class="stat-value">{{money0 .CurrencySymbol .AvgExpense}}</div>
+            </div>
+            {{if .HasIncome}}
+            <div class="stat-card is-primary">
+                <div class="stat-icon">
+                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#target"/></svg>
+                </div>
+                <div class="stat-label">Savings rate</div>
+                <div class="stat-value">{{printf "%.0f" .SavingsRate}}%</div>
+            </div>
+            {{else}}
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#calendar"/></svg>
+                </div>
+                <div class="stat-label">Months tracked</div>
+                <div class="stat-value">{{.AvgDivisor}}</div>
+            </div>
+            {{end}}
+        </div>
+        {{end}}
+
+        {{if .HasData}}
+        <div class="trend-charts{{if .DonutJSON}} is-double{{end}}">
+            <section class="card trend-card" aria-labelledby="trend-title">
+                <div class="trend-head">
+                    <div>
+                        <h2 class="trend-title" id="trend-title">{{.Year}}</h2>
+                        <p class="trend-caption">{{.HeadCaption}}</p>
+                    </div>
+                    <div class="trend-total">
+                        <p>
+                            <span class="trend-total-main">{{.HeadMain}}</span><span class="trend-total-frac">{{.HeadFrac}}</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="trend-chart-canvas">
+                    <canvas id="trendChart" role="img" aria-label="{{.HeadCaption}} for {{.Year}}"></canvas>
+                </div>
+            </section>
+
+            {{if .DonutJSON}}
+            <section class="card trend-card" aria-labelledby="donut-title">
+                <div class="trend-head">
+                    <div>
+                        <h2 class="trend-title" id="donut-title">By category</h2>
+                        <p class="trend-caption">Top spending categories</p>
+                    </div>
+                </div>
+                <div class="trend-donut-canvas">
+                    <canvas id="donutChart" role="img" aria-label="Spending by category"></canvas>
+                </div>
+            </section>
+            {{end}}
+        </div>
+        {{end}}
+
+        {{if .NoBudget}}
+        <section class="card">
+            <div class="empty">
+                <span class="empty-icon">
+                    <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
+                </span>
+                <p class="empty-title">No monthly budget yet</p>
+                <p class="empty-sub">Set a monthly limit in <a href="/settings">Settings</a> and this view will show which months stayed within it.</p>
+            </div>
+        </section>
+        {{else if not .HasData}}
+        <section class="card">
+            <div class="empty">
+                <span class="empty-icon">
+                    <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg#chart"/></svg>
+                </span>
+                <p class="empty-title">Nothing in {{.Year}}</p>
+                <p class="empty-sub">Entries you log will appear here, month by month.</p>
+            </div>
+        </section>
+        {{end}}
+
+        {{if eq .View "spending"}}
+        {{if .Rows}}
+        <section class="card trend-list" aria-labelledby="trend-list-title">
+            <div class="section-head">
+                <h2 class="card-title" id="trend-list-title">Spending by category</h2>
+                <a class="trend-link" href="{{.SeeAllHref}}">See entries</a>
+            </div>
+
+            <ul class="trend-rows">
+                {{range .Rows}}
+                <li>
+                    <a class="trend-row" href="{{.Href}}">
+                        <span class="trend-tile trend-tile-{{.Tile}}" aria-hidden="true">{{.Initial}}</span>
+                        <span class="trend-row-body">
+                            <span class="trend-row-name">{{.Name}}</span>
+                            <span class="trend-row-meta">{{.Count}} transaction{{if ne .Count 1}}s{{end}}</span>
+                        </span>
+                        <span class="trend-row-amount">{{.AmtMain}}<small>{{.AmtFrac}}</small></span>
+                    </a>
+                </li>
+                {{end}}
+            </ul>
+
+            {{if .MoreRows}}
+            <details class="trend-more">
+                <summary>Show more categories</summary>
+                <ul class="trend-rows">
+                    {{range .MoreRows}}
+                    <li>
+                        <a class="trend-row" href="{{.Href}}">
+                            <span class="trend-tile trend-tile-{{.Tile}}" aria-hidden="true">{{.Initial}}</span>
+                            <span class="trend-row-body">
+                                <span class="trend-row-name">{{.Name}}</span>
+                                <span class="trend-row-meta">{{.Count}} transaction{{if ne .Count 1}}s{{end}}</span>
+                            </span>
+                            <span class="trend-row-amount">{{.AmtMain}}<small>{{.AmtFrac}}</small></span>
+                        </a>
+                    </li>
+                    {{end}}
+                </ul>
+            </details>
+            {{end}}
+        </section>
+        {{end}}
+        {{end}}
+
+        {{if and (eq .View "balance") .HasData}}
+        <section class="card trend-list" aria-labelledby="trend-summary-title">
+            <div class="section-head">
+                <h2 class="card-title" id="trend-summary-title">{{.Year}} in total</h2>
+            </div>
+            <div class="summary-list">
+                <div class="summary-row">
+                    <span class="summary-label">Received</span>
+                    <span class="summary-value">{{money .CurrencySymbol .Received}}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Spent</span>
+                    <span class="summary-value">{{money .CurrencySymbol .Spent}}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Net</span>
+                    <span class="summary-value {{if lt .Net 0.0}}is-negative{{end}}">{{money .CurrencySymbol .Net}}</span>
+                </div>
+            </div>
+        </section>
+        {{end}}
+
+        {{if and (eq .View "target") .Months}}
+        <section class="card trend-list" aria-labelledby="trend-months-title">
+            <div class="section-head">
+                <h2 class="card-title" id="trend-months-title">Month by month</h2>
+                <span class="hint mt-0">Budget {{money0 .CurrencySymbol .BudgetLimit}}</span>
+            </div>
+
+            <ul class="trend-rows">
+                {{range .Months}}
+                <li>
+                    <a class="trend-row" href="{{.Href}}">
+                        <span class="trend-tile is-month {{if .Over}}is-bad{{else}}is-good{{end}}" aria-hidden="true">{{.Short}}</span>
+                        <span class="trend-row-body">
+                            <span class="trend-row-name">{{.Name}}</span>
+                            <span class="trend-row-meta">
+                                {{if .Over}}<strong>Over budget</strong> by {{money0 $.CurrencySymbol .Diff}}{{else}}{{money0 $.CurrencySymbol .Diff}} under budget{{end}}
+                            </span>
+                        </span>
+                        <span class="trend-row-amount">{{.AmtMain}}<small>{{.AmtFrac}}</small></span>
+                    </a>
+                </li>
+                {{end}}
+            </ul>
+        </section>
+        {{end}}
+
+    </main>
+
+    {{if .HasData}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script>
+    (function () {
+        var payload = {{.ChartJSON}};
+        var canvas = document.getElementById('trendChart');
+        if (!canvas || !payload.points || !payload.points.length) return;
+
+        var css = getComputedStyle(document.documentElement);
+        var brand = css.getPropertyValue('--brand').trim() || '#4F46E5';
+        var muted = css.getPropertyValue('--ink-muted').trim() || '#6B7280';
+        var line = css.getPropertyValue('--line').trim() || '#E5E7EB';
+        var over = css.getPropertyValue('--over').trim() || '#EF4444';
+        var safe = css.getPropertyValue('--safe').trim() || '#10B981';
+
+        var ctx = canvas.getContext('2d');
+        var gradient = ctx.createLinearGradient(0, 0, 0, canvas.clientHeight || 240);
+        gradient.addColorStop(0, brand + '40');
+        gradient.addColorStop(1, brand + '00');
+
+        var labels = payload.points.map(function (p) { return p.month.slice(0, 3); });
+        var datasets;
+
+        if (payload.view === 'balance') {
+            datasets = [
+                {
+                    label: 'Income',
+                    data: payload.points.map(function (p) { return p.received; }),
+                    borderColor: safe,
+                    backgroundColor: safe + '1A',
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: safe,
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
+                },
+                {
+                    label: 'Expense',
+                    data: payload.points.map(function (p) { return p.spent; }),
+                    borderColor: brand,
+                    backgroundColor: 'transparent',
+                    borderWidth: 2.5,
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: brand,
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
+                }
+            ];
+        } else {
+            datasets = [{
+                label: 'Spent',
+                data: payload.points.map(function (p) { return p.spent; }),
+                borderColor: brand,
+                backgroundColor: gradient,
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                pointHoverBackgroundColor: brand,
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 2
+            }];
+        }
+
+        if (payload.showLine && payload.view !== 'balance') {
+            datasets.push({
+                label: payload.lineLabel || 'Reference',
+                data: payload.points.map(function () { return payload.lineValue; }),
+                borderColor: over,
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0,
+                pointRadius: 0,
+                pointHoverRadius: 0
+            });
+        }
+
+        var currency = function (n) {
+            return payload.symbol + Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+        };
+
+        new Chart(canvas, {
+            type: 'line',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        display: payload.view === 'balance',
+                        position: 'bottom',
+                        labels: {
+                            color: muted,
+                            font: { size: 12, weight: '500' },
+                            boxWidth: 10,
+                            boxHeight: 10,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 16
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#111827',
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: payload.view === 'balance',
+                        titleFont: { size: 13, weight: '600' },
+                        bodyFont: { size: 13 },
+                        callbacks: {
+                            label: function (item) { return item.dataset.label + ': ' + currency(item.parsed.y); }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        border: { display: false },
+                        ticks: { color: muted, font: { size: 12, weight: '500' } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: line, drawTicks: false },
+                        border: { display: false },
+                        ticks: {
+                            color: muted,
+                            padding: 8,
+                            font: { size: 12 },
+                            callback: function (v) { return currency(v); }
+                        }
+                    }
+                }
+            }
+        });
+    })();
+
+    {{if .DonutJSON}}
+    (function () {
+        var slices = {{.DonutJSON}};
+        var canvas = document.getElementById('donutChart');
+        if (!canvas || !slices || !slices.length) return;
+
+        var css = getComputedStyle(document.documentElement);
+        var brand = css.getPropertyValue('--brand').trim() || '#4F46E5';
+        var muted = css.getPropertyValue('--ink-muted').trim() || '#6B7280';
+        var surface = css.getPropertyValue('--surface').trim() || '#FFFFFF';
+        var symbol = {{.CurrencySymbol}};
+
+        var palette = [
+            brand,
+            '#8B5CF6',
+            '#EC4899',
+            '#F59E0B',
+            '#10B981',
+            '#06B6D4',
+            '#6366F1',
+            '#94A3B8'
+        ];
+
+        new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: slices.map(function (s) { return s.name; }),
+                datasets: [{
+                    data: slices.map(function (s) { return s.value; }),
+                    backgroundColor: slices.map(function (_, i) { return palette[i % palette.length]; }),
+                    borderColor: surface,
+                    borderWidth: 2,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: muted,
+                            font: { size: 12, weight: '500' },
+                            boxWidth: 10,
+                            boxHeight: 10,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 14
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#111827',
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        titleFont: { size: 13, weight: '600' },
+                        bodyFont: { size: 13 },
+                        callbacks: {
+                            label: function (item) {
+                                var total = item.dataset.data.reduce(function (a, b) { return a + b; }, 0);
+                                var pct = total > 0 ? (item.parsed / total * 100).toFixed(1) : '0.0';
+                                return item.label + ': ' + symbol + Number(item.parsed).toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' (' + pct + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    })();
+    {{end}}
+    </script>
+    {{end}}
+</body>
+</html>
+{{end}}

@@ -160,10 +160,20 @@ func TestRateLimitDB_SharedAcrossInstances(t *testing.T) {
 	a := newSharedTestLimiter("test-shared", 3, &clock) // "instance A"
 	b := newSharedTestLimiter("test-shared", 3, &clock) // "instance B"
 
-	if a.fail("k") != 0 || a.fail("k") != 0 {
-		t.Fatal("first two failures should not lock")
+	// Two failures, both recorded on instance A. Neither should lock on its
+	// own — the budget is 3. Written as two statements rather than one
+	// short-circuited condition, because staticcheck's SA4000 cannot tell
+	// that fail() has a side effect and flags the repeated call as a typo.
+	if wait := a.fail("k"); wait != 0 {
+		t.Fatalf("first failure locked early: %v", wait)
 	}
-	wait := b.fail("k") // the third failure arrives on a different instance
+	if wait := a.fail("k"); wait != 0 {
+		t.Fatalf("second failure locked before max=3: %v", wait)
+	}
+
+	// The third failure arrives on a different instance. It must see A's two
+	// failures through the shared store and lock.
+	wait := b.fail("k")
 	if wait == 0 {
 		t.Fatal("instance B should have seen A's failures and locked")
 	}
@@ -224,22 +234,44 @@ func TestRateLimitDB_BucketsAreIndependent(t *testing.T) {
 	}
 }
 
+// TestRateLimitDB_SweepRemovesOnlyExpired checks the sweeper's logic in
+// isolation: one row in the past must go, one row in the future must stay.
+//
+// The rows are written directly rather than through a limiter, because the
+// limiter's `now` is a fake clock and its reset_at values end up on the fake
+// timeline — which the sweeper, running against real time, would judge
+// wrongly. Writing the rows by hand pins their reset_at to real time, so the
+// only thing being tested is what the sweeper does with an expired row and a
+// live one.
 func TestRateLimitDB_SweepRemovesOnlyExpired(t *testing.T) {
 	conn := useTestDB(t)
-	clock := testEpoch
-	l := newSharedTestLimiter("test-sweep", 5, &clock)
 
-	l.fail("old")
-	clock = clock.Add(loginWindow + time.Minute)
-	l.fail("fresh")
-	l.sweep()
-
-	var n int
-	if err := conn.QueryRow("SELECT COUNT(*) FROM rate_limits WHERE bucket = 'test-sweep'").Scan(&n); err != nil {
+	if _, err := conn.Exec(`
+		INSERT INTO rate_limits (bucket, key, count, reset_at) VALUES
+			('test-sweep', 'expired', 1, now() - interval '1 hour'),
+			('test-sweep', 'live',    1, now() + interval '1 hour')
+	`); err != nil {
 		t.Fatal(err)
 	}
-	if n != 1 {
-		t.Fatalf("rows left after sweep = %d, want 1 (only the unexpired one)", n)
+
+	sweepSharedRateLimits(time.Now())
+
+	var expired, live int
+	if err := conn.QueryRow(
+		"SELECT COUNT(*) FROM rate_limits WHERE bucket = 'test-sweep' AND key = 'expired'",
+	).Scan(&expired); err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.QueryRow(
+		"SELECT COUNT(*) FROM rate_limits WHERE bucket = 'test-sweep' AND key = 'live'",
+	).Scan(&live); err != nil {
+		t.Fatal(err)
+	}
+	if expired != 0 {
+		t.Errorf("expired row should have been swept, still present: %d", expired)
+	}
+	if live != 1 {
+		t.Errorf("live row should have survived the sweep, present: %d", live)
 	}
 }
 

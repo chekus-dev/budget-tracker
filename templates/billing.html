@@ -1,0 +1,153 @@
+{{define "billing.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Premium — Budget Tracker</title>
+    {{template "head.html" .}}
+</head>
+<body class="has-chrome">
+    {{template "nav.html" .}}
+
+    <main class="app-main">
+
+        <div class="trend-top">
+            {{template "account-bar" .}}
+        </div>
+
+        {{if eq .Status "paid"}}
+        <div class="alert alert-safe mb-4" role="status">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
+            <p><strong>Payment received.</strong> Thank you — Premium is now active.</p>
+        </div>
+        {{end}}
+
+        {{if eq .Status "failed"}}
+        <div class="alert alert-over mb-4" role="alert">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+            <p><strong>That payment was not completed.</strong> You have not been charged. You can try again below.</p>
+        </div>
+        {{end}}
+
+        {{if eq .Status "error"}}
+        <div class="alert alert-near mb-4" role="alert">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+            <p><strong>We could not confirm your payment yet.</strong> If you were charged, it will appear shortly. Contact support if it does not.</p>
+        </div>
+        {{end}}
+
+        {{if .Premium}}
+        <div class="page-head">
+            <h1 class="page-title">You're a supporter</h1>
+            <p class="page-sub">Premium is active until {{.Until}}</p>
+        </div>
+        {{else}}
+        <div class="page-head">
+            <h1 class="page-title">Go Premium</h1>
+            <p class="page-sub">Keep Budget Tracker independent, ad-free, and yours</p>
+        </div>
+        {{end}}
+
+        <div class="premium-layout">
+
+            <div class="premium-hero">
+                <span class="premium-badge">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
+                    {{if .Premium}}Premium active{{else}}Premium{{end}}
+                </span>
+
+                {{if .Premium}}
+                <p class="premium-price is-date">Until {{.Until}}</p>
+                <p class="premium-note">Pay again to add {{.Days}} more days to your account.</p>
+                {{else}}
+                <p class="premium-price">{{.Price}}<small>for {{.Days}} days</small></p>
+                <p class="premium-note">One-time payment. Does not renew automatically.</p>
+                {{end}}
+
+                {{if .Enabled}}
+                <form action="/billing/checkout" method="POST" class="mt-4">
+                    <button type="submit" class="btn btn-premium btn-block">
+                        {{if .Premium}}Add {{.Days}} more days{{else}}Pay {{.Price}}{{end}}
+                    </button>
+                </form>
+                <p class="premium-note mt-4" style="text-align:center;font-size:12px;">
+                    Secure payment via Paystack · We never see your card details
+                </p>
+                {{else}}
+                <p class="premium-note mt-4">Payments are not available right now. Try again later.</p>
+                {{end}}
+            </div>
+
+            <section class="card">
+                {{if .Perks}}
+                <h2 class="card-title mb-4">What your support funds</h2>
+                <ul class="perk-list">
+                    {{range .Perks}}
+                    <li class="perk">
+                        <span class="tile is-premium">
+                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
+                        </span>
+                        <span>{{.}}</span>
+                    </li>
+                    {{end}}
+                </ul>
+                {{end}}
+            </section>
+
+        </div>
+
+        <section class="card mb-4 mt-6">
+            <h2 class="card-title mb-4">How it works</h2>
+            <div class="summary-list">
+                <div class="summary-row">
+                    <span class="summary-label">Payment</span>
+                    <span class="summary-value">One-time, {{.Price}}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Duration</span>
+                    <span class="summary-value">{{.Days}} days from the day you pay</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Renewal</span>
+                    <span class="summary-value">Manual — never automatic</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Refunds</span>
+                    <span class="summary-value">On request, within 14 days</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="card mb-4">
+            <h2 class="card-title mb-4">Common questions</h2>
+            <div class="stack">
+                <details class="faq">
+                    <summary>Does Premium charge me every month?</summary>
+                    <p class="note mt-2">No. Every payment is a single charge that adds {{.Days}} days to your account. Nothing is charged automatically and there is nothing to cancel.</p>
+                </details>
+                <details class="faq">
+                    <summary>What happens when my Premium time runs out?</summary>
+                    <p class="note mt-2">Your data stays exactly as it is — every expense, category and budget remains. The Premium badge disappears until you pay again. No features are taken away.</p>
+                </details>
+                <details class="faq">
+                    <summary>Where does the money go?</summary>
+                    <p class="note mt-2">Server hosting, the domain, email delivery for password resets, and time spent building the app. Budget Tracker has no investors and runs no ads, so this is what keeps it going.</p>
+                </details>
+                <details class="faq">
+                    <summary>Is my payment information safe?</summary>
+                    <p class="note mt-2">Yes. Payments are handled entirely by Paystack, a licensed payment processor. Your card details never touch our servers.</p>
+                </details>
+                <details class="faq">
+                    <summary>Can I get a refund?</summary>
+                    <p class="note mt-2">Yes, on request within 14 days of any payment. Contact support with the email you signed up with and we will return the payment in full.</p>
+                </details>
+            </div>
+        </section>
+
+        <p class="hint text-center mt-6">
+            Questions? Read the <a href="/terms">terms</a> or contact support.
+        </p>
+
+    </main>
+</body>
+</html>
+{{end}}

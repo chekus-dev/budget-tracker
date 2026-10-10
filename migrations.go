@@ -28,28 +28,53 @@ const migrationLockID int64 = 0x627564676574 // "budget"
 // does not depend on `psql` existing in the runtime image — the same binary
 // that serves requests carries its own schema.
 //
-// Every migration here is written to be idempotent (`CREATE TABLE IF NOT
-// EXISTS`, `ADD COLUMN IF NOT EXISTS`), and there is deliberately no tracking
-// table (see migrations/README.md), so re-applying the whole set is a no-op.
-// Each file is sent as a single multi-statement Exec, which the simple protocol
-// wraps in one implicit transaction — a file either applies entirely or not at
-// all. The advisory lock guards the one case idempotency does not cover: two
-// instances migrating during a rolling deploy, where `CREATE TABLE IF NOT
-// EXISTS` is not race-free and can fail with a duplicate-key error on pg_type.
+// Tracking: schema_migrations records each filename that has been applied. A
+// file whose name is present is skipped entirely, whether or not its SQL is
+// idempotent. This is what makes the ordering guarantee real — a migration runs
+// once, in order, exactly once — and it opens the door to data migrations
+// (backfills, column rewrites), which cannot be made idempotent with IF NOT
+// EXISTS and would otherwise re-run on every boot.
+//
+// Existing databases that predate this change: on the first boot after
+// deploying, every migration re-applies once (harmless — the historical files
+// are all written idempotently) and gets recorded. Subsequent boots skip them.
+//
+// All migrations run in one transaction under a transaction-scoped advisory
+// lock. This makes the schema update atomic and keeps the lock valid when
+// DATABASE_URL uses a transaction pooler.
 func applyMigrations(ctx context.Context, db *sql.DB) error {
-	// Take a dedicated connection: a session-level advisory lock is tied to the
-	// session, and the pool could otherwise hand the unlock to a different one.
+	// Keep one logical connection for the transaction. Poolers pin it to one
+	// server connection until Commit or Rollback.
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return fmt.Errorf("acquire connection: %w", err)
 	}
 	defer conn.Close()
 
-	if _, err := conn.ExecContext(ctx, "SELECT pg_advisory_lock($1)", migrationLockID); err != nil {
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin migration transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, "SELECT pg_advisory_xact_lock($1)", migrationLockID); err != nil {
 		return fmt.Errorf("acquire migration lock: %w", err)
 	}
-	// Best-effort unlock; closing the connection would release it anyway.
-	defer conn.ExecContext(context.Background(), "SELECT pg_advisory_unlock($1)", migrationLockID)
+
+	// Bootstrap the ledger before reading it. Deliberately not a migration
+	// file: the loop below must read this table before any file has been
+	// applied, and a file that creates its own ledger would have to be
+	// exempted from the loop that maintains it. Creating it here keeps the
+	// bootstrap inside the advisory lock, so two instances racing on a fresh
+	// database cannot both try to create it.
+	if _, err := tx.ExecContext(ctx, `
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			filename   TEXT PRIMARY KEY,
+			applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+		)
+	`); err != nil {
+		return fmt.Errorf("create schema_migrations: %w", err)
+	}
 
 	names, err := fs.Glob(migrationFS, "migrations/*.sql")
 	if err != nil {
@@ -57,16 +82,55 @@ func applyMigrations(ctx context.Context, db *sql.DB) error {
 	}
 	sort.Strings(names)
 
+	type appliedMigration struct {
+		name    string
+		elapsed time.Duration
+	}
+	applied := make([]appliedMigration, 0, len(names))
+	skipped := 0
+
 	for _, name := range names {
+		// Already recorded — skip the file entirely, regardless of whether its
+		// SQL would be a no-op. This is what allows non-idempotent migrations
+		// (UPDATE, DELETE, ALTER ... SET NOT NULL after a backfill) to exist
+		// alongside the idempotent history.
+		var already bool
+		if err := tx.QueryRowContext(ctx,
+			`SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE filename = $1)`,
+			name,
+		).Scan(&already); err != nil {
+			return fmt.Errorf("check %s: %w", name, err)
+		}
+		if already {
+			skipped++
+			continue
+		}
+
 		body, err := migrationFS.ReadFile(name)
 		if err != nil {
 			return fmt.Errorf("read %s: %w", name, err)
 		}
+
 		start := time.Now()
-		if _, err := conn.ExecContext(ctx, string(body)); err != nil {
+		if _, err := tx.ExecContext(ctx, string(body)); err != nil {
 			return fmt.Errorf("apply %s: %w", name, err)
 		}
-		log.Printf("migration applied: %s (%s)", name, time.Since(start).Round(time.Millisecond))
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO schema_migrations (filename) VALUES ($1)`,
+			name,
+		); err != nil {
+			return fmt.Errorf("record %s: %w", name, err)
+		}
+		applied = append(applied, appliedMigration{name: name, elapsed: time.Since(start).Round(time.Millisecond)})
 	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit migrations: %w", err)
+	}
+
+	for _, migration := range applied {
+		log.Printf("migration applied: %s (%s)", migration.name, migration.elapsed)
+	}
+	log.Printf("migrations: %d skipped, %d applied", skipped, len(applied))
 	return nil
 }

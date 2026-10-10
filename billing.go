@@ -3,11 +3,17 @@ package main
 // billing.go: Paystack payments for the budget tracker. Drop next to main.go.
 //
 // Needs one new env var: PAYSTACK_SECRET_KEY. Everything else is reused from the
-// app (db, currentUser, requireAuth, externalBaseURL, serverError). If the key is
-// missing the routes answer 503 and the rest of the app is untouched.
+// app (db, tmpl, currentUser, requireAuth, externalBaseURL, serverError,
+// loadSettings, PageChrome). If the key is missing the routes answer 503 and the
+// rest of the app is untouched.
 //
 // All money rules live in Postgres (billing_apply_payment); Go only talks to
 // Paystack and calls that function once Paystack has confirmed the payment.
+//
+// The /billing page is templates/billing.html, parsed by main.go with the other
+// pages so it gets the shared chrome (nav, add-expense modal, styling). If that
+// template is missing or fails to render, a plain built-in page is served
+// instead, so the page itself never goes down.
 
 import (
 	"bytes"
@@ -46,6 +52,19 @@ var (
 	billingHTTP    = &http.Client{Timeout: 15 * time.Second}
 	billingReady   bool
 )
+
+// billingPerks is the "What your support funds" list on the Premium page.
+//
+// Every line here is a claim the project actually stands behind. An inflated
+// benefit — a feature that does not ship, a limit that does not exist — is a
+// refund request in a week and a review you cannot walk back. Add a line when
+// something new is genuinely true; remove one the moment it stops being true.
+var billingPerks = []string{
+	"Keeps Budget Tracker free of ads and trackers",
+	"Funds server hosting and ongoing development",
+	"Your data stays private — never sold or shared",
+	"Supports an independent, single-developer project",
+}
 
 func billingSecret() string { return strings.TrimSpace(os.Getenv("PAYSTACK_SECRET_KEY")) }
 
@@ -181,6 +200,21 @@ func isPremium(userID int) bool {
 	return ok
 }
 
+// BillingPageData is what billing.html receives. It embeds PageChrome so the
+// shared nav (Username, CurrencySymbol, Month, Filters) is always present;
+// html/template stops rendering mid-page when the chrome reads a field the
+// page's data lacks, so never replace this with an ad-hoc struct or map.
+type BillingPageData struct {
+	PageChrome
+	Premium, Enabled bool
+	Until, Status    string
+	Price            string
+	Days             int
+	Perks            []string
+}
+
+// billingPageTmpl is the plain page served only if billing.html is not
+// loaded or cannot render. It reads the same fields as billing.html.
 var billingPageTmpl = template.Must(template.New("billing").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Premium</title></head>
@@ -194,18 +228,58 @@ var billingPageTmpl = template.Must(template.New("billing").Parse(`<!doctype htm
 <p><a href="/">Back to your budget</a></p>
 </body></html>`))
 
+// renderBillingPage renders into a buffer first, so a template error can never
+// leave the browser with half a page under a 200.
+func renderBillingPage(w http.ResponseWriter, data BillingPageData) {
+	var buf bytes.Buffer
+	if tmpl != nil && tmpl.Lookup("billing.html") != nil {
+		if err := tmpl.ExecuteTemplate(&buf, "billing.html", data); err != nil {
+			log.Printf("billing: billing.html failed to render, using plain page: %v", err)
+			buf.Reset()
+		}
+	} else if tmpl != nil {
+		log.Println(`billing: templates/billing.html is not loaded; add it to ParseFiles in main.go. Using plain page.`)
+	}
+	if buf.Len() == 0 {
+		if err := billingPageTmpl.Execute(&buf, data); err != nil {
+			log.Printf("billing: render fallback page: %v", err)
+			http.Error(w, "Something went wrong. Please try again.", http.StatusInternalServerError)
+			return
+		}
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	buf.WriteTo(w)
+}
+
 func billingPageHandler(w http.ResponseWriter, r *http.Request) {
-	uid, _, ok := currentUser(r)
+	uid, username, ok := currentUser(r)
 	if !ok {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	data := struct {
-		Premium, Enabled bool
-		Until, Status    string
-		Price            string
-		Days             int
-	}{Enabled: billingReady, Status: r.URL.Query().Get("status"), Price: "₦1,000", Days: billingDays}
+	status := r.URL.Query().Get("status")
+	switch status {
+	case "paid", "failed", "error":
+	default:
+		status = ""
+	}
+	data := BillingPageData{
+		PageChrome: PageChrome{Username: username, CurrencySymbol: currencySymbol("NGN")},
+		Enabled:    billingReady,
+		Status:     status,
+		Price:      "₦1,000",
+		Days:       billingDays,
+		Perks:      billingPerks,
+	}
+	// The nav labels the add-expense field with the user's own currency. A
+	// settings problem must not take the Premium page down, so fall back to ₦.
+	if db != nil {
+		if s, err := loadSettings(uid); err != nil {
+			log.Printf("billing: load settings for page chrome: %v", err)
+		} else {
+			data.CurrencySymbol = currencySymbol(s.Currency)
+		}
+	}
 	if billingReady {
 		var until time.Time
 		err := db.QueryRowContext(r.Context(),
@@ -218,10 +292,7 @@ func billingPageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := billingPageTmpl.Execute(w, data); err != nil {
-		log.Printf("billing: render page: %v", err)
-	}
+	renderBillingPage(w, data)
 }
 
 func billingCheckoutHandler(w http.ResponseWriter, r *http.Request) {

@@ -7,25 +7,8 @@
 </head>
 <body class="has-chrome">
     {{template "nav.html" .}}
-
     <main class="app-main">
-
-        {{/* ---------- Two views, one page ---------- */}}
-        {{/* A search deliberately covers every month, so none of the
-             month-scoped furniture — the budget hero, the month switcher, the
-             progress bar, the "reset this month" danger zone — belongs on a
-             results screen. Everything month-specific therefore lives in the
-             else branch rather than being individually guarded; the two views
-             then cannot half-overlap. */}}
         {{if .Searching}}
-
-        {{/* ---------- Hero: what the search found ---------- */}}
-        {{/* The headline follows what the results actually contain. A search
-             for income alone would otherwise read "Matching spend ₦0.00" above
-             a list of ₦250,000 — true, and useless. When a search matches both
-             kinds the headline stays spending, because that is the question a
-             budget tracker is usually asked, and the income gets a pill. */}}
-        {{$bothKinds := and .Spent .Received}}
         <section class="balance-card" aria-labelledby="results-label">
             {{if and .Received (not .Spent)}}
             <p class="eyebrow" id="results-label">Matching income</p>
@@ -37,8 +20,7 @@
             <p class="balance-note">
                 {{len .Expenses}} result{{if ne (len .Expenses) 1}}s{{end}}{{if .Truncated}}, the {{.ResultLimit}} most recent{{end}}.
             </p>
-
-            {{if $bothKinds}}
+            {{if and .Spent .Received}}
             <div class="balance-stats">
                 <div class="balance-pill">
                     <div class="balance-pill-value">{{money .CurrencySymbol .Received}}</div>
@@ -51,26 +33,20 @@
             </div>
             {{end}}
         </section>
-
         {{if .Truncated}}
         <div class="alert alert-brand mb-4">
             <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#info"/></svg>
             <p>More than {{.ResultLimit}} entries match. Only the {{.ResultLimit}} most recent are listed, and the figures above total just those. Narrow the search to see the rest.</p>
         </div>
         {{end}}
-
         <div class="section-head">
             <h2 class="card-title">Results</h2>
             <span class="hint mt-0">{{len .Expenses}} entr{{if ne (len .Expenses) 1}}ies{{else}}y{{end}}</span>
         </div>
-
         <div id="expenses-container">
             {{template "expenses_list.html" .}}
         </div>
-
         {{else}}
-
-        {{/* ---------- Hero: remaining budget ---------- */}}
         {{if .HasBudget}}
         <section class="balance-card{{if ge .Spent .BudgetLimit}} is-over{{end}}" aria-labelledby="hero-label">
             <p class="eyebrow" id="hero-label">
@@ -84,7 +60,6 @@
                 {{money .CurrencySymbol .Spent}} of {{money .CurrencySymbol .BudgetLimit}} spent so far.
                 {{end}}
             </p>
-
             <div class="balance-stats">
                 <div class="balance-pill">
                     <div class="balance-pill-value">{{money .CurrencySymbol .Spent}}</div>
@@ -111,22 +86,16 @@
             </div>
         </section>
         {{else}}
-        {{/* A month with income but no spending yet. The headline follows what
-             the month actually contains, for the same reason the search
-             headline does: "Spent this month ₦0.00" above a list holding a
-             salary is true and useless. */}}
-        {{if and .Received (not .Spent)}}
         <section class="balance-card" aria-labelledby="hero-label">
+            {{if and .Received (not .Spent)}}
             <p class="eyebrow" id="hero-label">Received this month</p>
             <p class="balance-value">{{money .CurrencySymbol .Received}}</p>
             <p class="balance-note">{{len .Expenses}} entr{{if ne (len .Expenses) 1}}ies{{else}}y{{end}} recorded, nothing spent yet.</p>
             {{else}}
-        <section class="balance-card" aria-labelledby="hero-label">
             <p class="eyebrow" id="hero-label">Spent this month</p>
             <p class="balance-value">{{money .CurrencySymbol .Spent}}</p>
             <p class="balance-note">{{len .Expenses}} entr{{if ne (len .Expenses) 1}}ies{{else}}y{{end}} recorded.</p>
             {{end}}
-
             <div class="balance-stats">
                 {{if .Spent}}
                 <div class="balance-pill">
@@ -149,15 +118,12 @@
                     <div class="balance-pill-label">Entries</div>
                 </div>
             </div>
-
             <p class="balance-note mt-4">
                 <a href="/settings">Set a monthly budget</a>
                 to track what's left.
             </p>
         </section>
         {{end}}
-
-        {{/* ---------- Month switcher ---------- */}}
         <div class="month-switch mb-6">
             <a class="month-switch-btn" href="/?month={{.PrevMonth}}" aria-label="Previous month">
                 <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
@@ -173,15 +139,12 @@
             </span>
             {{end}}
         </div>
-
-        {{/* ---------- Budget progress ---------- */}}
         {{if .HasBudget}}
         <section class="card mb-4" aria-labelledby="progress-label">
             <div class="section-head">
                 <h2 class="card-title" id="progress-label">Monthly budget</h2>
                 <span class="figure figure-sm">{{money .CurrencySymbol .Spent}}</span>
             </div>
-
             <div class="progress">
                 {{if ge .Spent .BudgetLimit}}
                 <div class="progress-fill is-over" style="width: 100%;"></div>
@@ -191,9 +154,6 @@
                 <div class="progress-fill is-safe" style="width: {{printf "%.1f" .Percent}}%;"></div>
                 {{end}}
             </div>
-
-            {{/* The bar is colour; this line is the actual message, so the
-                 status is never conveyed by colour alone. */}}
             <p class="hint mt-2">
                 {{if ge .Spent .BudgetLimit}}
                 <strong>Over limit.</strong> {{printf "%.0f" .Percent}}% of {{money0 .CurrencySymbol .BudgetLimit}} used.
@@ -203,23 +163,19 @@
                 {{printf "%.0f" .Percent}}% of {{money0 .CurrencySymbol .BudgetLimit}} used.
                 {{end}}
             </p>
+            {{if .SafeToSpend}}
+            <p class="hint mt-2">
+                <strong>{{money0 .CurrencySymbol .SafeToSpend}}</strong> a day is safe to spend for the rest of the month.
+            </p>
+            {{end}}
         </section>
         {{end}}
-
-        {{/* ---------- Per-category budgets ---------- */}}
-        {{/* Only categories that actually have a limit set appear, in the order
-             the user arranged them in settings rather than sorted by how full
-             they are — a list that reorders itself every time an expense is
-             added is a list you cannot learn. Income is not counted here: a
-             limit caps spending, so paying yourself into "Food" must not buy
-             back room in the Food bar. */}}
         {{if .CategoryBudgets}}
         <section class="card mb-4" aria-labelledby="catbudget-label">
             <div class="section-head">
                 <h2 class="card-title" id="catbudget-label">Category budgets</h2>
                 <a class="hint mt-0" href="/settings">Edit</a>
             </div>
-
             <ul class="catbudget-list">
                 {{range .CategoryBudgets}}
                 <li class="catbudget">
@@ -230,7 +186,6 @@
                             <span class="catbudget-of">of {{money $.CurrencySymbol .Limit}}</span>
                         </span>
                     </div>
-
                     <div class="progress progress-sm">
                         {{if .Over}}
                         <div class="progress-fill is-over" style="width: 100%;"></div>
@@ -240,9 +195,6 @@
                         <div class="progress-fill is-safe" style="width: {{printf "%.1f" .PercentOfLimit}}%;"></div>
                         {{end}}
                     </div>
-
-                    {{/* Same rule as the monthly bar: the sentence carries the
-                         status, so colour alone never has to. */}}
                     <p class="hint mt-1">
                         {{if .Over}}
                         <strong>Over limit.</strong> {{printf "%.0f" .PercentUsed}}% of {{money $.CurrencySymbol .Limit}} used.
@@ -257,8 +209,6 @@
             </ul>
         </section>
         {{end}}
-
-        {{/* ---------- Alerts: warn, never block ---------- */}}
         {{if and .HasBudget (ge .Spent .BudgetLimit)}}
         <div class="alert alert-over mb-4">
             <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
@@ -270,25 +220,19 @@
             <p><strong>Approaching your limit.</strong> {{money .CurrencySymbol .Remaining}} left of your {{money .CurrencySymbol .BudgetLimit}} budget.</p>
         </div>
         {{end}}
-
         {{if ne .Month .CurrentMonth}}
         <div class="alert alert-brand mb-4">
             <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#info"/></svg>
             <p>You're viewing {{.MonthLabel}}. New expenses are always added to the current month.</p>
         </div>
         {{end}}
-
-        {{/* ---------- Recent activity ---------- */}}
         <div class="section-head">
             <h2 class="card-title">{{if eq .Month .CurrentMonth}}Recent activity{{else}}Expenses{{end}}</h2>
             <span class="hint mt-0">{{len .Expenses}} entr{{if ne (len .Expenses) 1}}ies{{else}}y{{end}}</span>
         </div>
-
         <div id="expenses-container">
             {{template "expenses_list.html" .}}
         </div>
-
-        {{/* ---------- Danger zone ---------- */}}
         {{if and (eq .Month .CurrentMonth) .Expenses}}
         <form action="/clear" method="POST" id="clear-form" class="mt-8">
             <input type="hidden" name="month" value="{{.Month}}">
@@ -297,7 +241,6 @@
                 Reset {{.MonthLabel}}
             </button>
         </form>
-
         <div class="modal" id="clear-modal" role="dialog" aria-modal="true" aria-labelledby="clear-modal-title" hidden>
             <div class="modal-panel">
                 <div class="modal-head">
@@ -319,14 +262,8 @@
             </div>
         </div>
         {{end}}
-
-        {{end}}{{/* end month view / results view */}}
-
+        {{end}}
     </main>
-
-    {{/* Rendered only in the moment after a delete, so the user gets their
-         row back. Instanced into the toast host by app.js. It sits outside the
-         view branch because a delete can happen in either view. */}}
     {{if .DeletedID}}
     <template id="undo-template">
         <div class="toast">
@@ -334,8 +271,6 @@
             <span class="toast-msg">Expense deleted.</span>
             <form action="/restore/{{.DeletedID}}" method="POST">
                 <input type="hidden" name="month" value="{{.Month}}">
-                {{/* Same round-trip as the delete form, so undoing a delete made
-                     from a search puts the row back into those results. */}}
                 {{with .Filters}}
                 <input type="hidden" name="q" value="{{.Query}}">
                 <input type="hidden" name="category_filter" value="{{.Category}}">
