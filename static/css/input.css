@@ -1937,3 +1937,87 @@
   width: 22px;
   height: 22px;
 }
+
+/* ============================================================
+   TAB BAR — HARDENED OVERRIDE
+   Guarantees the bottom nav is visible on every browser.
+   Uses plain flex on .sidebar-nav (no display:contents needed).
+   ============================================================ */
+
+nav.tabbar {
+  position: fixed !important;
+  top: auto !important;
+  left: max(0px, calc(50% - var(--app-width) / 2)) !important;
+  right: max(0px, calc(50% - var(--app-width) / 2)) !important;
+  bottom: 0 !important;
+  display: flex !important;
+  align-items: stretch !important;
+  height: auto !important;
+  min-height: 64px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  background: var(--surface) !important;
+  border-top: 1px solid var(--line) !important;
+  box-shadow: 0 -1px 3px rgba(17, 24, 39, 0.04) !important;
+  z-index: 40 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Hide the sidebar-only extras inside the bar */
+nav.tabbar .sidebar-brand,
+nav.tabbar .sidebar-upgrade,
+nav.tabbar .sidebar-logout-form {
+  display: none !important;
+}
+
+/* Make the nav wrapper fill the whole bar as a flex row */
+nav.tabbar .sidebar-nav {
+  display: flex !important;
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  justify-content: space-around !important;
+  align-items: stretch !important;
+}
+
+nav.tabbar .nav-item {
+  flex: 1 1 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  min-height: 60px !important;
+  padding: 8px 4px !important;
+  color: var(--ink-muted) !important;
+  text-decoration: none !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  background: none !important;
+  border: 0 !important;
+  cursor: pointer !important;
+}
+
+nav.tabbar .nav-item[aria-current="page"],
+nav.tabbar .nav-item.is-active {
+  color: var(--brand-ink) !important;
+}
+
+nav.tabbar .nav-item .icon {
+  width: 22px !important;
+  height: 22px !important;
+  flex: none !important;
+  display: block !important;
+}
+
+nav.tabbar .nav-item span {
+  display: block !important;
+  line-height: 1 !important;
+}
+
+/* Give the page room above the bar */
+body.has-chrome {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+}
