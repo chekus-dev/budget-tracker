@@ -11,7 +11,11 @@
     <main class="app-main">
 
         <div class="trend-top">
-            {{template "account-bar" .}}
+            
+        <div class="page-head">
+            <h1 class="page-title">Archive</h1>
+            <p class="page-sub">Every month with recorded activity</p>
+        </div>
             {{if and .Details (not .Searching)}}
             <div class="trend-year" role="group" aria-label="Month">
                 <a class="trend-year-btn" href="/archive?month={{.Details.PrevMonth}}" aria-label="Previous month">
@@ -133,10 +137,6 @@
         </p>
 
         {{else}}
-        <div class="page-head">
-            <h1 class="page-title">Archive</h1>
-            <p class="page-sub">Every month with recorded activity</p>
-        </div>
 
         {{if .Months}}
         <ul class="expense-list">

@@ -4,6 +4,34 @@
 <head>
     <title>Create account — Budget Tracker</title>
     {{template "head.html" .}}
+    <style>
+      .password-field { position: relative; }
+      .password-field .input { padding-right: 48px; }
+      .password-toggle {
+        position: absolute;
+        right: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--ink-muted, #6B7280);
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+      .password-toggle:hover { background: var(--surface-3, #F3F4F6); color: var(--ink, #111827); }
+      .password-toggle:focus-visible { outline: 2px solid var(--brand, #4F46E5); outline-offset: 2px; }
+      .password-toggle svg { width: 20px; height: 20px; display: block; }
+
+      /* Hidden state (default): plain eye. Visible state: slashed eye. */
+      .password-toggle .pw-eye-off { display: none; }
+      .password-toggle[data-state="visible"] .pw-eye     { display: none; }
+      .password-toggle[data-state="visible"] .pw-eye-off { display: block; }
+    </style>
 </head>
 <body>
     <main class="auth-shell">
@@ -39,15 +67,57 @@
 
                 <div class="auth-field">
                     <label class="label" for="password">Password</label>
-                    <input type="password" id="password" name="password" class="input"
-                           required minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="password-hint">
+                    <div class="password-field">
+                        <input type="password" id="password" name="password" class="input"
+                               required minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="password-hint">
+                        <button type="button" class="password-toggle"
+                                data-toggle-password="password"
+                                data-state="hidden"
+                                aria-label="Show password" aria-pressed="false">
+                            <svg class="pw-eye" aria-hidden="true" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <svg class="pw-eye-off" aria-hidden="true" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                                <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                                <line x1="2" y1="2" x2="22" y2="22"/>
+                            </svg>
+                        </button>
+                    </div>
                     <p class="hint" id="password-hint">At least 8 characters.</p>
                 </div>
 
                 <div class="auth-field">
                     <label class="label" for="confirm_password">Confirm password</label>
-                    <input type="password" id="confirm_password" name="confirm_password" class="input"
-                           required minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="confirm-error">
+                    <div class="password-field">
+                        <input type="password" id="confirm_password" name="confirm_password" class="input"
+                               required minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="confirm-error">
+                        <button type="button" class="password-toggle"
+                                data-toggle-password="confirm_password"
+                                data-state="hidden"
+                                aria-label="Show password" aria-pressed="false">
+                            <svg class="pw-eye" aria-hidden="true" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <svg class="pw-eye-off" aria-hidden="true" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                                <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                                <line x1="2" y1="2" x2="22" y2="22"/>
+                            </svg>
+                        </button>
+                    </div>
                     <p class="field-error" id="confirm-error" role="alert" hidden></p>
                 </div>
 
@@ -90,6 +160,20 @@
 
     <script>
     (function () {
+        // --- Password preview toggles ---
+        document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+            var input = document.getElementById(btn.getAttribute('data-toggle-password'));
+            if (!input) return;
+            btn.addEventListener('click', function () {
+                var nowVisible = input.type === 'password';
+                input.type = nowVisible ? 'text' : 'password';
+                btn.setAttribute('data-state', nowVisible ? 'visible' : 'hidden');
+                btn.setAttribute('aria-pressed', String(nowVisible));
+                btn.setAttribute('aria-label', nowVisible ? 'Hide password' : 'Show password');
+            });
+        });
+
+        // --- Existing validation ---
         var form = document.getElementById('register-form');
         var pw = document.getElementById('password');
         var confirm = document.getElementById('confirm_password');

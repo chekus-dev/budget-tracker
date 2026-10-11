@@ -10,10 +10,6 @@
 
     <main class="app-main">
 
-        <div class="trend-top">
-            {{template "account-bar" .}}
-        </div>
-
         {{if eq .Status "paid"}}
         <div class="alert alert-safe mb-4" role="status">
             <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
@@ -144,7 +140,7 @@
         </section>
 
         <p class="hint text-center mt-6">
-            Questions? Read the <a href="/terms">terms</a> or contact support.
+            Questions? Read the <a href="/terms">terms</a> or <a href="/support">contact support</a>.
         </p>
 
     </main>

@@ -4,9 +4,138 @@
 <head>
     <title>Terms and Conditions — Budget Tracker</title>
     {{template "head.html" .}}
+    <style>
+      /* ---- Table of contents ---- */
+      .legal-toc {
+        display: grid;
+        gap: 2px;
+        padding: 6px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+      }
+      .legal-toc a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        color: var(--ink);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+      .legal-toc a:hover { background: var(--surface-3); color: var(--brand-ink); }
+      .legal-toc .toc-num {
+        flex: none;
+        width: 24px; height: 24px;
+        border-radius: 6px;
+        display: grid; place-items: center;
+        background: var(--brand-soft);
+        color: var(--brand-ink);
+        font-size: 12px; font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .legal-toc a:hover .toc-num { background: var(--brand); color: #fff; }
+
+      /* ---- Meta strip ---- */
+      .legal-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-top: 8px;
+        font-size: 13px;
+        color: var(--ink-muted);
+      }
+      .legal-meta .meta-sep { color: var(--line-strong); }
+
+      /* ---- Accordion section ---- */
+      .legal-section {
+        margin-bottom: 10px;
+        padding: 0;
+        overflow: hidden;
+        scroll-margin-top: 20px;
+      }
+      .legal-section > summary {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 18px;
+        cursor: pointer;
+        list-style: none;
+        user-select: none;
+        transition: background-color 0.15s ease;
+      }
+      .legal-section > summary::-webkit-details-marker { display: none; }
+      .legal-section > summary:hover { background: var(--surface-2, #F9FAFB); }
+      .legal-section[open] > summary { border-bottom: 1px solid var(--line); }
+
+      .legal-section-num {
+        flex: none;
+        width: 36px; height: 36px;
+        border-radius: 10px;
+        display: grid; place-items: center;
+        background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+        color: #fff;
+        font-size: 15px; font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .legal-section-title {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        margin: 0;
+        flex: 1;
+        min-width: 0;
+      }
+      .legal-section-tag {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+        background: var(--surface-3);
+        padding: 4px 10px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+      .legal-section-chevron {
+        flex: none;
+        width: 20px; height: 20px;
+        color: var(--ink-muted);
+        transition: transform 0.2s ease;
+      }
+      .legal-section[open] .legal-section-chevron {
+        transform: rotate(180deg);
+        color: var(--brand-ink);
+      }
+      .legal-section-body {
+        padding: 16px 18px 20px;
+      }
+
+      @media (max-width: 400px) {
+        .legal-section-tag { display: none; }
+      }
+
+      .legal-back-top {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink-muted);
+        text-decoration: none;
+        margin-top: 24px;
+      }
+      .legal-back-top:hover { color: var(--brand-ink); }
+    </style>
 </head>
 <body>
     <main class="legal-shell">
+
         <a href="/register" class="legal-back">← Back to sign up</a>
 
         <div class="auth-brand">
@@ -16,108 +145,378 @@
 
         <div class="page-head">
             <h1 class="page-title">Terms and Conditions</h1>
-            <p class="page-sub">Last updated 2 October 2026</p>
+            <div class="legal-meta">
+                <span>Last updated 2 October 2026</span>
+                <span class="meta-sep">·</span>
+                <span>Version {{.Version}}</span>
+                <span class="meta-sep">·</span>
+                <span>Tap a section to read it</span>
+            </div>
         </div>
 
-        <section class="card legal-body">
-            <h2>1. What this service is</h2>
-            <p>
-                Budget Tracker is a personal budgeting tool. You record what you
-                spend and what you receive, optionally set a monthly budget and
-                per-category limits, and the app shows you what is left. It is a
-                record-keeping aid — <strong>it is not financial
-                advice</strong>, and it is not a bank, payment service or accounting
-                system.
-            </p>
-
-            <h2>2. Your account</h2>
-            <ul>
-                <li>You need an account to use the app. One account per person.</li>
-                <li>Give a valid email address — it is the only way to recover a
-                    forgotten password.</li>
-                <li>Keep your password to yourself. You are responsible for what
-                    happens under your account.</li>
-                <li>You must be old enough to enter into a contract where you live.</li>
-            </ul>
-
-            <h2>3. What we store</h2>
-            <p>To run the app we keep the following, and nothing else:</p>
-            <ul>
-                <li><strong>Account details:</strong> your username, email address,
-                    and a securely hashed version of your password. The password
-                    itself is never stored and cannot be read back.</li>
-                <li><strong>Your records:</strong> the entries you log — amount,
-                    description, category, date and whether it was money in or out —
-                    plus your settings, such as your monthly budget, per-category
-                    limits and chosen categories.</li>
-            </ul>
-            <p>
-                Your email is used for password recovery and nothing else. We do not
-                sell your data, and we do not use it for advertising. Deleting an
-                entry hides it immediately; it is permanently removed shortly
-                afterwards.
-            </p>
-
-            <h2>4. Acceptable use</h2>
-            <p>Do not:</p>
-            <ul>
-                <li>Create accounts by automated means, or attempt to get around the
-                    human-verification check.</li>
-                <li>Access anyone else's account, or try to break the security of the
-                    service.</li>
-                <li>Use the service to store unlawful material, or in any way that
-                    damages it for other people.</li>
-            </ul>
-            <p>
-                Accounts that do any of these may be removed. We may also block
-                automated signups and requests.
-            </p>
-
-            <h2>5. Availability and accuracy</h2>
-            <p>
-                The service is provided <strong>as is</strong>. We aim to keep it
-                running and your data intact, but we cannot promise uninterrupted
-                availability, and we are not liable for losses arising from downtime,
-                data loss, or from financial decisions you make using figures the app
-                shows you. Please check anything important against your own records.
-            </p>
-            <p>
-                Keep your own copy of anything you cannot afford to lose — the app
-                includes CSV and PDF export for exactly this reason.
-            </p>
-
-            <h2>6. Ending your use</h2>
-            <p>
-                You may stop using the service at any time and ask for your account
-                and its data to be deleted. We may suspend or close an account that
-                breaches these terms.
-            </p>
-
-            <h2>7. Changes to these terms</h2>
-            <p>
-                If these terms change in a way that affects you, the date at the top
-                of this page changes with them. Continuing to use the service after
-                that means you accept the new version.
-            </p>
-
-            <h2>8. Contact</h2>
-            <p>
-                Questions about these terms, or requests to delete your data, should
-                go to the address published on the site you signed up through.
-            </p>
+        <!-- ============================================================
+             At a glance
+             ============================================================ -->
+        <section class="card mb-4" aria-labelledby="glance-title">
+            <div class="section-head">
+                <h2 class="card-title" id="glance-title">At a glance</h2>
+                <span class="hint mt-0">The short version</span>
+            </div>
+            <div class="summary-list">
+                <div class="summary-row">
+                    <span class="summary-label">What it is</span>
+                    <span class="summary-value">A personal budgeting and goals tracker</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">What it isn't</span>
+                    <span class="summary-value">Not financial, banking or accounting advice</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">What you can do</span>
+                    <span class="summary-value">Log spending, set budgets, and track goals</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">What we store</span>
+                    <span class="summary-value">Your account, entries, budgets and goals</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">What we don't do</span>
+                    <span class="summary-value">Sell your data or advertise to you</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Your password</span>
+                    <span class="summary-value">Hashed — never readable by us</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Bot protection</span>
+                    <span class="summary-value">reCAPTCHA on sign-up; bypassing it is prohibited</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Leaving</span>
+                    <span class="summary-value">Ask anytime; we'll delete your account</span>
+                </div>
+            </div>
         </section>
 
-        <p class="note mt-4">
-            By creating an account you confirm that you have read and agree to these
-            terms.
-        </p>
-         <p class="note mt-4 text-center" style="color: var(--ink-faint);">
+        <!-- ============================================================
+             Table of contents
+             ============================================================ -->
+        <section class="mb-6" aria-labelledby="toc-title">
+            <div class="section-head">
+                <h2 class="card-title" id="toc-title">Contents</h2>
+                <span class="hint mt-0">8 sections</span>
+            </div>
+            <nav class="legal-toc" aria-label="Terms sections">
+                <a href="#section-1"><span class="toc-num">1</span> What this service is</a>
+                <a href="#section-2"><span class="toc-num">2</span> Your account</a>
+                <a href="#section-3"><span class="toc-num">3</span> What we store</a>
+                <a href="#section-4"><span class="toc-num">4</span> Acceptable use and security</a>
+                <a href="#section-5"><span class="toc-num">5</span> Availability and accuracy</a>
+                <a href="#section-6"><span class="toc-num">6</span> Ending your use</a>
+                <a href="#section-7"><span class="toc-num">7</span> Changes to these terms</a>
+                <a href="#section-8"><span class="toc-num">8</span> Contact</a>
+            </nav>
+        </section>
+
+        <!-- ============================================================
+             1. What this service is
+             ============================================================ -->
+        <details class="card legal-section" id="section-1">
+            <summary>
+                <span class="legal-section-num" aria-hidden="true">1</span>
+                <h2 class="legal-section-title">What this service is</h2>
+                <span class="legal-section-tag">Scope</span>
+                <svg class="legal-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6"/>
+                </svg>
+            </summary>
+            <div class="legal-section-body legal-body">
+                <p>
+                    Budget Tracker is a personal budgeting and goals tool. You record
+                    what you spend and what you receive, optionally set a monthly
+                    budget and per-category limits, and you can also set goals — things
+                    you're saving towards or habits you're building — and tick them off
+                    as you go. The app then shows you what is left and how you're
+                    progressing.
+                </p>
+                <p>
+                    It is a record-keeping aid — <strong>it is not financial
+                    advice</strong>, and it is not a bank, payment service or
+                    accounting system.
+                </p>
+            </div>
+        </details>
+
+        <!-- ============================================================
+             2. Your account
+             ============================================================ -->
+        <details class="card legal-section" id="section-2">
+            <summary>
+                <span class="legal-section-num" aria-hidden="true">2</span>
+                <h2 class="legal-section-title">Your account</h2>
+                <span class="legal-section-tag">Account</span>
+                <svg class="legal-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6"/>
+                </svg>
+            </summary>
+            <div class="legal-section-body legal-body">
+                <ul>
+                    <li>You need an account to use the app. One account per person.</li>
+                    <li>Give a valid email address — it is the only way to recover a
+                        forgotten password.</li>
+                    <li>Keep your password to yourself. You are responsible for what
+                        happens under your account.</li>
+                    <li>You must be old enough to enter into a contract where you live.</li>
+                </ul>
+            </div>
+        </details>
+
+        <!-- ============================================================
+             3. What we store
+             ============================================================ -->
+        <details class="card legal-section" id="section-3">
+            <summary>
+                <span class="legal-section-num" aria-hidden="true">3</span>
+                <h2 class="legal-section-title">What we store</h2>
+                <span class="legal-section-tag">Privacy</span>
+                <svg class="legal-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6"/>
+                </svg>
+            </summary>
+            <div class="legal-section-body legal-body">
+                <p>To run the app we keep the following, and nothing else:</p>
+                <ul>
+                    <li>
+                        <strong>Account details:</strong> your username, email address,
+                        and a securely hashed version of your password. The password
+                        itself is never stored and cannot be read back.
+                    </li>
+                    <li>
+                        <strong>Your records:</strong> the entries you log — amount,
+                        description, category, date and whether it was money in or out
+                        — plus your settings, such as your monthly budget,
+                        per-category limits and chosen categories.
+                    </li>
+                    <li>
+                        <strong>Your goals:</strong> the goals you create, along with
+                        their notes, target dates and whether each one is done or
+                        still in progress.
+                    </li>
+                </ul>
+                <p>
+                    Your email is used for password recovery and nothing else. We do
+                    not sell your data, and we do not use it for advertising.
+                    Deleting an entry or a goal hides it immediately; it is
+                    permanently removed shortly afterwards.
+                </p>
+            </div>
+        </details>
+
+        <!-- ============================================================
+             4. Acceptable use and security
+             ============================================================ -->
+        <details class="card legal-section" id="section-4">
+            <summary>
+                <span class="legal-section-num" aria-hidden="true">4</span>
+                <h2 class="legal-section-title">Acceptable use and security</h2>
+                <span class="legal-section-tag">Rules</span>
+                <svg class="legal-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6"/>
+                </svg>
+            </summary>
+            <div class="legal-section-body legal-body">
+                <p>
+                    You agree to use Budget Tracker only for its intended purpose and
+                    in compliance with these terms. In particular, you must not:
+                </p>
+                <ul>
+                    <li>
+                        Create accounts by automated, scripted or bulk means, or
+                        otherwise attempt to circumvent, disable, defeat or interfere
+                        with the human-verification check (reCAPTCHA) applied at
+                        sign-up. This includes the use of bots, headless browsers,
+                        automation frameworks, or any other tool designed to satisfy
+                        or bypass that check without genuine human interaction.
+                    </li>
+                    <li>
+                        Attempt to probe, scan, or test the vulnerability of the
+                        service, or to breach or circumvent any authentication,
+                        rate-limiting, or other security or access-control measure.
+                    </li>
+                    <li>
+                        Access, or attempt to access, any account other than your own,
+                        or the data of any other user.
+                    </li>
+                    <li>
+                        Reverse-engineer, decompile, or otherwise attempt to derive
+                        the source code or underlying logic of the service, except to
+                        the extent permitted by applicable law.
+                    </li>
+                    <li>
+                        Introduce viruses, malware, or any other harmful code, or use
+                        the service to store or transmit unlawful material.
+                    </li>
+                    <li>
+                        Use the service in any way that impairs its availability,
+                        integrity or performance for other users.
+                    </li>
+                </ul>
+                <p>
+                    We reserve the right to block, throttle, suspend or terminate any
+                    account or request that, in our reasonable judgement, breaches
+                    this section — including automated traffic, attempts to defeat the
+                    sign-up verification, or abusive or excessive usage. Where a
+                    breach is serious or repeated, we may act without prior notice.
+                </p>
+            </div>
+        </details>
+
+        <!-- ============================================================
+             5. Availability and accuracy
+             ============================================================ -->
+        <details class="card legal-section" id="section-5">
+            <summary>
+                <span class="legal-section-num" aria-hidden="true">5</span>
+                <h2 class="legal-section-title">Availability and accuracy</h2>
+                <span class="legal-section-tag">Liability</span>
+                <svg class="legal-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6"/>
+                </svg>
+            </summary>
+            <div class="legal-section-body legal-body">
+                <p>
+                    The service is provided <strong>as is</strong>. We aim to keep it
+                    running and your data intact, but we cannot promise uninterrupted
+                    availability, and we are not liable for losses arising from
+                    downtime, data loss, or from financial decisions you make using
+                    figures the app shows you. Please check anything important against
+                    your own records.
+                </p>
+                <p>
+                    Keep your own copy of anything you cannot afford to lose — the app
+                    includes CSV and PDF export for exactly this reason.
+                </p>
+            </div>
+        </details>
+
+        <!-- ============================================================
+             6. Ending your use
+             ============================================================ -->
+        <details class="card legal-section" id="section-6">
+            <summary>
+                <span class="legal-section-num" aria-hidden="true">6</span>
+                <h2 class="legal-section-title">Ending your use</h2>
+                <span class="legal-section-tag">Exit</span>
+                <svg class="legal-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6"/>
+                </svg>
+            </summary>
+            <div class="legal-section-body legal-body">
+                <p>
+                    You may stop using the service at any time and ask for your
+                    account and its data to be deleted. We may suspend or close an
+                    account that breaches these terms.
+                </p>
+            </div>
+        </details>
+
+        <!-- ============================================================
+             7. Changes to these terms
+             ============================================================ -->
+        <details class="card legal-section" id="section-7">
+            <summary>
+                <span class="legal-section-num" aria-hidden="true">7</span>
+                <h2 class="legal-section-title">Changes to these terms</h2>
+                <span class="legal-section-tag">Updates</span>
+                <svg class="legal-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6"/>
+                </svg>
+            </summary>
+            <div class="legal-section-body legal-body">
+                <p>
+                    If these terms change in a way that affects you, the date at the
+                    top of this page changes with them. Continuing to use the service
+                    after that means you accept the new version.
+                </p>
+            </div>
+        </details>
+
+        <!-- ============================================================
+             8. Contact
+             ============================================================ -->
+        <details class="card legal-section" id="section-8">
+            <summary>
+                <span class="legal-section-num" aria-hidden="true">8</span>
+                <h2 class="legal-section-title">Contact</h2>
+                <span class="legal-section-tag">Support</span>
+                <svg class="legal-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6"/>
+                </svg>
+            </summary>
+            <div class="legal-section-body legal-body">
+                <p>
+                    Questions about these terms, or requests to delete your data,
+                    should go to the address published on the site you signed up
+                    through.
+                </p>
+            </div>
+        </details>
+
+        <!-- ============================================================
+             Footer
+             ============================================================ -->
+        <div class="alert alert-brand mt-6" role="note">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
+            <p>
+                By creating an account you confirm that you have read and agree to
+                these terms.
+            </p>
+        </div>
+
+        <a href="#" class="legal-back-top">↑ Back to top</a>
+
+        <p class="note mt-6" style="color: var(--ink-faint); text-align: center;">
             Budget Tracker v{{.Version}}
         </p>
+
         <p class="mt-6">
             <a href="/register" class="btn btn-primary btn-block">Back to sign up</a>
         </p>
     </main>
+
+    <script>
+    /* When a TOC link is clicked, expand the target section. */
+    document.querySelectorAll('.legal-toc a[href^="#section-"]').forEach(function (link) {
+        link.addEventListener('click', function () {
+            var id = link.getAttribute('href').slice(1);
+            var target = document.getElementById(id);
+            if (target) target.open = true;
+        });
+    });
+
+    /* If the URL already has a hash (e.g. page reloaded on #section-3),
+       open that section automatically. */
+    if (location.hash && location.hash.indexOf('#section-') === 0) {
+        var target = document.querySelector(location.hash);
+        if (target) target.open = true;
+    }
+    </script>
 </body>
 </html>
 {{end}}

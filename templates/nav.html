@@ -1,9 +1,22 @@
 {{define "nav.html"}}
 {{/*
-  Shared chrome for every signed-in screen: the navigation (bottom tab bar on
-  mobile, left sidebar on desktop), the floating "add expense" button and its
-  modal, and the toast host.
+  Shared chrome for every signed-in screen: the top bar with the account
+  menu, the bottom tab bar (mobile nav), the floating "add expense" button
+  and its modal, and the toast host.
 */}}
+
+{{if .Username}}
+<header class="topbar">
+  <a href="/" class="topbar-brand">
+    <span class="brand-mark" aria-hidden="true">₦</span>
+    <span class="topbar-brand-name">Budget</span>
+  </a>
+
+  <div class="topbar-actions">
+    {{template "account-bar" .}}
+  </div>
+</header>
+{{end}}
 
 <nav class="tabbar" aria-label="Main">
   <div class="sidebar-brand">
@@ -144,18 +157,6 @@
 {{end}}
 
 
-{{/*
-  The account header every signed-in screen opens with. It is now a button
-  that opens a dropdown menu rather than plain text — the dropdown is where
-  Support, Settings, and Log Out live, matching the arrangement in the
-  reference design.
-
-  The menu is present in the DOM but hidden with the `hidden` attribute, so
-  it works with JavaScript disabled only in the sense that the account name
-  is still visible; the menu itself requires JS to open. That is an accepted
-  trade: the same actions are all reachable from the Settings page and the
-  sidebar, so a no-JS user loses nothing.
-*/}}
 {{define "account-bar"}}
 <div class="account-menu" id="account-menu">
   <button type="button" class="account-trigger" id="account-trigger"
@@ -189,6 +190,11 @@
     <a href="/support" class="account-menu-item" role="menuitem">
       <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#mail"/></svg>
       <span>Support</span>
+    </a>
+
+    <a href="/billing" class="account-menu-item" role="menuitem">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#banknote"/></svg>
+      <span>Premium</span>
     </a>
 
     <div class="account-menu-divider" role="separator"></div>
