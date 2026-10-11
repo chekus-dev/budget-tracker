@@ -2083,7 +2083,7 @@ body.has-chrome {
   width: 22px;
   height: 22px;
 }
-nav.tabbar { background: yellow !important; outline: 6px solid red !important; min-height: 120px !important; }
+
 /* ============================================================
    Bottom tab bar — final styling
    Uses plain flex; no display:contents anywhere.
