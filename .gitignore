@@ -36,3 +36,5 @@ Thumbs.db
 
 # Compiled binary at the repo root (any name, no extension)
 /web-server-in-go-with-mysql-datebase
+app
+budget

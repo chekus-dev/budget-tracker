@@ -523,6 +523,7 @@ func main() {
 		"templates/billing.html",
 		"templates/support.html",
 		"templates/goals.html",
+		"templates/help.html",
 	))
 	verifyTemplatesRender()
 
@@ -548,6 +549,7 @@ func main() {
 	mux.HandleFunc("/api/categories", requireAuth(categoriesHandler))
 	mux.HandleFunc("/api/expenses-raw", requireAuth(expensesRawHandler))
 	mux.HandleFunc("/support", requireAuth(supportHandler))
+	mux.HandleFunc("/help", requireAuth(helpHandler))
 	mux.HandleFunc("/goals", requireAuth(goalsHandler))
 	mux.HandleFunc("/goals/create", requireAuth(goalsCreateHandler))
 	mux.HandleFunc("/goals/toggle/", requireAuth(goalsToggleHandler))
@@ -2230,6 +2232,7 @@ func verifyTemplatesRender() {
 			WhatsApp:     "2348000000000",
 			WhatsAppText: "Hi%2C%20I%20need%20help%20with%20Budget%20Tracker.",
 		}},
+		{"help.html", PageChrome{Username: "sam", CurrencySymbol: "₦", Version: appVersion}},
 		{"terms.html", nil},
 	}
 
@@ -2867,6 +2870,34 @@ func supportHandler(w http.ResponseWriter, r *http.Request) {
 	if err := tmpl.ExecuteTemplate(w, "support.html", data); err != nil {
 		if !isClientDisconnect(err) {
 			log.Printf("failed to render support template: %v", err)
+		}
+	}
+}
+
+// helpHandler serves the getting-started guide. It is behind requireAuth
+// because it renders the shared chrome (top bar + tab bar), which expects a
+// signed-in user. Nothing on the page is user-specific.
+func helpHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireDB(w) {
+		return
+	}
+	userID, username, _ := currentUser(r)
+
+	settings, err := loadSettings(userID)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+
+	chrome := PageChrome{
+		Username:       username,
+		CurrencySymbol: currencySymbol(settings.Currency),
+		Version:        appVersion,
+	}
+
+	if err := tmpl.ExecuteTemplate(w, "help.html", chrome); err != nil {
+		if !isClientDisconnect(err) {
+			log.Printf("failed to render help template: %v", err)
 		}
 	}
 }

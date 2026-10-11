@@ -1,0 +1,356 @@
+{{define "help.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Help — Budget Tracker</title>
+    {{template "head.html" .}}
+    <style>
+      /* --- Numbered steps --- */
+      .step-list { display: grid; gap: 10px; }
+      .step {
+        display: flex; gap: 14px;
+        padding: 16px 18px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+      }
+      .step-num {
+        flex: none;
+        width: 32px; height: 32px;
+        border-radius: 9px;
+        display: grid; place-items: center;
+        background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+        color: #fff;
+        font-size: 14px; font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .step-body { flex: 1; min-width: 0; }
+      .step-title {
+        font-size: 15px; font-weight: 700;
+        letter-spacing: -0.01em;
+        margin-bottom: 4px;
+      }
+      .step-text {
+        font-size: 13.5px; line-height: 1.5;
+        color: var(--ink-muted);
+        text-wrap: pretty;
+      }
+      .step-text strong { color: var(--ink); }
+      .step-text a { font-weight: 600; }
+
+      /* --- Feature cards --- */
+      .feature-grid { display: grid; gap: 8px; }
+      .feature-card {
+        display: flex; align-items: center; gap: 14px;
+        padding: 14px 16px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+        text-decoration: none; color: inherit;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+      }
+      .feature-card:hover {
+        border-color: var(--brand);
+        box-shadow: var(--shadow-pop);
+        transform: translateY(-1px);
+      }
+      .feature-card .tile { flex: none; }
+      .feature-body { flex: 1; min-width: 0; }
+      .feature-title {
+        display: block;
+        font-size: 14.5px; font-weight: 600;
+        color: var(--ink);
+      }
+      .feature-desc {
+        display: block;
+        font-size: 12.5px; color: var(--ink-muted);
+        margin-top: 2px; line-height: 1.4;
+      }
+      .feature-card .trailing-icon { color: var(--ink-muted); flex: none; }
+
+      /* --- FAQ accordion --- */
+      .faq-list { display: grid; gap: 14px; }
+
+      /* --- Back to top --- */
+      .help-back-top {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 13px; font-weight: 600;
+        color: var(--ink-muted);
+        text-decoration: none;
+        margin-top: 20px;
+      }
+      .help-back-top:hover { color: var(--brand-ink); }
+    </style>
+</head>
+<body class="has-chrome no-fab">
+    {{template "nav.html" .}}
+
+    <main class="app-main">
+
+        <div class="page-head">
+            <h1 class="page-title">Getting started</h1>
+            <p class="page-sub">A quick tour — everything you need in five minutes.</p>
+        </div>
+
+        <!-- Welcome -->
+        <div class="alert alert-brand mb-6" role="note">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#info"/></svg>
+            <p>
+                Budget Tracker helps you see where your money goes and what's left.
+                Log what you spend, set a monthly limit, and the app does the maths.
+            </p>
+        </div>
+
+        <!-- Your first 5 minutes -->
+        <div class="section-head">
+            <h2 class="card-title">Your first 5 minutes</h2>
+            <span class="hint mt-0">4 steps</span>
+        </div>
+
+        <div class="step-list mb-6">
+
+            <div class="step">
+                <span class="step-num" aria-hidden="true">1</span>
+                <div class="step-body">
+                    <div class="step-title">Set a monthly budget</div>
+                    <p class="step-text">
+                        Open <a href="/settings">Settings</a>, enter how much you want
+                        to spend this month, and save. This gives the home screen its
+                        big number. Leave it blank if you'd rather not track a limit.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-num" aria-hidden="true">2</span>
+                <div class="step-body">
+                    <div class="step-title">Log your first expense</div>
+                    <p class="step-text">
+                        Tap the purple <strong>+ button</strong> at the bottom right of
+                        the home page. Add what you spent, an amount, and a category. That's
+                        it — one entry, a second.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-num" aria-hidden="true">3</span>
+                <div class="step-body">
+                    <div class="step-title">Log what comes in</div>
+                    <p class="step-text">
+                        In the same <strong>+</strong> sheet, switch the toggle from
+                        <em>Expense</em> to <em>Income</em>. Use this for salary,
+                        refunds, or money from anyone. The app keeps income and
+                        expenses separate.
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-num" aria-hidden="true">4</span>
+                <div class="step-body">
+                    <div class="step-title">Check your progress</div>
+                    <p class="step-text">
+                        Visit <a href="/trends">Trends</a> to see the year at a glance,
+                        or set <a href="/goals">Goals</a> for things you want to
+                        remember or save for.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- What each page does -->
+        <div class="section-head">
+            <h2 class="card-title">What each page does</h2>
+        </div>
+
+        <div class="feature-grid mb-6">
+
+            <a href="/" class="feature-card">
+                <span class="tile">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#home"/></svg>
+                </span>
+                <span class="feature-body">
+                    <span class="feature-title">Home</span>
+                    <span class="feature-desc">What's left this month, plus every entry you've logged.</span>
+                </span>
+                <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+            </a>
+
+            <a href="/trends" class="feature-card">
+                <span class="tile">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chart"/></svg>
+                </span>
+                <span class="feature-body">
+                    <span class="feature-title">Trends</span>
+                    <span class="feature-desc">Month-by-month charts and where your money went this year.</span>
+                </span>
+                <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+            </a>
+
+            <a href="/goals" class="feature-card">
+                <span class="tile">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#target"/></svg>
+                </span>
+                <span class="feature-body">
+                    <span class="feature-title">Goals</span>
+                    <span class="feature-desc">Things to do this month or this year — save, pay off, or remember.</span>
+                </span>
+                <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+            </a>
+
+            <a href="/archive" class="feature-card">
+                <span class="tile">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#archive"/></svg>
+                </span>
+                <span class="feature-body">
+                    <span class="feature-title">Archive</span>
+                    <span class="feature-desc">Search and filter old entries by date, category or amount.</span>
+                </span>
+                <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+            </a>
+
+            <a href="/settings" class="feature-card">
+                <span class="tile">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#settings"/></svg>
+                </span>
+                <span class="feature-body">
+                    <span class="feature-title">Settings</span>
+                    <span class="feature-desc">Budget, currency, categories, theme, and account details.</span>
+                </span>
+                <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+            </a>
+
+            <a href="/export" class="feature-card">
+                <span class="tile">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#export"/></svg>
+                </span>
+                <span class="feature-body">
+                    <span class="feature-title">Export</span>
+                    <span class="feature-desc">Download any month of entries as CSV or PDF.</span>
+                </span>
+                <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+            </a>
+
+        </div>
+
+        <!-- Common questions -->
+        <div class="section-head">
+            <h2 class="card-title">Common questions</h2>
+        </div>
+
+        <section class="card mb-6">
+            <div class="faq-list">
+
+                <details class="faq">
+                    <summary>How is "left to spend" worked out?</summary>
+                    <p class="note mt-2">
+                        It starts with your monthly budget, then subtracts every
+                        expense you've logged this month. Income is tracked
+                        separately and does not add to the "left to spend" figure
+                        — that is intentional, so logging a refund doesn't change
+                        your spending pace.
+                    </p>
+                </details>
+
+                <details class="faq">
+                    <summary>What's the difference between an expense and income?</summary>
+                    <p class="note mt-2">
+                        <strong>Expenses</strong> are money leaving — food,
+                        transport, bills. <strong>Income</strong> is money coming in
+                        — salary, refunds, gifts. The <em>+</em> sheet lets you
+                        switch between them with one tap. Only expenses count
+                        against your budget.
+                    </p>
+                </details>
+
+                <details class="faq">
+                    <summary>Can I edit or delete an entry?</summary>
+                    <p class="note mt-2">
+                        Yes. On the home screen, every row has a pencil icon
+                        (edit) and a trash icon (delete). Editing opens the same
+                        <em>+</em> sheet you already know, pre-filled with that
+                        entry.
+                    </p>
+                </details>
+
+                <details class="faq">
+                    <summary>What happens if I go over budget?</summary>
+                    <p class="note mt-2">
+                        Nothing breaks — the hero card turns red and shows how
+                        much you're over. You can keep logging. The goal is
+                        awareness, not restriction.
+                    </p>
+                </details>
+
+                <details class="faq">
+                    <summary>Can I track a spending limit per category?</summary>
+                    <p class="note mt-2">
+                        Yes, on the <a href="/settings">Settings</a> page. Add a
+                        category (like "Food" or "Transport"), give it a monthly
+                        limit, and the home screen shows a progress bar for each
+                        one.
+                    </p>
+                </details>
+
+                <details class="faq">
+                    <summary>Is my data private?</summary>
+                    <p class="note mt-2">
+                        Yes. Your entries are tied to your account and visible
+                        only to you. Your password is stored as a secure hash —
+                        nobody, including us, can read it back. See the
+                        <a href="/terms">terms and conditions</a> for full
+                        details.
+                    </p>
+                </details>
+
+                <details class="faq">
+                    <summary>What if I forget my password?</summary>
+                    <p class="note mt-2">
+                        On the login page, tap
+                        <a href="/forgot-password">Forgot password?</a> and enter
+                        the email you signed up with. We'll send a reset link.
+                    </p>
+                </details>
+
+                <details class="faq">
+                    <summary>Can I export my data?</summary>
+                    <p class="note mt-2">
+                        Yes. Go to <a href="/export">Export</a> and pick any month.
+                        You can download it as CSV (for spreadsheets) or PDF (for
+                        printing or archiving).
+                    </p>
+                </details>
+
+            </div>
+        </section>
+
+        <!-- Still stuck? -->
+        <div class="section-head">
+            <h2 class="card-title">Still stuck?</h2>
+        </div>
+
+        <a href="/support" class="feature-card mb-4">
+            <span class="tile">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#mail"/></svg>
+            </span>
+            <span class="feature-body">
+                <span class="feature-title">Contact support</span>
+                <span class="feature-desc">Send us a message — we usually reply within a day.</span>
+            </span>
+            <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+        </a>
+
+        <a href="#" class="help-back-top">↑ Back to top</a>
+
+        <p class="mt-6">
+            <a href="/" class="btn btn-primary btn-block">Go to my dashboard</a>
+        </p>
+
+    </main>
+</body>
+</html>
+{{end}}
