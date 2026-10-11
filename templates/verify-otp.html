@@ -1,0 +1,85 @@
+{{define "verify-otp.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Enter code — Budget Tracker</title>
+    {{template "head.html" .}}
+    <style>
+      .otp-input {
+        width: 100%;
+        min-height: 56px;
+        padding: 12px;
+        background: var(--surface);
+        color: var(--ink);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius-field);
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: 0.5em;
+        text-align: center;
+        text-indent: 0.5em;
+      }
+      .otp-input:focus {
+        outline: none;
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent);
+      }
+      .otp-email {
+        font-weight: 600;
+        color: var(--ink);
+        word-break: break-all;
+      }
+    </style>
+</head>
+<body>
+    <main class="auth-shell">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <span class="brand-mark" aria-hidden="true">₦</span>
+                Budget Tracker
+            </div>
+
+            <h1 class="auth-title">Enter your code</h1>
+            <p class="auth-sub">
+                We sent a 6-digit code to
+                <span class="otp-email">{{.Email}}</span>.
+                It expires in 15 minutes.
+            </p>
+
+            {{if .Error}}
+            <div class="alert alert-over mb-4" role="alert">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+                <p>{{.Error}}</p>
+            </div>
+            {{end}}
+
+            <form action="/verify-otp" method="POST" autocomplete="off">
+                <div class="auth-field">
+                    <label class="label" for="code">6-digit code</label>
+                    <input
+                        class="otp-input"
+                        type="text"
+                        id="code"
+                        name="code"
+                        inputmode="numeric"
+                        pattern="[0-9]{6}"
+                        maxlength="6"
+                        autocomplete="one-time-code"
+                        required
+                        autofocus>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Verify code</button>
+            </form>
+
+            <form action="/forgot-password" method="GET" class="mt-4">
+                <button type="submit" class="btn btn-soft btn-block">Send a new code</button>
+            </form>
+
+            <p class="auth-foot"><a href="/login">Back to log in</a></p>
+        </div>
+    </main>
+</body>
+</html>
+{{end}}

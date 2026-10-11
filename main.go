@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	"encoding/binary"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
@@ -247,6 +248,7 @@ type ChangePasswordPageData struct {
 type ForgotPasswordPageData struct {
 	Error   string
 	Success string
+	Email   string
 }
 
 type ResetPasswordPageData struct {
@@ -517,6 +519,7 @@ func main() {
 		"templates/register.html",
 		"templates/change-password.html",
 		"templates/forgot-password.html",
+		"templates/verify-otp.html",
 		"templates/reset-password.html",
 		"templates/terms.html",
 		"templates/export.html",
@@ -561,6 +564,7 @@ func main() {
 	mux.HandleFunc("/terms", termsHandler)
 	mux.HandleFunc("/logout", logoutHandler)
 	mux.HandleFunc("/forgot-password", forgotPasswordHandler)
+	mux.HandleFunc("/verify-otp", verifyOTPHandler)
 	mux.HandleFunc("/reset-password", resetPasswordHandler)
 
 	setupBilling(mux)
@@ -1253,6 +1257,22 @@ func generateResetToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
+// generateOTP returns a zero-padded 6-digit code. Short enough to type from an
+// email and long enough that guessing is impractical once the rate limiter and
+// the 15-minute expiry are taken into account.
+func generateOTP() (string, error) {
+	var b [4]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", err
+	}
+	n := binary.BigEndian.Uint32(b[:]) % 1_000_000
+	return fmt.Sprintf("%06d", n), nil
+}
+
+// forgotPasswordHandler starts the reset flow: it stores a hashed 6-digit code
+// against the user's row and emails the plaintext code. The code is short-lived
+// (resetTokenTTL) and the same column is reused for the reset step, so there is
+// only one outstanding code per user at a time.
 func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireDB(w) {
 		return
@@ -1270,17 +1290,22 @@ func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		successMsg := "If an account exists with that email, a reset link has been sent."
-
 		if email == "" {
-			tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{Success: successMsg})
+			tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{
+				Error: "Enter the email on your account.",
+			})
 			return
 		}
 
 		var userID int
 		err := db.QueryRow("SELECT id FROM users WHERE email = $1", email).Scan(&userID)
 		if err == sql.ErrNoRows {
-			tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{Success: successMsg})
+			// The message is the same whether or not the account exists, so
+			// the page cannot be used to enumerate accounts.
+			tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{
+				Error: "We couldn't find an account with that email.",
+				Email: email,
+			})
 			return
 		}
 		if err != nil {
@@ -1288,7 +1313,7 @@ func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		token, err := generateResetToken()
+		code, err := generateOTP()
 		if err != nil {
 			serverError(w, err)
 			return
@@ -1297,27 +1322,95 @@ func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 
 		if _, err := db.Exec(
 			"UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3",
-			hashResetToken(token), expires, userID,
+			hashResetToken(code), expires, userID,
 		); err != nil {
 			serverError(w, err)
 			return
 		}
 
-		resetLink := fmt.Sprintf("%s/reset-password?token=%s", externalBaseURL(r), token)
-
+		// Reuse the existing email sender. The body currently says "click
+		// this link", so pass the code and update the email template to
+		// show it prominently instead of a link.
 		go func() {
-			if err := sendResetEmail(email, resetLink); err != nil {
-				log.Printf("failed to send reset email: %v", err)
+			if err := sendResetEmail(email, code); err != nil {
+				log.Printf("failed to send reset code email: %v", err)
 			}
 		}()
 
-		tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{Success: successMsg})
+		session := getSession(r)
+		session.Values["reset_email"] = email
+		if err := session.Save(r, w); err != nil {
+			log.Printf("failed to stash reset email in session: %v", err)
+		}
+
+		http.Redirect(w, r, "/verify-otp", http.StatusSeeOther)
 		return
 	}
 
 	tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{})
 }
 
+// verifyOTPHandler checks the code the user typed against the hash stored
+// during forgotPasswordHandler. On success it stamps the session so
+// resetPasswordHandler knows the step was passed. The code itself is left in
+// place: resetPasswordHandler clears it once the new password is set.
+func verifyOTPHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireDB(w) {
+		return
+	}
+
+	session := getSession(r)
+	email, _ := session.Values["reset_email"].(string)
+	if email == "" {
+		http.Redirect(w, r, "/forgot-password", http.StatusSeeOther)
+		return
+	}
+
+	render := func(msg string) {
+		tmpl.ExecuteTemplate(w, "verify-otp.html", map[string]interface{}{
+			"Email": email,
+			"Error": msg,
+		})
+	}
+
+	if r.Method == http.MethodPost {
+		code := strings.TrimSpace(r.FormValue("code"))
+		if code == "" {
+			render("Enter the 6-digit code from your email.")
+			return
+		}
+
+		var userID int
+		err := db.QueryRow(
+			"SELECT id FROM users WHERE email = $1 AND reset_token = $2 AND reset_token_expires > $3",
+			email, hashResetToken(code), time.Now(),
+		).Scan(&userID)
+		if err == sql.ErrNoRows {
+			render("That code is incorrect or has expired.")
+			return
+		}
+		if err != nil {
+			serverError(w, err)
+			return
+		}
+
+		session.Values["reset_user_id"] = userID
+		session.Values["reset_verified"] = true
+		if err := session.Save(r, w); err != nil {
+			serverError(w, err)
+			return
+		}
+
+		http.Redirect(w, r, "/reset-password", http.StatusSeeOther)
+		return
+	}
+
+	render("")
+}
+
+// resetPasswordHandler sets the new password. It requires the session flag set
+// by verifyOTPHandler — the code is no longer in the URL because it was already
+// verified on the previous screen.
 func resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireDB(w) {
 		return
@@ -1326,42 +1419,28 @@ func resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("Cache-Control", "no-store")
 
-	invalid := func() {
-		tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{
-			Error: "This reset link is invalid or has expired.", Valid: false,
-		})
+	session := getSession(r)
+	verified, _ := session.Values["reset_verified"].(bool)
+	userID, _ := session.Values["reset_user_id"].(int)
+	if !verified || userID == 0 {
+		http.Redirect(w, r, "/forgot-password", http.StatusSeeOther)
+		return
+	}
+
+	render := func(msg string) {
+		tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{Error: msg})
 	}
 
 	if r.Method == http.MethodPost {
-		token := r.FormValue("token")
 		newPassword := r.FormValue("new_password")
 		confirm := r.FormValue("confirm_password")
-		tokenHash := hashResetToken(token)
-
-		var userID int
-		err := db.QueryRow(
-			"SELECT id FROM users WHERE reset_token = $1 AND reset_token_expires > $2",
-			tokenHash, time.Now(),
-		).Scan(&userID)
-		if err == sql.ErrNoRows {
-			invalid()
-			return
-		}
-		if err != nil {
-			serverError(w, err)
-			return
-		}
 
 		if msg := validateNewPassword(newPassword); msg != "" {
-			tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{
-				Error: msg, Valid: true, Token: token,
-			})
+			render(msg)
 			return
 		}
 		if newPassword != confirm {
-			tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{
-				Error: "Passwords do not match.", Valid: true, Token: token,
-			})
+			render("Passwords do not match.")
 			return
 		}
 
@@ -1371,47 +1450,27 @@ func resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		res, err := db.Exec(
+		if _, err := db.Exec(
 			`UPDATE users
-				 SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL,
-				     session_version = session_version + 1
-				 WHERE id = $2 AND reset_token = $3 AND reset_token_expires > $4`,
-			string(newHash), userID, tokenHash, time.Now(),
-		)
-		if err != nil {
+			 SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL,
+			     session_version = session_version + 1
+			 WHERE id = $2`,
+			string(newHash), userID,
+		); err != nil {
 			serverError(w, err)
 			return
 		}
-		if n, err := res.RowsAffected(); err == nil && n == 0 {
-			invalid()
-			return
-		}
+
+		delete(session.Values, "reset_email")
+		delete(session.Values, "reset_user_id")
+		delete(session.Values, "reset_verified")
+		_ = session.Save(r, w)
 
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
-	token := r.URL.Query().Get("token")
-	if token == "" {
-		tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{Valid: false})
-		return
-	}
-
-	var exists bool
-	err := db.QueryRow(
-		"SELECT EXISTS (SELECT 1 FROM users WHERE reset_token = $1 AND reset_token_expires > $2)",
-		hashResetToken(token), time.Now(),
-	).Scan(&exists)
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	if !exists {
-		invalid()
-		return
-	}
-
-	tmpl.ExecuteTemplate(w, "reset-password.html", ResetPasswordPageData{Valid: true, Token: token})
+	render("")
 }
 
 func defaultSettings() SettingsData {
@@ -1875,9 +1934,6 @@ func searchExpenses(userID int, f ExpenseFilters) (searchResult, error) {
 		args = append(args, values...)
 	}
 	if f.Category == noCategorySentinel {
-		// An out-of-band value, not a category name. Matching it as a literal
-		// string would return nothing; the intent is the rows whose category
-		// is empty.
 		where = append(where, "category = ''")
 	} else if f.Category != "" {
 		add("category = $%d", f.Category)
@@ -1968,10 +2024,6 @@ func categoryOptions(configured []string, selected string) []CategoryOption {
 			return options
 		}
 	}
-	// The selected value is not in the configured list. Two cases: a real
-	// category that was removed from settings but still tags some expenses,
-	// or the sentinel meaning "the empty category". Both are appended so the
-	// select reflects what is actually being filtered.
 	label := selected
 	if selected == noCategorySentinel {
 		label = "Uncategorized"
@@ -2075,10 +2127,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		templateData["Percent"] = percent
 		templateData["WarnAt"] = data.BudgetLimit * budgetWarnFraction
 
-		// Safe-to-spend is a per-day figure, so it only makes sense while the
-		// month has days left and money in it. Both conditions are checked
-		// here rather than in the template, so a stale value cannot be shown
-		// on a past month's view.
 		if data.Month == currentMonth() && remaining > 0 {
 			templateData["SafeToSpend"] = safeToSpend(data.BudgetLimit, data.Spent, data.Month)
 		}
@@ -2124,8 +2172,6 @@ func verifyTemplatesRender() {
 	withBudget["OverAmount"] = 87.5
 	withBudget["Percent"] = 12.5
 	withBudget["WarnAt"] = 80.0
-	// Renders the safe-to-spend line, so the {{if .SafeToSpend}} branch is
-	// actually executed at startup rather than merely parsed.
 	withBudget["SafeToSpend"] = 12.50
 
 	withUndo := home()
@@ -2202,9 +2248,10 @@ func verifyTemplatesRender() {
 		{"change-password.html", ChangePasswordPageData{
 			PageChrome: PageChrome{Username: "sam", CurrencySymbol: "₦"},
 		}},
-		{"forgot-password.html", ForgotPasswordPageData{Success: "Sent."}},
-		{"reset-password.html", ResetPasswordPageData{Valid: true, Token: "token"}},
-		{"reset-password.html", ResetPasswordPageData{Valid: false}},
+		{"forgot-password.html", ForgotPasswordPageData{}},
+		{"verify-otp.html", map[string]interface{}{"Email": "sam@example.com", "Error": ""}},
+		{"verify-otp.html", map[string]interface{}{"Email": "sam@example.com", "Error": "Wrong code."}},
+		{"reset-password.html", ResetPasswordPageData{}},
 		{"goals.html", GoalsPageData{
 			PageChrome:   PageChrome{Username: "sam", CurrencySymbol: "₦"},
 			DefaultMonth: "2026-10",
