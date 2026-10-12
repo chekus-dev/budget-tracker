@@ -10,8 +10,6 @@
 
     <main class="app-main">
 
-        <div class="trend-top">
-            {{template "account-bar" .}}
             <div class="trend-year" role="group" aria-label="Month">
                 <a class="trend-year-btn" href="/export?month={{.PrevMonth}}" aria-label="Previous month">
                     <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
@@ -29,7 +27,7 @@
             </div>
         </div>
         <div class="page-head">
-            <h1 class="page-title">Export</h1>
+            <h2 class="page-title">Export</h2>
             <p class="page-sub">Download your ledger for {{.Label}}</p>
         </div>
 

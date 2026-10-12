@@ -5,38 +5,33 @@
     <title>Archive — Budget Tracker</title>
     {{template "head.html" .}}
 </head>
-<body class="has-chrome no-fab">    
+<body class="has-chrome no-fab">
     {{template "nav.html" .}}
 
     <main class="app-main">
 
-        <div class="trend-top">
-          
-        <p class="note mt-6" style="color: var(--ink-faint); text-align: center;">
-            Budget Tracker v{{.Version}}
-        </p>  
         <div class="page-head">
-            <h1 class="page-title">Archive</h1>
+            <h2 class="page-title">Archive</h2>
             <p class="page-sub">Every month with recorded activity</p>
         </div>
-            {{if and .Details (not .Searching)}}
-            <div class="trend-year" role="group" aria-label="Month">
-                <a class="trend-year-btn" href="/archive?month={{.Details.PrevMonth}}" aria-label="Previous month">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
-                </a>
-                <span class="trend-year-label">{{.Label}}</span>
-                {{if lt .Month .Details.CurrentMonth}}
-                <a class="trend-year-btn" href="/archive?month={{.Details.NextMonth}}" aria-label="Next month">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
-                </a>
-                {{else}}
-                <span class="trend-year-btn" aria-disabled="true" aria-label="Next month">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
-                </span>
-                {{end}}
-            </div>
+
+        {{if and .Details (not .Searching)}}
+        <div class="trend-year" role="group" aria-label="Month">
+            <a class="trend-year-btn" href="/archive?month={{.Details.PrevMonth}}" aria-label="Previous month">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
+            </a>
+            <span class="trend-year-label">{{.Label}}</span>
+            {{if lt .Month .Details.CurrentMonth}}
+            <a class="trend-year-btn" href="/archive?month={{.Details.NextMonth}}" aria-label="Next month">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+            </a>
+            {{else}}
+            <span class="trend-year-btn" aria-disabled="true" aria-label="Next month">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+            </span>
             {{end}}
         </div>
+        {{end}}
 
         <form class="archive-search" action="/archive" method="GET" role="search">
             <div class="archive-search-main">

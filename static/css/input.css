@@ -6,20 +6,6 @@
 
 /* ==========================================================================
    Budget Tracker — design system (Fundex language)
-   ==========================================================================
-   Single source of truth.
-
-   MOBILE VIEW ONLY. The app renders as a phone-width column at every screen
-   size: a bottom tab bar, a floating add button, bottom-sheet modals. On a
-   wide screen the column is centred and the fixed bars are held to the same
-   width (--app-width) so they line up with the page. There is no desktop
-   sidebar or multi-column layout.
-
-   Build:   npm run build:css      (→ static/css/app.css)
-   Watch:   npm run watch:css
-
-   @source paths are relative to THIS file. It lives at static/css/input.css,
-   so templates/ at the project root is two levels up: ../../templates.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -28,8 +14,6 @@
 :root {
   color-scheme: light;
 
-  /* Width of the phone column. Everything fixed to the screen edge (tab bar,
-     top bar, add button, dropdown) is centred to this width. */
   --app-width: 480px;
 
   --canvas:      #F7F8FA;
@@ -168,7 +152,6 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Room for the bottom tab bar. */
   body.has-chrome {
     padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   }
@@ -541,32 +524,37 @@
   .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip-row .chip { cursor: default; }
 
-  /* ---- Segmented ---- */
+  /* ---- Segmented (Expense / Income toggle) ---- */
   .segmented {
-    display: flex; gap: 4px; padding: 4px;
-    background: var(--surface-3);
-    border-radius: var(--radius-pill);
+    display: flex;
+    gap: 12px;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
   }
   .segmented-btn {
     flex: 1;
     display: inline-flex; align-items: center; justify-content: center;
     gap: 8px;
-    min-height: 40px;
+    min-height: 44px;
     padding: 8px 14px;
-    border: 1px solid transparent;
+    border: 1px solid var(--line);
     border-radius: var(--radius-pill);
-    background: transparent;
+    background: var(--surface);
     color: var(--ink-muted);
     font-size: 13px; font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
   }
-  .segmented-btn:hover { color: var(--ink); }
+  .segmented-btn:hover {
+    color: var(--ink);
+    border-color: var(--line-strong);
+  }
   .segmented-btn.is-active {
-    background: var(--surface);
-    border-color: var(--line);
+    background: var(--brand-soft);
+    border-color: var(--brand);
     color: var(--brand-ink);
-    box-shadow: var(--shadow-card);
+    box-shadow: none;
   }
 
   /* ---- Buttons ---- */
@@ -1187,7 +1175,6 @@
     font-size: 12px; color: var(--ink-muted);
   }
 
-  /* ---- Trends: canvas chart wrapper ---- */
   .trend-chart-canvas {
     position: relative;
     height: 260px;
@@ -1199,19 +1186,16 @@
     margin-top: 8px;
   }
 
-  /* ---- Trends: chart grid (stacked) ---- */
   .trend-charts {
     display: grid;
     gap: 16px;
     margin-bottom: 20px;
   }
 
-  /* Stat grid on the Trends page. */
   .stat-grid-three {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  /* Coloured stat icon tiles. */
   .stat-icon.is-safe { background: var(--safe-soft); color: var(--safe-ink); }
   .stat-icon.is-over { background: var(--over-soft); color: var(--over-ink); }
 
@@ -1816,9 +1800,6 @@
 
   .btn-row > .btn { flex: 1 1 100%; }
 
-  .segmented { overflow-x: auto; }
-  .segmented-btn { flex: 0 0 auto; min-width: 96px; }
-
   .trend-head { margin-bottom: 18px; }
   .trend-total-main { font-size: 30px; }
   .trend-total-frac { font-size: 18px; }
@@ -1872,155 +1853,11 @@
     .expense-row { gap: 10px; padding: 10px 12px; min-height: 60px; }
     .expense-icon { width: 36px; height: 36px; }
     .expense-amount { font-size: 13px; }
+
+    .segmented { gap: 10px; }
   }
 }
 
-/* --------------------------------------------------------------------------
-   Top bar — brand + account fit  (outside @layer so it always wins)
-   -------------------------------------------------------------------------- */
-
-.topbar-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  flex: none;
-  font-weight: 700;
-  font-size: 16px;
-  letter-spacing: -0.01em;
-  color: inherit;
-  text-decoration: none;
-}
-
-.topbar-brand .brand-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  font-size: 15px;
-}
-
-.topbar-brand-name {
-  white-space: nowrap;
-}
-
-.topbar .account-menu { margin: 0; }
-
-.topbar .account-trigger {
-  padding: 4px;
-  margin: 0;
-  gap: 8px;
-}
-
-.topbar .account-trigger .trend-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  font-size: 15px;
-}
-
-.topbar .account-trigger .trend-account-name {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-/* --------------------------------------------------------------------------
-   Stat card icons — inline SVGs in the Trends stat tiles
-   -------------------------------------------------------------------------- */
-
-.stat-icon > svg {
-  width: 20px;
-  height: 20px;
-  display: block;
-  flex: none;
-}
-
-.stat-card.is-primary .stat-icon > svg {
-  width: 22px;
-  height: 22px;
-}
-
-/* ============================================================
-   TAB BAR — HARDENED OVERRIDE
-   Guarantees the bottom nav is visible on every browser.
-   Uses plain flex on .sidebar-nav (no display:contents needed).
-   ============================================================ */
-
-nav.tabbar {
-  position: fixed !important;
-  top: auto !important;
-  left: max(0px, calc(50% - var(--app-width) / 2)) !important;
-  right: max(0px, calc(50% - var(--app-width) / 2)) !important;
-  bottom: 0 !important;
-  display: flex !important;
-  align-items: stretch !important;
-  height: auto !important;
-  min-height: 64px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-  background: var(--surface) !important;
-  border-top: 1px solid var(--line) !important;
-  box-shadow: 0 -1px 3px rgba(17, 24, 39, 0.04) !important;
-  z-index: 40 !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  transform: none !important;
-}
-
-/* Hide the sidebar-only extras inside the bar */
-nav.tabbar .sidebar-brand,
-nav.tabbar .sidebar-upgrade,
-nav.tabbar .sidebar-logout-form {
-  display: none !important;
-}
-
-/* Make the nav wrapper fill the whole bar as a flex row */
-nav.tabbar .sidebar-nav {
-  display: flex !important;
-  flex: 1 1 100% !important;
-  width: 100% !important;
-  justify-content: space-around !important;
-  align-items: stretch !important;
-}
-
-nav.tabbar .nav-item {
-  flex: 1 1 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 4px !important;
-  min-height: 60px !important;
-  padding: 8px 4px !important;
-  color: var(--ink-muted) !important;
-  text-decoration: none !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  background: none !important;
-  border: 0 !important;
-  cursor: pointer !important;
-}
-
-nav.tabbar .nav-item[aria-current="page"],
-nav.tabbar .nav-item.is-active {
-  color: var(--brand-ink) !important;
-}
-
-nav.tabbar .nav-item .icon {
-  width: 22px !important;
-  height: 22px !important;
-  flex: none !important;
-  display: block !important;
-}
-
-nav.tabbar .nav-item span {
-  display: block !important;
-  line-height: 1 !important;
-}
-
-/* Give the page room above the bar */
-body.has-chrome {
-  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
-}
 /* --------------------------------------------------------------------------
    Top bar — brand + account fit
    -------------------------------------------------------------------------- */
@@ -2086,9 +1923,6 @@ body.has-chrome {
 
 /* ============================================================
    Bottom tab bar — final styling
-   Uses plain flex; no display:contents anywhere.
-   Matches the design system tokens (white surface, gray inactive,
-   purple active), centred to the phone column on wide screens.
    ============================================================ */
 
 nav.tabbar {
@@ -2158,7 +1992,57 @@ nav.tabbar .nav-item span {
 body.has-chrome {
   padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
 }
+
 /* Hide the FAB on pages that already have their own primary action */
 body.no-fab .fab {
   display: none !important;
+}
+
+/* ============================================================
+   Center the month switcher (Export page)
+   ============================================================ */
+
+.month-switch {
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 20px;
+}
+
+/* ============================================================
+   Center the year switcher (Trends page)
+   ============================================================ */
+
+.trend-top {
+  justify-content: center !important;
+}
+
+.trend-year {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* ============================================================
+   Settings page — make Reset all full width like Edit settings
+   ============================================================ */
+
+form:has(> .btn-danger) {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+}
+
+form:has(> .btn-danger) > .btn-danger {
+  width: 100%;
+}/* ============================================================
+   Archive page — left-align the page heading like every other page
+   ============================================================ */
+
+.page-head {
+  text-align: left;
+}
+
+.page-title,
+.page-sub {
+  text-align: left;
 }
