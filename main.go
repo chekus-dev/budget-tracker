@@ -246,9 +246,10 @@ type ChangePasswordPageData struct {
 }
 
 type ForgotPasswordPageData struct {
-	Error   string
-	Success string
-	Email   string
+	Error            string
+	Success          string
+	Email            string
+	RecaptchaSiteKey string
 }
 
 type ResetPasswordPageData struct {
@@ -569,11 +570,6 @@ func main() {
 
 	setupBilling(mux)
 
-	// Static assets. A request that carries a version query (?v=N) is a
-	// content-addressed URL: bumping the N in head.html produces a different
-	// URL, so the browser can cache the response forever without ever serving
-	// a stale file. Requests without the query are cached for a day, which
-	// covers anything not yet on the versioned pattern.
 	staticFS := http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
 	mux.Handle("/static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("v") != "" {
@@ -891,7 +887,10 @@ func tooManyAttempts(w http.ResponseWriter, wait time.Duration) {
 
 func tooManyResets(w http.ResponseWriter, wait time.Duration) {
 	writeRetryAfter(w, wait)
-	tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{Error: resetLockoutMessage(wait)})
+	tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{
+		Error:            resetLockoutMessage(wait),
+		RecaptchaSiteKey: recaptchaSiteKey(),
+	})
 }
 
 func writeRetryAfter(w http.ResponseWriter, wait time.Duration) {
@@ -1290,9 +1289,21 @@ func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if recaptchaRequired() {
+			if err := verifyRecaptcha(r, r.FormValue("g-recaptcha-response")); err != nil {
+				tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{
+					Error:            err.Error(),
+					Email:            email,
+					RecaptchaSiteKey: recaptchaSiteKey(),
+				})
+				return
+			}
+		}
+
 		if email == "" {
 			tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{
-				Error: "Enter the email on your account.",
+				Error:            "Enter the email on your account.",
+				RecaptchaSiteKey: recaptchaSiteKey(),
 			})
 			return
 		}
@@ -1303,8 +1314,9 @@ func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 			// The message is the same whether or not the account exists, so
 			// the page cannot be used to enumerate accounts.
 			tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{
-				Error: "We couldn't find an account with that email.",
-				Email: email,
+				Error:            "We couldn't find an account with that email.",
+				Email:            email,
+				RecaptchaSiteKey: recaptchaSiteKey(),
 			})
 			return
 		}
@@ -1347,7 +1359,9 @@ func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{})
+	tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{
+		RecaptchaSiteKey: recaptchaSiteKey(),
+	})
 }
 
 // verifyOTPHandler checks the code the user typed against the hash stored
@@ -2248,6 +2262,7 @@ func verifyTemplatesRender() {
 		{"change-password.html", ChangePasswordPageData{
 			PageChrome: PageChrome{Username: "sam", CurrencySymbol: "₦"},
 		}},
+		{"forgot-password.html", ForgotPasswordPageData{RecaptchaSiteKey: "test-site-key"}},
 		{"forgot-password.html", ForgotPasswordPageData{}},
 		{"verify-otp.html", map[string]interface{}{"Email": "sam@example.com", "Error": ""}},
 		{"verify-otp.html", map[string]interface{}{"Email": "sam@example.com", "Error": "Wrong code."}},
