@@ -25,8 +25,8 @@ services:
     # so the deploy needs Node as well as Go. Render's Go image ships Node, but
     # pin the major version so a base-image change cannot silently alter the
     # CSS output. `npm ci` installs exactly what package-lock.json pins.
-    buildCommand: npm ci && npm run build:css && go build -o budget-tracker .
-    startCommand: ./budget-tracker
+    buildCommand: npm ci && npm run build:css && go build -o app .
+    startCommand: ./app
 
     # The binary applies migrations/*.sql itself at startup (see migrations.go),
     # so there is no separate migrate step here and no dependency on psql being
