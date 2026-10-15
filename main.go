@@ -57,7 +57,7 @@ const (
 	// tel: link is derived by stripping spaces.
 	supportEmail    = "chekusjoseph@gmail.com"
 	supportPhone    = "+234 9130 789 611"
-	supportWhatsApp = "2349130789611"
+	supportWhatsApp = "2349166270135"
 )
 
 // normalizeKind maps whatever arrived in a form to a storable kind, defaulting
