@@ -579,6 +579,10 @@ func main() {
 	mux.HandleFunc("/goals/delete/", requireAuth(goalsDeleteHandler))
 	mux.HandleFunc("/welcome", requireAuth(welcomeHandler))
 
+	mux.HandleFunc("/admin", requireAdmin(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r) // placeholder until step 5
+	}))
+
 	mux.HandleFunc("/healthz", healthzHandler)
 	mux.HandleFunc("/login", loginHandler)
 	mux.HandleFunc("/register", registerHandler)
