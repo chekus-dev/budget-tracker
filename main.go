@@ -1011,8 +1011,30 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 		if err := session.Save(r, w); err != nil {
 			log.Printf("failed to refresh session: %v", err)
 		}
+		stampLastSeen(userID)
 		next(w, r)
 	}
+}
+
+// stampLastSeen records the user's activity timestamp, at most once an hour
+// per user. Writing on every request would double the write load on every
+// page view for a value that only needs hour-level accuracy. The WHERE
+// clause means most calls hit the index and write nothing.
+func stampLastSeen(userID int) {
+	if db == nil {
+		return
+	}
+	go func() {
+		_, err := db.Exec(
+			`UPDATE users SET last_seen_at = NOW()
+			 WHERE id = $1
+			   AND (last_seen_at IS NULL OR last_seen_at < NOW() - INTERVAL '1 hour')`,
+			userID,
+		)
+		if err != nil {
+			log.Printf("stampLastSeen(%d): %v", userID, err)
+		}
+	}()
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
