@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const (
@@ -48,7 +49,7 @@ type TrendBar struct {
 
 type TrendRow struct {
 	Name    string
-	Initial string
+	Icon    string
 	Tile    int
 	Count   int
 	AmtMain string
@@ -82,6 +83,10 @@ type TrendsPageData struct {
 	Tabs                     []TrendTab
 
 	HeadMain, HeadFrac, HeadCaption string
+	// HeadMoney marks the headline as a real figure rather than the "2 of 3"
+	// and "No budget" captions that share the same fields. Only a money
+	// headline gets the masked twin the screenshot deterrents swap in.
+	HeadMoney bool
 
 	HasData     bool
 	NoBudget    bool
@@ -165,6 +170,175 @@ func tileIndex(name string) int {
 	return h
 }
 
+/* ---- Category icons ----
+
+   A category is free text: whatever the user types in Settings is the string
+   stored against the expense. There is no icon column and no picker, so the
+   icon is worked out from the name here instead — which also means the
+   categories a user already has pick up an icon without re-entering them.
+
+   categoryRuleIcons is a keyword table, and its order is the part that
+   matters, because the first rule listing a word keeps that word:
+
+     - Money concepts come first. "Savings for school fees" is a savings
+       category, and both halves of it are in the table.
+     - Concrete things follow, and vague ones come last, so "Transport to
+       work" reads as transport rather than as work.
+     - "Bills" and "Fees" sit well down, because those are the words people
+       fall back on when nothing more specific fits.
+
+   Words match whole, so "car" does not match "scarves", and a trailing "s"
+   or "es" is folded, so "Snacks" finds "snack" and "Taxes" finds "tax".
+   A name with several known words takes the one that comes first in it. */
+var categoryRuleIcons = []struct {
+	icon  string
+	words []string
+}{
+	// Money.
+	{"piggy", []string{"saving", "save", "ajo", "esusu", "susu", "adashe", "thrift", "emergency", "sinking", "pension"}},
+	{"trending-up", []string{"investment", "invest", "stock", "share", "crypto", "bitcoin", "forex", "trading", "trade", "dividend", "bond", "mutual"}},
+	{"coins", []string{"loan", "debt", "borrow", "repay", "repayment", "owe", "owed", "instalment", "installment", "hire"}},
+	{"wallet", []string{"allowance", "pocket", "personal", "cash", "petty", "upkeep"}},
+
+	// Food and drink.
+	{"utensils", []string{"food", "feeding", "feed", "eat", "eating", "lunch", "dinner", "breakfast", "brunch", "restaurant", "eatery", "takeaway", "takeout", "chop", "suya", "shawarma", "pizza", "burger", "snack", "canteen", "cafeteria", "kitchen", "meal"}},
+	{"cart", []string{"grocery", "groceries", "market", "provision", "supermarket", "foodstuff", "vegetable", "meat", "fish", "pepper", "rice", "store"}},
+	{"coffee", []string{"coffee", "cafe", "café", "tea", "starbucks", "cappuccino"}},
+	{"cup", []string{"drink", "beer", "wine", "alcohol", "juice", "soda", "beverage", "bar", "shisha"}},
+	{"cake", []string{"cake", "birthday", "anniversary", "celebration"}},
+
+	// Getting around.
+	{"car", []string{"transport", "transportation", "car", "uber", "bolt", "taxi", "cab", "keke", "okada", "ride", "vehicle", "parking", "toll", "wash", "driving"}},
+	{"bus", []string{"bus", "danfo", "brt", "train", "rail", "metro", "shuttle", "ferry"}},
+	{"flame", []string{"gas", "cylinder", "firewood", "charcoal"}},
+	{"fuel", []string{"fuel", "petrol", "diesel", "kerosene", "pms"}},
+	{"plane", []string{"flight", "travel", "trip", "holiday", "vacation", "airfare", "aeroplane", "airplane"}},
+	{"bed", []string{"hotel", "lodge", "lodging", "airbnb", "guesthouse", "shortlet"}},
+
+	// Home and the bills that come with it.
+	{"home", []string{"rent", "house", "home", "mortgage", "housing", "landlord", "tenancy", "tenement", "accommodation", "property"}},
+	{"bolt", []string{"electricity", "electric", "power", "nepa", "light", "utility", "prepaid", "token", "meter", "generator", "gen"}},
+	{"droplet", []string{"water", "borehole"}},
+	{"wifi", []string{"data", "internet", "wifi", "broadband", "modem", "router", "browsing", "network"}},
+	{"smartphone", []string{"airtime", "recharge", "phone", "call", "mtn", "glo", "airtel", "9mobile", "etisalat", "sim", "topup", "telecom", "sms"}},
+	{"trash", []string{"waste", "refuse", "sanitation", "garbage", "trash", "disposal", "cleaning", "fumigation", "pest", "environment"}},
+	{"wrench", []string{"repair", "maintenance", "plumber", "electrician", "mechanic", "servicing", "fix", "handyman", "carpenter", "welder", "painter", "installation"}},
+	{"shield", []string{"insurance", "insure", "security", "guard", "safety", "policy"}},
+
+	// Health, appearance, and the people around you.
+	{"heart", []string{"health", "medical", "hospital", "clinic", "doctor", "treatment", "surgery", "hmo", "nhis", "sick", "illness", "checkup", "lab", "laboratory", "scan", "test"}},
+	{"pill", []string{"medicine", "medication", "drug", "pharmacy", "chemist", "pill", "prescription", "vitamin"}},
+	{"dumbbell", []string{"gym", "fitness", "workout", "exercise", "sport", "training", "yoga", "football", "ball", "coach"}},
+	{"scissors", []string{"haircut", "hair", "barber", "barbing", "salon", "beauty", "cosmetic", "makeup", "spa", "manicure", "pedicure", "nail", "wig", "weave", "braid", "cream", "lotion"}},
+	{"shirt", []string{"cloth", "clothes", "clothing", "fashion", "shoe", "wears", "outfit", "tailor", "laundry", "fabric", "ankara", "lace", "jewellery", "jewelry", "watch"}},
+	{"graduation", []string{"school", "tuition", "education", "academic", "university", "polytechnic", "college", "lesson", "lecture", "exam", "waec", "jamb", "neco", "nursery"}},
+	{"book", []string{"book", "stationery", "textbook", "notebook", "pen", "learning", "course", "study", "studies", "library", "research", "printing", "photocopy"}},
+	{"baby", []string{"baby", "babies", "kid", "child", "children", "diaper", "nappy", "pampers", "childcare", "nanny", "maternity", "antenatal", "toy", "creche"}},
+	{"paw", []string{"pet", "dog", "cat", "vet", "veterinary", "animal"}},
+	{"gift", []string{"gift", "present", "donation", "charity", "tithe", "offering", "church", "mosque", "zakat", "sadaka", "alms", "welfare", "thanksgiving"}},
+
+	// Leisure.
+	{"film", []string{"movie", "cinema", "film", "netflix", "showmax", "prime", "entertainment", "dstv", "gotv", "startimes", "tv", "cable", "streaming"}},
+	{"music", []string{"music", "spotify", "audiomack", "boomplay", "song", "album"}},
+	{"gamepad", []string{"game", "gaming", "playstation", "xbox", "ps4", "ps5", "console"}},
+	{"dice", []string{"bet", "betting", "gamble", "gambling", "lottery", "lotto", "pool", "stake", "sporty", "bet9ja", "casino", "jackpot"}},
+	{"ticket", []string{"ticket", "event", "concert", "party", "parties", "outing", "owambe", "show"}},
+
+	// Everything else, vaguest last.
+	{"laptop", []string{"laptop", "computer", "electronics", "gadget", "accessories", "charger"}},
+	{"bag", []string{"shopping", "shop", "mall", "boutique", "purchase", "amazon", "jumia", "konga"}},
+	{"receipt", []string{"bill", "fee", "charge", "subscription", "due", "levy", "tax", "vat"}},
+	{"briefcase", []string{"work", "business", "office", "job", "company", "staff", "employee", "professional", "consulting"}},
+	{"tag", []string{"other", "misc", "miscellaneous", "uncategorised", "uncategorized", "general", "random", "tag", "various", "stuff"}},
+}
+
+/* categoryWordIcons is the table above turned inside out, built once at
+   startup. The first rule to list a word keeps it, which is what makes the
+   order of categoryRuleIcons decide a name that fits two of them. */
+var categoryWordIcons = func() map[string]string {
+	m := make(map[string]string, 512)
+	for _, rule := range categoryRuleIcons {
+		for _, w := range rule.words {
+			if _, taken := m[w]; !taken {
+				m[w] = rule.icon
+			}
+		}
+	}
+	return m
+}()
+
+/* categoryFallbackIcons are the shapes an unrecognised category hashes into.
+   None of them means anything, which is the point: a name the table does not
+   know gets a marker of its own rather than a wrong guess at what it is. Two
+   unknown names can still land on the same shape, but not all of them will. */
+var categoryFallbackIcons = []string{
+	"tag", "wallet", "receipt", "banknote", "piggy", "target", "calendar",
+	"inbox", "bookmark", "star", "flag", "layers", "package", "grid",
+	"sparkle", "folder",
+}
+
+/* categoryIcon returns the sprite id to draw for a category name. It returns
+   "" for an empty name, which is how an entry logged without a category asks
+   for the generic receipt/banknote instead. */
+func categoryIcon(name string) string {
+	name = strings.ToLower(strings.TrimSpace(name))
+	if name == "" {
+		return ""
+	}
+	for _, w := range categoryWords(name) {
+		/* Exact first, then the singular, so a word that genuinely ends in
+		   "s" — "gas", "bus" — is not folded into something else. */
+		for _, form := range []string{w, strings.TrimSuffix(w, "s"), strings.TrimSuffix(w, "es")} {
+			if icon, ok := categoryWordIcons[form]; ok {
+				return icon
+			}
+		}
+	}
+	return categoryIconFallback(name)
+}
+
+/* categoryWords splits a name into the words the table is matched against.
+   Everything that is not a letter or a digit separates words, so "Car wash",
+   "car-wash" and "car/wash" all give the same two. */
+func categoryWords(name string) []string {
+	return strings.FieldsFunc(name, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	})
+}
+
+/* categoryIconFallback gives an unrecognised name a stable icon of its own:
+   FNV-1a over the name, so the same category draws the same icon on every
+   page and after every restart, and different names spread over the pool. */
+func categoryIconFallback(name string) string {
+	h := uint32(2166136261)
+	for _, r := range name {
+		h = (h ^ uint32(r)) * 16777619
+	}
+	return categoryFallbackIcons[h%uint32(len(categoryFallbackIcons))]
+}
+
+/* catIcon is what the templates ask for wherever a category is drawn as a
+   category — a tile, a budget row, beside a name. It differs from
+   categoryIcon in one way that matters: it never returns "".
+
+   An empty id would make the markup <use href="/static/icons.svg?v=7#"/>,
+   and an empty fragment selects the sprite's root <svg>, so the browser
+   would draw all eighty-six symbols at once inside a 20px box. Names are
+   meant to be non-empty by the time they get here — Settings drops blank
+   ones and the report and trends queries relabel them "Uncategorized" — but
+   categoryBudgetProgress also builds rows from the keys in the limits
+   table, which predate that rule, so this does not rely on it.
+
+   rowIcon is the one caller that does need the difference, and it asks
+   categoryIcon directly: an entry logged with no category should fall back
+   to the generic receipt or banknote, not to a meaningless shape. */
+func catIcon(name string) string {
+	if icon := categoryIcon(name); icon != "" {
+		return icon
+	}
+	return "tag"
+}
+
 func trendYearRange(v url.Values, year int) {
 	v.Set("kind", kindExpense)
 	v.Set("from", fmt.Sprintf("%04d-01-01", year))
@@ -244,6 +418,7 @@ func buildTrends(view string, year int, now time.Time, months [12]monthTotals, l
 	switch view {
 	case "balance":
 		d.HeadMain, d.HeadFrac = splitAmount(symbol, d.Net)
+		d.HeadMoney = true
 		if d.Net > 0 {
 			d.HeadMain = "+" + d.HeadMain
 		}
@@ -253,10 +428,12 @@ func buildTrends(view string, year int, now time.Time, months [12]monthTotals, l
 			d.HeadMain, d.HeadCaption = "No budget", "Set one in Settings"
 		} else {
 			d.HeadMain, d.HeadFrac = splitAmount(symbol, d.Spent)
+			d.HeadMoney = true
 			d.HeadCaption = "Total spent"
 		}
 	default:
 		d.HeadMain, d.HeadFrac = splitAmount(symbol, d.Spent)
+		d.HeadMoney = true
 		d.HeadCaption = "Total spent"
 	}
 
@@ -339,7 +516,7 @@ func buildTrendRows(cats []catTotal, symbol string, year int) (top, more []Trend
 	for i, c := range cats {
 		main, frac := splitAmount(symbol, c.Total)
 		row := TrendRow{
-			Name: c.Name, Initial: initialOf(c.Name), Tile: tileIndex(c.Name),
+			Name: c.Name, Icon: catIcon(c.Name), Tile: tileIndex(c.Name),
 			Count: c.Count, AmtMain: main, AmtFrac: frac,
 			Href: trendCategoryHref(c, year),
 		}

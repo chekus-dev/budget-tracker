@@ -49,8 +49,8 @@
   --premium-ink:    #6D28D9;
   --premium-soft:   #F5F3FF;
 
-  --shadow-card: 0 1px 3px rgba(17, 24, 39, 0.06), 0 1px 2px rgba(17, 24, 39, 0.04);
-  --shadow-pop:  0 10px 30px rgba(17, 24, 39, 0.10);
+  --shadow-card: 0 1px 2px rgba(17, 24, 39, 0.04), 0 8px 24px -14px rgba(17, 24, 39, 0.12);
+  --shadow-pop:  0 4px 8px -4px rgba(17, 24, 39, 0.06), 0 20px 44px -18px rgba(17, 24, 39, 0.18);
 }
 
 /* --------------------------------------------------------------------------
@@ -92,8 +92,8 @@
   --premium-ink:    #C4B5FD;
   --premium-soft:   #2E1065;
 
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-pop:  0 10px 30px rgba(0, 0, 0, 0.50);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.30), 0 8px 24px -14px rgba(0, 0, 0, 0.45);
+  --shadow-pop:  0 20px 44px -18px rgba(0, 0, 0, 0.60);
 }
 
 @theme inline {
@@ -125,8 +125,8 @@
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  --radius-field: 8px;
-  --radius-card:  12px;
+  --radius-field: 12px;
+  --radius-card:  18px;
   --radius-pill:  999px;
 
   --shadow-card: var(--shadow-card);
@@ -147,7 +147,7 @@
     color: var(--ink);
     font-family: var(--font-sans);
     font-size: 15px;
-    line-height: 1.5;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
   }
@@ -190,10 +190,10 @@
     width: 100%;
     max-width: var(--app-width);
     margin: 0 auto;
-    padding: 16px 16px 96px;
+    padding: 20px 18px 96px;
   }
 
-  .page-head { margin-bottom: 20px; }
+  .page-head { margin-bottom: 24px; }
 
   .eyebrow {
     font-size: 11px; font-weight: 600;
@@ -210,30 +210,116 @@
   .figure-md { font-size: 18px; }
   .figure-lg { font-size: 22px; }
 
+  /* ---- Amount masking + capture friction ----
+     Every amount renders as .amt, wrapping .amt-v (the value) and .amt-m (a
+     bullet mask). Swapping which of the two is displayed costs no layout,
+     because both already sit in the flow.
+
+     app.js sets .amounts-hidden on <html> whenever the window or tab loses
+     focus. This is friction against a casual capture, not a lock: an OS
+     screenshot, a phone camera, a screen recorder and DevTools all ignore
+     everything in this section. */
+  .amt { position: relative; }
+  .amt-m { display: none; }
+
+  .amounts-hidden .amt-v {
+    /* Out of sight but still readable by assistive tech, which is not what
+       we are defending against. */
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .amounts-hidden .amt-m { display: inline; }
+
+  body.has-chrome {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  /* Text entry has to stay selectable or the forms stop working. */
+  input, textarea, select, [contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  img { -webkit-user-drag: none; }
+
+  /* The export page at /export/pdf is a standalone document with its own
+     inline styles and never loads this file, so it is untouched here. */
+  @media print {
+    body.has-chrome > * { display: none !important; }
+    body.has-chrome {
+      padding: 0 !important;
+      background: #fff;
+    }
+    body.has-chrome::after {
+      content: "Printing is off for this app. Open Export and use the Save as PDF report instead.";
+      display: block;
+      padding: 32px 8px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #111827;
+    }
+  }
+
   /* ---- Card ---- */
   .card {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
-    padding: 18px;
+    padding: 20px;
   }
 
-  /* ---- Balance card (hero) ---- */
+  /* ---- Balance card (hero) ----
+     A soft indigo wash rather than a solid block. The hero tokens are
+     redeclared on .is-over and under .dark, so every child element resolves
+     its own ink for the state and theme it is in. */
   .balance-card {
+    --hero-ink:       #312E81;
+    --hero-ink-muted: rgba(49, 46, 129, 0.68);
+    --hero-surface:   rgba(255, 255, 255, 0.75);
+    --hero-line:      rgba(79, 70, 229, 0.16);
+    --hero-track:     rgba(79, 70, 229, 0.15);
+    --hero-sheen:     radial-gradient(circle, rgba(255, 255, 255, 0.85), transparent 68%);
+
     position: relative;
     overflow: hidden;
-    border-radius: 16px;
-    padding: 24px;
-    color: #fff;
-    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
-    margin-bottom: 20px;
-    box-shadow: 0 8px 24px -10px rgba(79, 70, 229, 0.45);
+    border-radius: 20px;
+    padding: 26px;
+    color: var(--hero-ink);
+    background: linear-gradient(160deg, #EEF2FF 0%, #E0E7FF 100%);
+    border: 1px solid var(--hero-line);
+    margin-bottom: 24px;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.06), 0 12px 28px -12px rgba(79, 70, 229, 0.22);
+  }
+
+  .balance-card.is-over {
+    --hero-ink:       #991B1B;
+    --hero-ink-muted: rgba(153, 27, 27, 0.72);
+    --hero-line:      rgba(185, 28, 28, 0.18);
+    --hero-track:     rgba(185, 28, 28, 0.15);
+    background: linear-gradient(160deg, #FEF2F2 0%, #FEE2E2 100%);
+    box-shadow: 0 2px 4px rgba(185, 28, 28, 0.06), 0 12px 28px -12px rgba(185, 28, 28, 0.22);
   }
 
   .dark .balance-card {
-    background: linear-gradient(135deg, #4338CA 0%, #6D28D9 100%);
-    box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.6);
+    --hero-ink:       #E0E7FF;
+    --hero-ink-muted: rgba(199, 210, 254, 0.72);
+    --hero-surface:   rgba(255, 255, 255, 0.08);
+    --hero-line:      rgba(255, 255, 255, 0.14);
+    --hero-track:     rgba(255, 255, 255, 0.14);
+    --hero-sheen:     radial-gradient(circle, rgba(255, 255, 255, 0.10), transparent 68%);
+    background: linear-gradient(160deg, #1E1B4B 0%, #312E81 100%);
+    box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.55);
+  }
+
+  .dark .balance-card.is-over {
+    --hero-ink:       #FCA5A5;
+    --hero-ink-muted: rgba(252, 165, 165, 0.75);
+    --hero-line:      rgba(248, 113, 113, 0.22);
+    --hero-track:     rgba(248, 113, 113, 0.20);
+    background: linear-gradient(160deg, #450A0A 0%, #7F1D1D 100%);
   }
 
   .balance-card::after {
@@ -244,13 +330,13 @@
     width: 300px;
     height: 300px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 65%);
+    background: var(--hero-sheen);
     pointer-events: none;
   }
 
   .balance-card > * { position: relative; z-index: 1; }
 
-  .balance-card .eyebrow { color: rgba(255, 255, 255, 0.85); }
+  .balance-card .eyebrow { color: var(--hero-ink-muted); }
 
   .balance-value {
     font-size: 38px;
@@ -261,53 +347,48 @@
     word-break: break-word;
   }
 
-  .balance-card.is-over {
-    background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%);
-    box-shadow: 0 8px 24px -10px rgba(239, 68, 68, 0.45);
-  }
-
   .balance-note {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--hero-ink-muted);
     text-wrap: pretty;
   }
 
   .balance-card a {
-    color: #fff;
+    color: var(--hero-ink);
     font-weight: 600;
     text-decoration: underline;
     text-underline-offset: 2px;
   }
   .balance-card a:hover { text-decoration-thickness: 2px; }
 
-  .balance-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .balance-stats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 
   .balance-pill {
     flex: 1 1 110px;
-    background: rgba(255, 255, 255, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 10px;
+    background: var(--hero-surface);
+    border: 1px solid var(--hero-line);
+    border-radius: 12px;
     padding: 10px 12px;
   }
   .balance-pill-value { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .balance-pill-label { font-size: 11px; color: rgba(255, 255, 255, 0.85); margin-top: 2px; }
+  .balance-pill-label { font-size: 11px; color: var(--hero-ink-muted); margin-top: 2px; }
 
   .hero-progress {
     height: 8px;
     margin-top: 16px;
     border-radius: var(--radius-pill);
-    background: rgba(255, 255, 255, 0.22);
+    background: var(--hero-track);
     overflow: hidden;
   }
   .hero-progress > span {
     display: block;
     height: 100%;
     border-radius: var(--radius-pill);
-    background: #fff;
+    background: var(--brand);
     transition: width 0.4s ease;
   }
   .balance-card.is-over .hero-progress > span {
-    background: repeating-linear-gradient(135deg, #fff 0 6px, rgba(255, 255, 255, 0.6) 6px 12px);
+    background: repeating-linear-gradient(135deg, var(--over) 0 6px, rgba(255, 255, 255, 0.55) 6px 12px);
   }
 
   /* ---- Progress (standalone) ---- */
@@ -340,7 +421,7 @@
     align-items: flex-start;
     gap: 10px;
     padding: 12px 14px;
-    border-radius: 10px;
+    border-radius: 14px;
     font-size: 13px;
     line-height: 1.45;
     border: 1px solid transparent;
@@ -373,7 +454,7 @@
   }
   .stat-icon {
     width: 34px; height: 34px;
-    border-radius: 9px;
+    border-radius: 12px;
     display: grid; place-items: center;
     background: var(--brand-soft);
     color: var(--brand-ink);
@@ -404,7 +485,7 @@
     padding: 12px 14px;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: 16px;
     box-shadow: var(--shadow-card);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
@@ -416,7 +497,7 @@
 
   .expense-icon {
     width: 40px; height: 40px; flex: none;
-    border-radius: 10px;
+    border-radius: 13px;
     display: grid; place-items: center;
     background: var(--brand-soft);
     color: var(--brand-ink);
@@ -680,6 +761,17 @@
   /* ---- Category row (settings) ---- */
   .category-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .category-item .input { flex: 1; min-width: 0; }
+  /* Shows which icon the category's name resolves to. Derived on the
+     server, so a row the user has just added shows the neutral tag until
+     the form is saved and the page comes back. */
+  .category-icon {
+    flex: none;
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    display: grid; place-items: center;
+    background: var(--surface-3);
+    color: var(--ink-muted);
+  }
   .category-limit { position: relative; flex: none; width: 130px; }
   .category-limit .input { padding-left: 30px; width: 100%; }
   .category-limit-symbol {
@@ -696,6 +788,14 @@
     gap: 12px; margin-bottom: 6px;
   }
   .catbudget-name { font-size: 14px; font-weight: 600; }
+  /* The category's icon, drawn from its name. Kept inline rather than made
+     a flex row so the head keeps the baseline alignment the figure beside
+     it relies on. */
+  .catbudget-name .icon-sm {
+    vertical-align: -3px;
+    margin-right: 6px;
+    color: var(--ink-muted);
+  }
   .catbudget-figure { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .catbudget-of { font-weight: 500; color: var(--ink-muted); margin-left: 2px; font-size: 12px; }
 
@@ -712,7 +812,7 @@
     width: 100%; max-width: 400px;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 16px;
+    border-radius: 20px;
     box-shadow: var(--shadow-card);
     padding: 32px 28px;
   }
@@ -725,6 +825,42 @@
   .auth-foot { text-align: center; font-size: 13px; color: var(--ink-muted); margin-top: 20px; }
   .auth-foot a { font-weight: 600; }
   .auth-field { margin-bottom: 16px; }
+
+  /* ---- Welcome wizard ----
+     Four bars across the auth card, one per step, with the label under each.
+     Colour and weight are the only things that differ between the states, so
+     there is nothing here a script has to keep in step — the server decides
+     which step is which and the CSS just draws it. */
+  .wizard-steps {
+    list-style: none; margin: 0 0 20px; padding: 0;
+    display: flex; gap: 6px;
+  }
+  .wizard-step {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    text-align: center;
+  }
+  .wizard-dot {
+    width: 100%; height: 4px;
+    border-radius: 999px;
+    background: var(--line-strong);
+  }
+  .wizard-step.is-done .wizard-dot { background: var(--brand); opacity: .45; }
+  .wizard-step.is-now  .wizard-dot { background: var(--brand); }
+  .wizard-label {
+    max-width: 100%;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: .04em; text-transform: uppercase;
+    color: var(--ink-faint);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .wizard-step.is-done .wizard-label { color: var(--ink-muted); }
+  .wizard-step.is-now  .wizard-label { color: var(--brand); }
+
+  /* Stacked rather than side by side: at 400px the card's inner width is
+     around 290px, and two buttons carrying "Skip setup" and "Finish" do not
+     both fit on one line without one of them wrapping its label. */
+  .wizard-actions { display: grid; gap: 8px; margin-top: 24px; }
 
   .captcha { display: flex; justify-content: center; }
   .captcha + .field-error { text-align: center; }
@@ -781,7 +917,7 @@
 
   .brand-mark {
     width: 34px; height: 34px; flex: none;
-    border-radius: 10px;
+    border-radius: 13px;
     display: grid; place-items: center;
     background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
     color: #fff;
@@ -821,7 +957,7 @@
     overflow-y: auto;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 16px;
+    border-radius: 20px;
     box-shadow: var(--shadow-pop);
     padding: 22px;
   }
@@ -876,7 +1012,7 @@
 
   /* ---- Skeleton ---- */
   .skeleton {
-    border-radius: 10px;
+    border-radius: 14px;
     background: linear-gradient(90deg, var(--surface-3) 25%, var(--surface-2) 37%, var(--surface-3) 63%);
     background-size: 400% 100%;
     animation: skeleton-sweep 1.4s ease infinite;
@@ -885,7 +1021,7 @@
     0%   { background-position: 100% 50%; }
     100% { background-position: 0 50%; }
   }
-  .skeleton-row { height: 64px; border-radius: 12px; }
+  .skeleton-row { height: 64px; border-radius: 16px; }
   .skeleton-line { height: 12px; }
 
   /* ---- Empty ---- */
@@ -921,7 +1057,7 @@
   .month-switch-btn {
     width: 44px; height: 44px; flex: none;
     display: grid; place-items: center;
-    border: 0; border-radius: 8px;
+    border: 0; border-radius: 10px;
     background: transparent;
     color: var(--brand-ink);
     cursor: pointer;
@@ -987,12 +1123,12 @@
   /* ---- Tile ---- */
   .tile {
     width: 40px; height: 40px; flex: none;
-    border-radius: 10px;
+    border-radius: 13px;
     display: grid; place-items: center;
     background: var(--brand-soft);
     color: var(--brand-ink);
   }
-  .tile-lg { width: 48px; height: 48px; border-radius: 12px; }
+  .tile-lg { width: 48px; height: 48px; border-radius: 15px; }
   .tile.is-safe { background: var(--safe-soft); color: var(--safe-ink); }
   .tile.is-near { background: var(--near-soft); color: var(--near-ink); }
   .tile.is-over { background: var(--over-soft); color: var(--over-ink); }
@@ -1046,7 +1182,7 @@
   .trend-account { display: flex; align-items: center; gap: 12px; min-width: 0; }
   .trend-avatar {
     flex: none; width: 42px; height: 42px;
-    border-radius: 12px;
+    border-radius: 15px;
     display: grid; place-items: center;
     background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
     color: #fff;
@@ -1216,7 +1352,7 @@
 
   .trend-tile {
     flex: none; width: 44px; height: 44px;
-    border-radius: 12px;
+    border-radius: 15px;
     display: grid; place-items: center;
     color: #fff;
     font-size: 19px; font-weight: 700;
@@ -1233,6 +1369,9 @@
   .trend-tile.is-month { font-size: 15px; }
   .trend-tile.is-good { background: #15803D; }
   .trend-tile.is-bad { background: #C2410C; }
+  /* A category tile holds its icon instead of its initial. Month tiles keep
+     their text, so this only reaches the category ones. */
+  .trend-tile .icon { width: 22px; height: 22px; }
 
   .trend-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .trend-row-name { font-size: 15px; font-weight: 500; transition: color 0.15s ease; }
@@ -1265,7 +1404,7 @@
   .premium-layout { display: grid; gap: 20px; }
   .premium-hero {
     position: relative; overflow: hidden;
-    border-radius: 16px; padding: 26px;
+    border-radius: 20px; padding: 26px;
     color: #fff;
     background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
     box-shadow: 0 8px 24px -10px rgba(109, 40, 217, 0.5);
@@ -1303,7 +1442,7 @@
 
   .perk-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
   .perk { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; }
-  .perk .tile { width: 32px; height: 32px; border-radius: 9px; }
+  .perk .tile { width: 32px; height: 32px; border-radius: 12px; }
 
   /* ---- FAQ accordion ---- */
   .faq {
@@ -1453,7 +1592,7 @@
     display: flex; align-items: center; gap: 12px;
     padding: 4px 8px 4px 4px;
     margin: -4px -8px -4px -4px;
-    border: 0; border-radius: 12px;
+    border: 0; border-radius: 14px;
     background: transparent;
     cursor: pointer; color: inherit; font: inherit;
     transition: background-color 0.15s ease;
@@ -1474,11 +1613,11 @@
     position: absolute;
     top: calc(100% + 8px); right: 0;
     z-index: 50;
-    min-width: 240px;
-    padding: 8px;
+    min-width: 248px;
+    padding: 10px;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: var(--radius-card);
     box-shadow: var(--shadow-pop);
     animation: dropdown-in 0.12s ease-out;
   }
@@ -1489,7 +1628,9 @@
 
   .account-dropdown-head {
     display: flex; align-items: center; gap: 12px;
-    padding: 10px 12px 12px;
+    /* 8px, not 12px: the rows below inset their icon tiles by the same 8px,
+       so this keeps the avatar flush with them. */
+    padding: 6px 8px 12px;
   }
   .account-dropdown-head .trend-avatar {
     width: 40px; height: 40px; font-size: 16px;
@@ -1508,8 +1649,8 @@
   .account-menu-item {
     display: flex; align-items: center; gap: 12px;
     width: 100%;
-    padding: 10px 12px;
-    border: 0; border-radius: 8px;
+    padding: 6px 8px;
+    border: 0; border-radius: 12px;
     background: transparent;
     color: var(--ink);
     font-size: 14px; font-weight: 500;
@@ -1519,15 +1660,29 @@
   }
   .account-menu-item:hover { background: var(--surface-3); }
   .account-menu-item .icon {
+    /* Same content-box trick as the tab bar: the tile is the icon element's
+       own background, so the glyph keeps its size as the tile grows. */
+    box-sizing: content-box;
     width: 18px; height: 18px;
-    color: var(--ink-muted); flex: none;
+    padding: 7px;
+    border-radius: 10px;
+    background: var(--surface-3);
+    color: var(--ink-muted);
+    flex: none;
+    transition: background-color 0.12s ease, color 0.12s ease;
   }
-  .account-menu-item:hover .icon { color: var(--ink); }
+  .account-menu-item:hover .icon {
+    background: var(--brand-soft);
+    color: var(--brand-ink);
+  }
   .account-menu-item.is-danger { color: var(--over-ink); }
-  .account-menu-item.is-danger .icon { color: var(--over-ink); }
+  .account-menu-item.is-danger .icon {
+    background: var(--over-soft);
+    color: var(--over-ink);
+  }
   .account-menu-item.is-danger:hover { background: var(--over-soft); }
   .account-menu-divider {
-    height: 1px; margin: 6px 4px;
+    height: 1px; margin: 8px 4px;
     background: var(--line);
   }
 
@@ -1625,7 +1780,7 @@
     padding: 14px 16px;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: 16px;
     box-shadow: var(--shadow-card);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
@@ -1785,7 +1940,7 @@
   .goal-row,
   .contact-card,
   .link-card {
-    border-radius: 10px;
+    border-radius: 14px;
   }
 
   .filter-bar { gap: 10px; }
@@ -1945,7 +2100,7 @@ nav.tabbar {
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--surface);
   border-top: 1px solid var(--line);
-  box-shadow: 0 -1px 3px rgba(17, 24, 39, 0.04);
+  box-shadow: 0 -6px 20px -12px rgba(17, 24, 39, 0.16);
   z-index: 40;
 }
 
@@ -1957,7 +2112,7 @@ nav.tabbar .nav-item {
   justify-content: center;
   gap: 4px;
   min-height: 60px;
-  padding: 8px 4px;
+  padding: 6px 4px;
   margin: 0;
   color: var(--ink-muted);
   text-decoration: none;
@@ -1977,15 +2132,39 @@ nav.tabbar .nav-item.is-active {
 }
 
 nav.tabbar .nav-item svg {
+  /* The lozenge behind the active icon is this element's own background.
+     content-box is what makes that work: width/height stay the drawn size
+     while padding grows the box the background paints into, so the icon
+     never scales along with it. */
+  box-sizing: content-box;
   width: 22px;
   height: 22px;
+  padding: 5px 12px;
+  border-radius: 11px;
   flex: none;
   display: block;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+nav.tabbar .nav-item[aria-current="page"] svg,
+nav.tabbar .nav-item.is-active svg {
+  background: var(--brand-soft);
+  transform: translateY(-1px);
+}
+
+nav.tabbar .nav-item:active svg {
+  transform: translateY(0) scale(0.94);
 }
 
 nav.tabbar .nav-item span {
   display: block;
   line-height: 1;
+}
+
+/* The tab bar's own shadow is tuned for the light canvas; on the dark one it
+   needs to be stronger to read as a lifted surface at all. */
+.dark nav.tabbar {
+  box-shadow: 0 -6px 20px -12px rgba(0, 0, 0, 0.6);
 }
 
 /* Give the page room above the bar */

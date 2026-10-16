@@ -16,17 +16,17 @@
             <div class="trend-year" role="group" aria-label="Year">
                 {{if .HasPrev}}
                 <a class="trend-year-btn" href="{{.PrevHref}}" aria-label="Previous year, {{.PrevYear}}">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-left"/></svg>
                 </a>
                 {{end}}
                 <span class="trend-year-label">{{.Year}}</span>
                 {{if .HasNext}}
                 <a class="trend-year-btn" href="{{.NextHref}}" aria-label="Next year, {{.NextYear}}">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
                 </a>
                 {{else}}
                 <span class="trend-year-btn" aria-disabled="true" aria-label="Next year">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
                 </span>
                 {{end}}
             </div>
@@ -53,14 +53,14 @@
         <div class="stat-grid stat-grid-three mb-4">
             <div class="stat-card">
                 <div class="stat-icon is-safe">
-                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#trending-up"/></svg>
+                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#trending-up"/></svg>
                 </div>
                 <div class="stat-label">Avg monthly income</div>
                 <div class="stat-value">{{money0 .CurrencySymbol .AvgIncome}}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon is-over">
-                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#trending-down"/></svg>
+                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#trending-down"/></svg>
                 </div>
                 <div class="stat-label">Avg monthly expense</div>
                 <div class="stat-value">{{money0 .CurrencySymbol .AvgExpense}}</div>
@@ -68,7 +68,7 @@
             {{if .HasIncome}}
             <div class="stat-card is-primary">
                 <div class="stat-icon">
-                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#target"/></svg>
+                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#target"/></svg>
                 </div>
                 <div class="stat-label">Savings rate</div>
                 <div class="stat-value">{{printf "%.0f" .SavingsRate}}%</div>
@@ -76,7 +76,7 @@
             {{else}}
             <div class="stat-card">
                 <div class="stat-icon">
-                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#calendar"/></svg>
+                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#calendar"/></svg>
                 </div>
                 <div class="stat-label">Months tracked</div>
                 <div class="stat-value">{{.AvgDivisor}}</div>
@@ -95,7 +95,7 @@
                     </div>
                     <div class="trend-total">
                         <p>
-                            <span class="trend-total-main">{{.HeadMain}}</span><span class="trend-total-frac">{{.HeadFrac}}</span>
+                            {{if .HeadMoney}}<span class="amt"><span class="amt-v"><span class="trend-total-main">{{.HeadMain}}</span><span class="trend-total-frac">{{.HeadFrac}}</span></span><span class="amt-m trend-total-main" aria-hidden="true">{{bullets .HeadMain .HeadFrac}}</span></span>{{else}}<span class="trend-total-main">{{.HeadMain}}</span><span class="trend-total-frac">{{.HeadFrac}}</span>{{end}}
                         </p>
                     </div>
                 </div>
@@ -124,7 +124,7 @@
         <section class="card">
             <div class="empty">
                 <span class="empty-icon">
-                    <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
+                    <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg?v=7#check"/></svg>
                 </span>
                 <p class="empty-title">No monthly budget yet</p>
                 <p class="empty-sub">Set a monthly limit in <a href="/settings">Settings</a> and this view will show which months stayed within it.</p>
@@ -134,7 +134,7 @@
         <section class="card">
             <div class="empty">
                 <span class="empty-icon">
-                    <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg#chart"/></svg>
+                    <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg?v=7#chart"/></svg>
                 </span>
                 <p class="empty-title">Nothing in {{.Year}}</p>
                 <p class="empty-sub">Entries you log will appear here, month by month.</p>
@@ -154,12 +154,14 @@
                 {{range .Rows}}
                 <li>
                     <a class="trend-row" href="{{.Href}}">
-                        <span class="trend-tile trend-tile-{{.Tile}}" aria-hidden="true">{{.Initial}}</span>
+                        <span class="trend-tile trend-tile-{{.Tile}}" aria-hidden="true">
+                            <svg class="icon"><use href="/static/icons.svg?v=7#{{.Icon}}"/></svg>
+                        </span>
                         <span class="trend-row-body">
                             <span class="trend-row-name">{{.Name}}</span>
                             <span class="trend-row-meta">{{.Count}} transaction{{if ne .Count 1}}s{{end}}</span>
                         </span>
-                        <span class="trend-row-amount">{{.AmtMain}}<small>{{.AmtFrac}}</small></span>
+                        <span class="trend-row-amount"><span class="amt"><span class="amt-v">{{.AmtMain}}<small>{{.AmtFrac}}</small></span><span class="amt-m" aria-hidden="true">{{bullets .AmtMain .AmtFrac}}</span></span></span>
                     </a>
                 </li>
                 {{end}}
@@ -172,12 +174,14 @@
                     {{range .MoreRows}}
                     <li>
                         <a class="trend-row" href="{{.Href}}">
-                            <span class="trend-tile trend-tile-{{.Tile}}" aria-hidden="true">{{.Initial}}</span>
+                            <span class="trend-tile trend-tile-{{.Tile}}" aria-hidden="true">
+                                <svg class="icon"><use href="/static/icons.svg?v=7#{{.Icon}}"/></svg>
+                            </span>
                             <span class="trend-row-body">
                                 <span class="trend-row-name">{{.Name}}</span>
                                 <span class="trend-row-meta">{{.Count}} transaction{{if ne .Count 1}}s{{end}}</span>
                             </span>
-                            <span class="trend-row-amount">{{.AmtMain}}<small>{{.AmtFrac}}</small></span>
+                            <span class="trend-row-amount"><span class="amt"><span class="amt-v">{{.AmtMain}}<small>{{.AmtFrac}}</small></span><span class="amt-m" aria-hidden="true">{{bullets .AmtMain .AmtFrac}}</span></span></span>
                         </a>
                     </li>
                     {{end}}
@@ -228,7 +232,7 @@
                                 {{if .Over}}<strong>Over budget</strong> by {{money0 $.CurrencySymbol .Diff}}{{else}}{{money0 $.CurrencySymbol .Diff}} under budget{{end}}
                             </span>
                         </span>
-                        <span class="trend-row-amount">{{.AmtMain}}<small>{{.AmtFrac}}</small></span>
+                        <span class="trend-row-amount"><span class="amt"><span class="amt-v">{{.AmtMain}}<small>{{.AmtFrac}}</small></span><span class="amt-m" aria-hidden="true">{{bullets .AmtMain .AmtFrac}}</span></span></span>
                     </a>
                     
                 </li>

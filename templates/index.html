@@ -36,7 +36,7 @@
         </section>
         {{if .Truncated}}
         <div class="alert alert-brand mb-4">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#info"/></svg>
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#info"/></svg>
             <p>More than {{.ResultLimit}} entries match. Only the {{.ResultLimit}} most recent are listed, and the figures above total just those. Narrow the search to see the rest.</p>
         </div>
         {{end}}
@@ -127,16 +127,16 @@
         {{end}}
         <div class="month-switch mb-6">
             <a class="month-switch-btn" href="/?month={{.PrevMonth}}" aria-label="Previous month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-left"/></svg>
             </a>
             <span class="month-switch-label">{{.MonthLabel}}</span>
             {{if lt .Month .CurrentMonth}}
             <a class="month-switch-btn" href="/?month={{.NextMonth}}" aria-label="Next month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
             </a>
             {{else}}
             <span class="month-switch-btn" aria-disabled="true" aria-label="Next month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
             </span>
             {{end}}
         </div>
@@ -181,7 +181,10 @@
                 {{range .CategoryBudgets}}
                 <li class="catbudget">
                     <div class="catbudget-head">
-                        <span class="catbudget-name">{{.Category}}</span>
+                        <span class="catbudget-name">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#{{catIcon .Category}}"/></svg>
+                            {{.Category}}
+                        </span>
                         <span class="catbudget-figure">
                             {{money $.CurrencySymbol .Spent}}
                             <span class="catbudget-of">of {{money $.CurrencySymbol .Limit}}</span>
@@ -212,18 +215,18 @@
         {{end}}
         {{if and .HasBudget (ge .Spent .BudgetLimit)}}
         <div class="alert alert-over mb-4">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#alert"/></svg>
             <p><strong>You're over budget.</strong> You've spent {{money .CurrencySymbol .Spent}} against a {{money .CurrencySymbol .BudgetLimit}} limit — that's {{money .CurrencySymbol .OverAmount}} over. You can still keep logging expenses.</p>
         </div>
         {{else if and .HasBudget (ge .Spent .WarnAt)}}
         <div class="alert alert-near mb-4">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#bell"/></svg>
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#bell"/></svg>
             <p><strong>Approaching your limit.</strong> {{money .CurrencySymbol .Remaining}} left of your {{money .CurrencySymbol .BudgetLimit}} budget.</p>
         </div>
         {{end}}
         {{if ne .Month .CurrentMonth}}
         <div class="alert alert-brand mb-4">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#info"/></svg>
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#info"/></svg>
             <p>You're viewing {{.MonthLabel}}. New expenses are always added to the current month.</p>
         </div>
         {{end}}
@@ -238,7 +241,7 @@
         <form action="/clear" method="POST" id="clear-form" class="mt-8">
             <input type="hidden" name="month" value="{{.Month}}">
             <button type="submit" class="btn btn-danger btn-block" data-confirm-clear>
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#trash"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#trash"/></svg>
                 Reset {{.MonthLabel}}
             </button>
         </form>
@@ -247,7 +250,7 @@
                 <div class="modal-head">
                     <h2 class="modal-title" id="clear-modal-title">Reset {{.MonthLabel}}?</h2>
                     <button type="button" class="btn-icon" data-close-modal>
-                        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#close"/></svg>
+                        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#close"/></svg>
                         <span class="visually-hidden">Close</span>
                     </button>
                 </div>
@@ -268,7 +271,7 @@
     {{if .DeletedID}}
     <template id="undo-template">
         <div class="toast">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#trash"/></svg>
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#trash"/></svg>
             <span class="toast-msg">Expense deleted.</span>
             <form action="/restore/{{.DeletedID}}" method="POST">
                 <input type="hidden" name="month" value="{{.Month}}">

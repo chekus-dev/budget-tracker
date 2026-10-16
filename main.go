@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v5"
@@ -486,6 +487,23 @@ func main() {
 
 	tmpl = template.Must(template.New("index.html").Funcs(template.FuncMap{
 		"tile": tileIndex,
+		/* Category icons are worked out from the category's name, so
+		   everywhere a category is shown asks for one rather than storing
+		   one. See categoryIcon in trends.go for how a name picks an icon.
+		   catIcon never returns an empty id, so the sprite URL always
+		   carries a fragment that names one symbol. */
+		"catIcon": catIcon,
+		/* The icon on a list row: the category's own when the entry has a
+		   category, and the generic receipt/banknote when it does not. */
+		"rowIcon": func(category string, income bool) string {
+			if icon := categoryIcon(category); icon != "" {
+				return icon
+			}
+			if income {
+				return "banknote"
+			}
+			return "receipt"
+		},
 		"mulf": func(a, b float64) float64 { return a * b },
 		"divf": func(a, b float64, _ ...float64) float64 {
 			if b == 0 {
@@ -494,18 +512,14 @@ func main() {
 			return a / b
 		},
 		"subtract": func(a, b float64) float64 { return a - b },
-		"money": func(symbol string, v float64) string {
-			if v < 0 {
-				return "-" + symbol + commaGroupsPrec(-v, 2)
-			}
-			return symbol + commaGroupsPrec(v, 2)
-		},
-		"money0": func(symbol string, v float64) string {
-			if v < 0 {
-				return "-" + symbol + commaGroupsPrec(-v, 0)
-			}
-			return symbol + commaGroupsPrec(v, 0)
-		},
+		/* Amounts render with a masked twin alongside the value. The
+		   stylesheet swaps which one is visible, so hiding amounts never
+		   changes the page's layout. */
+		"money":  func(symbol string, v float64) template.HTML { return amountMarkup(symbol, v, 2) },
+		"money0": func(symbol string, v float64) template.HTML { return amountMarkup(symbol, v, 0) },
+		/* For amounts the page data has already split into a whole part and a
+		   fraction, which the trends headline and its rows size separately. */
+		"bullets": bullets,
 	}).ParseFiles(
 		"templates/trends.html",
 		"templates/head.html",
@@ -528,6 +542,7 @@ func main() {
 		"templates/support.html",
 		"templates/goals.html",
 		"templates/help.html",
+		"templates/welcome.html",
 	))
 	verifyTemplatesRender()
 
@@ -558,6 +573,7 @@ func main() {
 	mux.HandleFunc("/goals/create", requireAuth(goalsCreateHandler))
 	mux.HandleFunc("/goals/toggle/", requireAuth(goalsToggleHandler))
 	mux.HandleFunc("/goals/delete/", requireAuth(goalsDeleteHandler))
+	mux.HandleFunc("/welcome", requireAuth(welcomeHandler))
 
 	mux.HandleFunc("/healthz", healthzHandler)
 	mux.HandleFunc("/login", loginHandler)
@@ -1098,7 +1114,9 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			serverError(w, err)
 			return
 		}
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		// Straight into the wizard rather than through the home page: the
+		// indexHandler gate would only bounce a brand-new account here anyway.
+		http.Redirect(w, r, "/welcome", http.StatusSeeOther)
 		return
 	}
 	tmpl.ExecuteTemplate(w, "register.html", AuthPageData{RecaptchaSiteKey: recaptchaSiteKey()})
@@ -2067,6 +2085,22 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID, username, _ := currentUser(r)
+
+	/* The only gate that sends anyone to the welcome wizard.
+	   Deliberately not a requireOnboarded middleware: that would put a
+	   database read in front of every request in the app for a rule that
+	   matters exactly once in an account's life, and it would lock a
+	   half-set-up user out of everything else — someone who abandoned the
+	   wizard at step 2 can still read their Trends page, and should be able
+	   to. The cost here is one primary-key lookup on a page that already
+	   issues several queries.
+	   A failed read renders the home page rather than redirecting: a database
+	   blip is not a reason to march someone into a wizard. */
+	if onboarded, err := userOnboarded(userID); err == nil && !onboarded {
+		http.Redirect(w, r, "/welcome", http.StatusSeeOther)
+		return
+	}
+
 	month := normalizeMonth(r.URL.Query().Get("month"))
 	filters := parseFilters(r)
 
@@ -2295,6 +2329,31 @@ func verifyTemplatesRender() {
 			WhatsAppText: "Hi%2C%20I%20need%20help%20with%20Budget%20Tracker.",
 		}},
 		{"help.html", PageChrome{Username: "sam", CurrencySymbol: "₦", Version: appVersion}},
+		/* Two rows because the wizard has two shapes: a step with a form, and
+		   step 4 rejected, which adds the error alert and echoes what was
+		   typed back into the fields. */
+		{"welcome.html", WelcomePageData{
+			PageChrome:   PageChrome{Username: "sam", CurrencySymbol: "₦", Version: appVersion},
+			Step:         1,
+			Steps:        welcomeSteps(1),
+			Title:        "What do you count in?",
+			Sub:          "Amounts are labelled with this everywhere in the app.",
+			Currency:     "NGN",
+			CurrencyList: currencyOptions,
+			Categories:   []string{"Food", "Transport", "Bills"},
+		}},
+		{"welcome.html", WelcomePageData{
+			PageChrome:   PageChrome{Username: "sam", CurrencySymbol: "₦", Version: appVersion},
+			Step:         4,
+			Steps:        welcomeSteps(4),
+			Title:        "Log your first entry",
+			Sub:          "Optional — skip it if you would rather start with a clean sheet.",
+			Error:        "Enter an amount, or clear the description to skip this step.",
+			Currency:     "NGN",
+			CurrencyList: currencyOptions,
+			Categories:   []string{"Food", "Transport", "Bills"},
+			Form:         welcomeEntryForm{Description: "Lunch", Amount: "", Kind: kindExpense, Category: "Food"},
+		}},
 		{"terms.html", nil},
 	}
 
@@ -3158,6 +3217,47 @@ func currencySymbol(code string) string {
 		return sym
 	}
 	return code + " "
+}
+
+/* amountMarkup renders a formatted amount together with a masked twin, which
+   is what the screenshot deterrents swap in when the window loses focus. Both
+   are in the DOM at all times, so toggling between them never reflows the page.
+
+   The result is template.HTML, which opts out of html/template's automatic
+   escaping, so the symbol is escaped here by hand. currencySymbol falls back to
+   "<code> " for a code it does not recognise, and that value comes out of the
+   settings row, so it cannot be trusted to be a bare glyph. */
+func amountMarkup(symbol string, v float64, prec int) template.HTML {
+	sign, abs := "", v
+	if v < 0 {
+		sign, abs = "-", -v
+	}
+	digits := commaGroupsPrec(abs, prec)
+
+	/* One bullet per digit, so the mask occupies roughly the width of the
+	   figure it replaces. */
+	mask := strings.Repeat("&bull;", len(digits))
+
+	return template.HTML(
+		`<span class="amt"><span class="amt-v">` + template.HTMLEscapeString(sign+symbol+digits) +
+			`</span><span class="amt-m" aria-hidden="true">` + mask + `</span></span>`)
+}
+
+/* bullets renders one bullet per character of the amount it stands in for, so
+   the mask occupies roughly the width of the figure it replaces. Some amounts
+   are split into a whole part and a fraction before they reach the template —
+   the trends headline and its rows size the fraction separately — so the parts
+   arrive as separate arguments and are counted together.
+
+   The result is template.HTML because the entity has to survive html/template's
+   escaping. Nothing that reaches it is page data: the value is a repetition
+   count and the entity is a literal. */
+func bullets(parts ...string) template.HTML {
+	n := 0
+	for _, p := range parts {
+		n += utf8.RuneCountInString(p)
+	}
+	return template.HTML(strings.Repeat("&bull;", n))
 }
 
 func knownCurrency(code string) bool {

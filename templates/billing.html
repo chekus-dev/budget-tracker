@@ -12,21 +12,21 @@
 
         {{if eq .Status "paid"}}
         <div class="alert alert-safe mb-4" role="status">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#check"/></svg>
             <p><strong>Payment received.</strong> Thank you — Premium is now active.</p>
         </div>
         {{end}}
 
         {{if eq .Status "failed"}}
         <div class="alert alert-over mb-4" role="alert">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#alert"/></svg>
             <p><strong>That payment was not completed.</strong> You have not been charged. You can try again below.</p>
         </div>
         {{end}}
 
         {{if eq .Status "error"}}
         <div class="alert alert-near mb-4" role="alert">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#alert"/></svg>
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#alert"/></svg>
             <p><strong>We could not confirm your payment yet.</strong> If you were charged, it will appear shortly. Contact support if it does not.</p>
         </div>
         {{end}}
@@ -47,7 +47,7 @@
 
             <div class="premium-hero">
                 <span class="premium-badge">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#check"/></svg>
                     {{if .Premium}}Premium active{{else}}Premium{{end}}
                 </span>
 
@@ -80,7 +80,7 @@
                     {{range .Perks}}
                     <li class="perk">
                         <span class="tile is-premium">
-                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#check"/></svg>
+                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#check"/></svg>
                         </span>
                         <span>{{.}}</span>
                     </li>

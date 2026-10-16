@@ -62,6 +62,9 @@
                 <div id="category-list" role="group" aria-labelledby="categories-label">
                     {{range .Categories}}
                     <div class="category-item">
+                        <span class="category-icon" aria-hidden="true">
+                            <svg class="icon-sm"><use href="/static/icons.svg?v=7#{{catIcon .}}"/></svg>
+                        </span>
                         <input type="text" name="category" value="{{.}}" class="input" aria-label="Category name">
                         <span class="category-limit">
                             <span class="category-limit-symbol" aria-hidden="true">{{$.CurrencySymbol}}</span>
@@ -71,7 +74,7 @@
                                    aria-label="Monthly limit for {{.}}">
                         </span>
                         <button type="button" class="btn-icon" data-remove-category>
-                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#close"/></svg>
+                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#close"/></svg>
                             <span class="visually-hidden">Remove category</span>
                         </button>
                     </div>
@@ -79,7 +82,7 @@
                 </div>
 
                 <button type="button" class="btn btn-soft btn-sm mt-2" id="add-category-row">
-                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#plus"/></svg>
+                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#plus"/></svg>
                     Add category
                 </button>
             </section>
@@ -101,15 +104,15 @@
 
                 <div class="theme-grid" role="group" aria-labelledby="appearance-label">
                     <button type="button" class="theme-btn" data-theme="light" aria-pressed="false">
-                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg#sun"/></svg>
+                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg?v=7#sun"/></svg>
                         Light
                     </button>
                     <button type="button" class="theme-btn" data-theme="dark" aria-pressed="false">
-                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg#moon"/></svg>
+                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg?v=7#moon"/></svg>
                         Dark
                     </button>
                     <button type="button" class="theme-btn" data-theme="system" aria-pressed="false">
-                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg#monitor"/></svg>
+                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg?v=7#monitor"/></svg>
                         System
                     </button>
                 </div>
@@ -122,31 +125,31 @@
 
         <a href="/export" class="card link-card mb-4">
             <span class="tile">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#export"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#export"/></svg>
             </span>
             <span class="link-card-body">
                 <span class="link-card-title">Export</span>
                 <span class="link-card-desc">Download a month of entries</span>
             </span>
-            <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+            <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
         </a>
 
         <h2 class="card-title mb-2 mt-8">Account</h2>
 
         <a href="/account/change-password" class="card link-card mb-4">
             <span class="tile">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#settings"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#settings"/></svg>
             </span>
             <span class="link-card-body">
                 <span class="link-card-title">Change password</span>
                 <span class="link-card-desc">Signs you out on your other devices</span>
             </span>
-            <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+            <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
         </a>
 
         <form action="/logout" method="POST">
             <button type="submit" class="btn btn-soft btn-block">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#logout"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#logout"/></svg>
                 Log out{{if .Username}} ({{.Username}}){{end}}
             </button>
         </form>
@@ -154,6 +157,15 @@
 
     <template id="category-row-template">
         <div class="category-item">
+            {{/*
+              A category's icon is worked out from its name, and only the
+              server knows that table. A row that does not exist yet has no
+              name the server has seen, so it shows the neutral tag until the
+              form is saved and the page comes back with the real icon.
+            */}}
+            <span class="category-icon" aria-hidden="true">
+                <svg class="icon-sm"><use href="/static/icons.svg?v=7#tag"/></svg>
+            </span>
             <input type="text" name="category" placeholder="New category" class="input" aria-label="Category name">
             <span class="category-limit">
                 <span class="category-limit-symbol" aria-hidden="true">{{.CurrencySymbol}}</span>
@@ -162,7 +174,7 @@
                        aria-label="Monthly limit">
             </span>
             <button type="button" class="btn-icon" data-remove-category>
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#close"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#close"/></svg>
                 <span class="visually-hidden">Remove category</span>
             </button>
         </div>

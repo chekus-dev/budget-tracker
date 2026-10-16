@@ -187,7 +187,7 @@
      would silently exclude valid controls from the trap. getClientRects() is
      the correct test for "is this actually rendered". */
   function isVisible(el) {
-    return el.getClientRects().length > 0;
+    return el.getClientRects().length > 0;hv`][]`
   }
 
   function openModal(modal) {
@@ -627,6 +627,118 @@
     });
   }
 
+  /* ------------------------------------------------- screenshot friction --- */
+  /* A deterrent, not a lock. An OS screenshot, a phone camera, a screen
+     recorder and DevTools all ignore everything here, and so does a browser
+     with JavaScript switched off. The part that earns its keep is the masking:
+     it blanks the figures whenever this window or tab stops being the one you
+     are looking at, which covers a screen left unattended and a recording
+     running in the background. The rest only raises the cost of a casual
+     capture, and it costs something too — nobody can select or copy their own
+     figures out of the app any more. */
+  function wireScreenshotFriction() {
+    var root = document.documentElement;
+    var toggle = document.getElementById('amount-toggle');
+    var toggleIcon = document.getElementById('amount-toggle-icon');
+    var STORE_KEY = 'bt-amounts-hidden';
+
+    /* Two separate reasons amounts can be hidden: the user asked for it with
+       the eye, or the window stopped being the one they are looking at. They
+       are tracked apart so that looking away and coming back restores what the
+       user chose rather than quietly overriding it. */
+    var userHidden = false;
+    try { userHidden = localStorage.getItem(STORE_KEY) === '1'; } catch (e) {}
+
+    var windowFocused = document.visibilityState === 'visible';
+
+    function render() {
+      root.classList.toggle('amounts-hidden', userHidden || !windowFocused);
+
+      /* The button reflects the stored preference, not the focus state. Tying
+         it to focus would flip the icon every time the user switched tabs,
+         which reads as a glitch rather than a setting. */
+      if (!toggle) return;
+      toggle.setAttribute('aria-pressed', String(userHidden));
+      toggle.setAttribute('title', userHidden ? 'Show amounts' : 'Hide amounts');
+      if (toggleIcon) {
+        var ref = '/static/icons.svg#' + (userHidden ? 'eye-off' : 'eye');
+        /* Both spellings of the attribute: SVG 2 uses href, and older engines
+           only re-resolve xlink:href when the sprite reference changes. */
+        toggleIcon.setAttribute('href', ref);
+        toggleIcon.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', ref);
+      }
+    }
+
+    if (toggle) {
+      toggle.addEventListener('click', function () {
+        userHidden = !userHidden;
+        try { localStorage.setItem(STORE_KEY, userHidden ? '1' : '0'); } catch (e) {}
+        render();
+      });
+    }
+
+    /* Every amount carries both its value and a bullet mask in the DOM at all
+       times, and the stylesheet swaps which of the two is shown, so toggling
+       this never reflows the page. */
+
+    window.addEventListener('blur', function () {
+      windowFocused = false;
+      render();
+    });
+    window.addEventListener('focus', function () {
+      windowFocused = true;
+      render();
+    });
+
+    document.addEventListener('visibilitychange', function () {
+      windowFocused = document.visibilityState === 'visible';
+      render();
+    });
+
+    /* A page opened in a background tab fires no blur to catch, so seed from
+       what the tab actually is rather than assuming it is in front. Only
+       visibilityState is consulted, never document.hasFocus(), because a
+       window manager that reports no focus at load would leave the page masked
+       with no later event guaranteed to lift it. */
+    render();
+
+    document.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    });
+
+    document.addEventListener('dragstart', function (e) {
+      if (e.target && e.target.tagName === 'IMG') e.preventDefault();
+    });
+
+    /* Selection and copy are off page-wide, but the forms have to keep
+       working: typing, selecting inside a field and pasting in all still need
+       to go through. This guard mirrors the exemption in the stylesheet. */
+    function inTextField(target) {
+      if (!target) return false;
+      if (target.isContentEditable) return true;
+      var tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    }
+
+    function blockUnlessTyping(e) {
+      if (inTextField(e.target)) return;
+      e.preventDefault();
+    }
+
+    document.addEventListener('copy', blockUnlessTyping);
+    document.addEventListener('cut', blockUnlessTyping);
+    document.addEventListener('selectstart', blockUnlessTyping);
+
+    /* Ctrl/Cmd+P. The browser's own menu and the OS print shortcut are out of
+       reach, and the export page at /export/pdf is a separate document that
+       never loads this file, so its Save as PDF report still prints. */
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+      }
+    });
+  }
+
   /* --------------------------------------------------------------- boot --- */
   function init() {
     markActiveNav();
@@ -642,6 +754,7 @@
     wireCategoryRows();
     wireUndoToast();
     wireSkeletons();
+    wireScreenshotFriction();
   }
 
   if (document.readyState === 'loading') {

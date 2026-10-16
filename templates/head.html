@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="/static/css/app.css?v=3">
+<link rel="stylesheet" href="/static/css/app.css?v=8">
 
 <script>
   (function () {
@@ -63,6 +63,15 @@
       root.classList.add('light');
       root.classList.remove('dark');
     }
+
+    /* Same reasoning as the theme above: applied before first paint so a
+       stored "hidden" never shows real figures for a frame first. app.js
+       takes over from here, and the class it toggles is the same one. */
+    try {
+      if (localStorage.getItem('bt-amounts-hidden') === '1') {
+        root.classList.add('amounts-hidden');
+      }
+    } catch (e) {}
   })();
 </script>
 {{end}}

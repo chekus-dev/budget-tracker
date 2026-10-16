@@ -4,7 +4,7 @@
     {{range .Expenses}}
     <li class="expense-row{{if .Income}} is-income{{end}}">
         <span class="expense-icon" aria-hidden="true">
-            <svg class="icon"><use href="/static/icons.svg#{{if .Income}}banknote{{else}}receipt{{end}}"/></svg>
+            <svg class="icon"><use href="/static/icons.svg?v=7#{{rowIcon .Category .Income}}"/></svg>
         </span>
 
         <div class="expense-body">
@@ -24,7 +24,7 @@
                     data-amount="{{printf "%.2f" .Amount}}"
                     data-category="{{.Category}}"
                     data-date="{{.Date}}">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#pencil"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#pencil"/></svg>
                 <span class="visually-hidden">Edit {{.Description}}</span>
             </button>
 
@@ -38,7 +38,7 @@
                 <input type="hidden" name="to" value="{{.To}}">
                 {{end}}
                 <button type="submit" class="btn-icon is-danger">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#trash"/></svg>
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#trash"/></svg>
                     <span class="visually-hidden">Delete {{.Description}}</span>
                 </button>
             </form>
@@ -50,7 +50,7 @@
 {{if $.Searching}}
 <div class="empty">
     <span class="empty-icon">
-        <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg#search"/></svg>
+        <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg?v=7#search"/></svg>
     </span>
     <p class="empty-title">Nothing matched</p>
     <p class="empty-sub">Try a shorter search, a wider date range, or <a href="/">clear the filters</a>.</p>
@@ -58,7 +58,7 @@
 {{else}}
 <div class="empty">
     <span class="empty-icon">
-        <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg#inbox"/></svg>
+        <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg?v=7#inbox"/></svg>
     </span>
     <p class="empty-title">Nothing logged yet</p>
     <p class="empty-sub">Tap the <strong>+</strong> button to add your first expense or income.</p>

@@ -18,16 +18,16 @@
         {{if and .Details (not .Searching)}}
         <div class="trend-year" role="group" aria-label="Month">
             <a class="trend-year-btn" href="/archive?month={{.Details.PrevMonth}}" aria-label="Previous month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-left"/></svg>
             </a>
             <span class="trend-year-label">{{.Label}}</span>
             {{if lt .Month .Details.CurrentMonth}}
             <a class="trend-year-btn" href="/archive?month={{.Details.NextMonth}}" aria-label="Next month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
             </a>
             {{else}}
             <span class="trend-year-btn" aria-disabled="true" aria-label="Next month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
             </span>
             {{end}}
         </div>
@@ -37,7 +37,7 @@
             <div class="archive-search-main">
                 <label class="label" for="archive-q">Search entries</label>
                 <span class="filter-input archive-search-input">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#search"/></svg>
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#search"/></svg>
                     <input class="input" type="search" id="archive-q" name="q" value="{{.Filters.Query}}" placeholder="Search description, category, date…">
                 </span>
             </div>
@@ -67,7 +67,7 @@
                     <div class="date-field">
                         <input class="input" type="date" id="archive-from" name="from" value="{{.Filters.From}}" onchange="this.form.submit()">
                         <button type="button" class="date-trigger" data-date-target="archive-from" aria-label="Choose start date">
-                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#calendar"/></svg>
+                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#calendar"/></svg>
                         </button>
                     </div>
                 </div>
@@ -77,7 +77,7 @@
                     <div class="date-field">
                         <input class="input" type="date" id="archive-to" name="to" value="{{.Filters.To}}" onchange="this.form.submit()">
                         <button type="button" class="date-trigger" data-date-target="archive-to" aria-label="Choose end date">
-                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#calendar"/></svg>
+                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#calendar"/></svg>
                         </button>
                     </div>
                 </div>
@@ -85,7 +85,7 @@
 
             <div class="archive-search-actions">
                 <button type="submit" class="btn btn-primary">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#search"/></svg>
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#search"/></svg>
                     Search
                 </button>
                 {{if .Filters.Active}}
@@ -107,7 +107,7 @@
 
         {{if .Truncated}}
         <div class="alert alert-brand mb-4">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#info"/></svg>
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#info"/></svg>
             <p>More than {{.ResultLimit}} entries match. Only the {{.ResultLimit}} most recent are listed here.</p>
         </div>
         {{end}}
@@ -129,7 +129,7 @@
 
         <p class="mt-6">
             <a href="/archive" class="btn btn-soft btn-block">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#archive"/></svg>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#archive"/></svg>
                 All months
             </a>
         </p>
@@ -142,14 +142,14 @@
             <li>
                 <a href="/archive?month={{.Month}}" class="expense-row row-link">
                     <span class="expense-icon" aria-hidden="true">
-                        <svg class="icon"><use href="/static/icons.svg#calendar"/></svg>
+                        <svg class="icon"><use href="/static/icons.svg?v=7#calendar"/></svg>
                     </span>
                     <span class="expense-body">
                         <span class="expense-title">{{.Label}}</span>
                         <span class="expense-meta">{{.Count}} expense{{if ne .Count 1}}s{{end}}{{if .Received}} · {{money $.CurrencySymbol .Received}} in{{end}}</span>
                     </span>
                     <span class="expense-amount">{{money $.CurrencySymbol .Spent}}</span>
-                    <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                    <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
                 </a>
             </li>
             {{end}}
@@ -157,7 +157,7 @@
         {{else}}
         <div class="empty">
             <span class="empty-icon">
-                <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg#inbox"/></svg>
+                <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg?v=7#inbox"/></svg>
             </span>
             <p class="empty-title">No archived months yet</p>
             <p class="empty-sub">Months appear here once you've logged expenses in them.</p>

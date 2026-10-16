@@ -12,16 +12,16 @@
 
             <div class="trend-year" role="group" aria-label="Month">
                 <a class="trend-year-btn" href="/export?month={{.PrevMonth}}" aria-label="Previous month">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-left"/></svg>
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-left"/></svg>
                 </a>
                 <span class="trend-year-label">{{.Label}}</span>
                 {{if lt .Month .CurrentMonth}}
                 <a class="trend-year-btn" href="/export?month={{.NextMonth}}" aria-label="Next month">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
                 </a>
                 {{else}}
                 <span class="trend-year-btn" aria-disabled="true" aria-label="Next month">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#chevron-right"/></svg>
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
                 </span>
                 {{end}}
             </div>
@@ -34,24 +34,24 @@
         <div class="stack">
             <a href="/export/csv?month={{.Month}}" class="card link-card" download>
                 <span class="tile tile-lg is-safe">
-                    <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg#file-text"/></svg>
+                    <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg?v=7#file-text"/></svg>
                 </span>
                 <span class="link-card-body">
                     <span class="link-card-title">CSV spreadsheet</span>
                     <span class="link-card-desc">Every entry, with a Type column marking income apart from spending, and separate totals for each.</span>
                 </span>
-                <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#download"/></svg>
+                <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg?v=7#download"/></svg>
             </a>
 
             <a href="/export/pdf?month={{.Month}}" class="card link-card" target="_blank" rel="noopener">
                 <span class="tile tile-lg is-near">
-                    <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg#receipt"/></svg>
+                    <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg?v=7#receipt"/></svg>
                 </span>
                 <span class="link-card-body">
                     <span class="link-card-title">PDF report</span>
                     <span class="link-card-desc">Print-ready, with summary stats and a category breakdown. Spending only — income is left out of the percentages.</span>
                 </span>
-                <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg#export"/></svg>
+                <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg?v=7#export"/></svg>
             </a>
         </div>
 

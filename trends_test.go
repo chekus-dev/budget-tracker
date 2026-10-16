@@ -199,6 +199,116 @@ func TestBuildTrendRows(t *testing.T) {
 	}
 }
 
+/* The icon table in trends.go is the one part of the category feature with
+   no visible failure mode: a name it misses still gets a marker, so nothing
+   looks broken, it just looks wrong. These are the cases worth pinning. */
+func TestCategoryIcon(t *testing.T) {
+	for _, tc := range []struct{ name, want string }{
+		// The three defaults a new account starts with.
+		{"Food", "utensils"},
+		{"Transport", "car"},
+		{"Bills", "receipt"},
+
+		// Everyday categories, the ones the table exists to cover.
+		{"Rent", "home"},
+		{"Airtime", "smartphone"},
+		{"Data", "wifi"},
+		{"Fuel", "fuel"},
+		{"Groceries", "cart"},
+		{"School fees", "graduation"},
+		{"Church offering", "gift"},
+		{"Eating out", "utensils"},
+		{"Loan repayment", "coins"},
+		{"Netflix", "film"},
+		{"Haircut", "scissors"},
+
+		// Case and separators must not matter.
+		{"FOOD", "utensils"},
+		{"car-wash", "car"},
+	} {
+		if got := categoryIcon(tc.name); got != tc.want {
+			t.Errorf("categoryIcon(%q) = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+func TestCategoryIconMatching(t *testing.T) {
+	// No category is not the same as an unknown one: an entry logged without
+	// one asks for no icon at all, so the row can fall back to its generic
+	// receipt or banknote.
+	for _, blank := range []string{"", "   ", "\t"} {
+		if got := categoryIcon(blank); got != "" {
+			t.Errorf("categoryIcon(%q) = %q, want no icon", blank, got)
+		}
+	}
+
+	// Words match whole, so a name that merely contains one does not claim
+	// its icon — "Carpet" is not transport.
+	for _, name := range []string{"Scarves", "Carpet", "Barcode", "Barbeque"} {
+		want := categoryIconFallback(strings.ToLower(name))
+		if got := categoryIcon(name); got != want {
+			t.Errorf("categoryIcon(%q) = %q, want the fallback %q", name, got, want)
+		}
+	}
+
+	// A trailing "s" or "es" folds, so plurals find their singular.
+	for _, tc := range []struct{ name, want string }{
+		{"Snacks", "utensils"}, // "s"
+		{"Taxes", "receipt"},   // "es"
+	} {
+		if got := categoryIcon(tc.name); got != tc.want {
+			t.Errorf("categoryIcon(%q) = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+
+	// An unrecognised name still gets an icon, and always the same one.
+	first := categoryIcon("Zzzz")
+	if first == "" {
+		t.Fatal("an unrecognised category should still get an icon")
+	}
+	for i := 0; i < 5; i++ {
+		if got := categoryIcon("Zzzz"); got != first {
+			t.Fatalf("fallback is not stable: %q then %q", first, got)
+		}
+	}
+}
+
+/* catIcon is the template-facing one, and the only thing it guarantees beyond
+   categoryIcon is that the id is never empty. That is not cosmetic: an empty
+   id renders as <use href="/static/icons.svg?v=7#"/>, and an empty fragment
+   selects the sprite's root <svg>, so every symbol in the file would be drawn
+   inside one icon-sized box. */
+func TestCatIconNeverEmpty(t *testing.T) {
+	for _, name := range []string{
+		"", "   ", "\t", "\n",
+		"Food", "Zzzz", "-", "--", "!!!", "2024", "   spaced   ",
+	} {
+		if got := catIcon(name); got == "" {
+			t.Errorf("catIcon(%q) returned an empty id, which draws the whole sprite", name)
+		}
+	}
+
+	// The blank substitution is the only difference between the two, so any
+	// name that resolves to a real icon has to come out the same either way.
+	for _, name := range []string{"Food", "Rent", "Snacks", "Zzzz"} {
+		got, want := catIcon(name), categoryIcon(name)
+		if want == "" {
+			t.Fatalf("categoryIcon(%q) unexpectedly returned nothing", name)
+		}
+		if got != want {
+			t.Errorf("catIcon(%q) = %q but categoryIcon(%q) = %q", name, got, name, want)
+		}
+	}
+
+	// A blank name is the case they are meant to disagree on, and the
+	// substitute is a shape that means nothing rather than a wrong guess.
+	for _, blank := range []string{"", "   ", "\t"} {
+		if got := catIcon(blank); got != "tag" {
+			t.Errorf("catIcon(%q) = %q, want the neutral tag", blank, got)
+		}
+	}
+}
+
 func TestTrendAllCategoriesHref(t *testing.T) {
 	// "See entries" is unfiltered by category. It is deliberately not the
 	// same call as the blank-catTotal path, which now means "only the

@@ -20,22 +20,22 @@
 
         <div class="stat-grid mb-6">
             <div class="stat-card">
-                <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#receipt"/></svg></div>
+                <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#receipt"/></svg></div>
                 <div class="stat-label">Expenses</div>
                 <div class="stat-value">{{.Count}}</div>
             </div>
             <div class="stat-card is-primary">
-                <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#wallet"/></svg></div>
+                <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#wallet"/></svg></div>
                 <div class="stat-label">Total spent</div>
                 <div class="stat-value">{{money0 .CurrencySymbol .Total}}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#chart"/></svg></div>
+                <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#chart"/></svg></div>
                 <div class="stat-label">Average expense</div>
                 <div class="stat-value">{{money0 .CurrencySymbol .Average}}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#trending-up"/></svg></div>
+                <div class="stat-icon"><svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#trending-up"/></svg></div>
                 <div class="stat-label">Largest expense</div>
                 <div class="stat-value">{{money0 .CurrencySymbol .Largest}}</div>
             </div>
@@ -54,7 +54,9 @@
             <ul class="trend-rows">
                 {{range .CategoryTotals}}
                 <li class="trend-row">
-                    <span class="trend-tile trend-tile-{{tile .Category}}" aria-hidden="true">{{printf "%.1s" .Category}}</span>
+                    <span class="trend-tile trend-tile-{{tile .Category}}" aria-hidden="true">
+                        <svg class="icon"><use href="/static/icons.svg?v=7#{{catIcon .Category}}"/></svg>
+                    </span>
                     <div class="trend-row-body">
                         <div class="trend-row-name">{{.Category}}</div>
                     </div>
@@ -67,7 +69,7 @@
         {{if gt .BudgetLimit 0.0}}
         <div class="text-center">
             <span class="chip is-static">
-                <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg#target"/></svg>
+                <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#target"/></svg>
                 {{printf "%.0f" .PercentOfBudget}}% of {{money0 .CurrencySymbol .BudgetLimit}} budget
             </span>
         </div>
@@ -76,7 +78,7 @@
         {{else}}
         <div class="empty">
             <span class="empty-icon">
-                <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg#chart"/></svg>
+                <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg?v=7#chart"/></svg>
             </span>
             <p class="empty-title">Nothing to report yet</p>
             <p class="empty-sub">Once you log an expense, your category breakdown appears here.</p>

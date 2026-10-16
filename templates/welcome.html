@@ -1,0 +1,194 @@
+{{define "welcome.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Welcome — Budget Tracker</title>
+    {{template "head.html" .}}
+</head>
+{{/*
+  The auth shell, not the app shell: a centred card with no nav bar and no FAB
+  to wander off into. The auth-* classes are layout only — a card on a branded
+  gradient — and carry no auth behaviour, so reusing them costs nothing and
+  saves duplicating the rules.
+
+  app.js is loaded by nav.html and nowhere else, and this page has no nav, so
+  it loads the script itself. Without it the Add/Remove buttons on step 3 do
+  nothing at all, and the failure is silent — the button is there and simply
+  does not respond. Nothing else here needs a script.
+*/}}
+<body>
+    <main class="auth-shell">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <span class="brand-mark" aria-hidden="true">{{.CurrencySymbol}}</span>
+                Budget Tracker
+            </div>
+
+            <ol class="wizard-steps">
+                {{range .Steps}}
+                <li class="wizard-step is-{{.State}}">
+                    <span class="wizard-dot" aria-hidden="true"></span>
+                    <span class="wizard-label">{{.Label}}</span>
+                    {{if eq .State "now"}}<span class="visually-hidden">(current step)</span>{{end}}
+                    {{if eq .State "done"}}<span class="visually-hidden">(done)</span>{{end}}
+                </li>
+                {{end}}
+            </ol>
+
+            <h2 class="auth-title">{{.Title}}</h2>
+            <p class="auth-sub">{{.Sub}}</p>
+
+            {{if .Error}}
+            <div class="alert alert-over mb-4" role="alert">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#alert"/></svg>
+                <p>{{.Error}}</p>
+            </div>
+            {{end}}
+
+            <form action="/welcome" method="POST">
+                <input type="hidden" name="step" value="{{.Step}}">
+
+                {{if eq .Step 1}}
+                {{/*
+                  No live preview of the amount format here, unlike Settings:
+                  the option labels already carry the glyph ("Nigerian Naira
+                  (₦)"), so a preview beside them would say the same thing
+                  twice — and it could not track the select without a script,
+                  since the symbol is rendered by the server.
+                */}}
+                <div class="auth-field">
+                    <label class="label" for="currency">Currency</label>
+                    <select class="input" id="currency" name="currency">
+                        {{$selected := .Currency}}
+                        {{range .CurrencyList}}
+                        <option value="{{.Code}}" {{if eq .Code $selected}}selected{{end}}>{{.Label}}</option>
+                        {{end}}
+                    </select>
+                </div>
+                {{end}}
+
+                {{if eq .Step 2}}
+                <div class="auth-field">
+                    <label class="label" for="budget">Monthly budget limit ({{.CurrencySymbol}})</label>
+                    <input type="number" step="0.01" min="0" inputmode="decimal"
+                           id="budget" name="budget" placeholder="0.00"
+                           value="{{if .BudgetLimit}}{{printf "%.2f" .BudgetLimit}}{{end}}"
+                           class="input" autofocus>
+                    <p class="hint">
+                        Leave blank for no limit. That is not the same as a limit
+                        of zero — blank means "do not track a limit at all".
+                    </p>
+                </div>
+                {{end}}
+
+                {{if eq .Step 3}}
+                <div class="auth-field">
+                    <div class="label" id="categories-label">Categories</div>
+                    <p class="hint">
+                        Delete the ones you would never use, and add your own.
+                        These are the chips you pick from when logging an entry.
+                    </p>
+
+                    <div id="category-list" role="group" aria-labelledby="categories-label">
+                        {{range .Categories}}
+                        <div class="category-item">
+                            <span class="category-icon" aria-hidden="true">
+                                <svg class="icon-sm"><use href="/static/icons.svg?v=7#{{catIcon .}}"/></svg>
+                            </span>
+                            <input type="text" name="category" value="{{.}}" class="input" aria-label="Category name">
+                            <button type="button" class="btn-icon" data-remove-category>
+                                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#close"/></svg>
+                                <span class="visually-hidden">Remove category</span>
+                            </button>
+                        </div>
+                        {{end}}
+                    </div>
+
+                    <button type="button" class="btn btn-soft btn-sm mt-2" id="add-category-row">
+                        <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#plus"/></svg>
+                        Add category
+                    </button>
+                </div>
+                {{end}}
+
+                {{if eq .Step 4}}
+                <div class="auth-field">
+                    <label class="label" for="description">What did you spend on?</label>
+                    {{/*
+                      Deliberately not required, unlike the same field in the
+                      add form. Leaving both this and the amount blank is how
+                      you skip the step, and a required attribute would make
+                      the browser refuse that.
+                    */}}
+                    <input type="text" id="description" name="description" class="input"
+                           placeholder="Lunch, bus fare, data…" maxlength="255"
+                           value="{{.Form.Description}}" autofocus>
+                </div>
+
+                <div class="auth-field">
+                    <label class="label" for="amount">Amount ({{.CurrencySymbol}})</label>
+                    <input type="number" id="amount" name="amount" class="input"
+                           inputmode="decimal" step="0.01" min="0.01" placeholder="0.00"
+                           value="{{.Form.Amount}}">
+                </div>
+
+                <div class="auth-field">
+                    <label class="label" for="kind">Type</label>
+                    <select class="input" id="kind" name="kind">
+                        <option value="expense" {{if eq .Form.Kind "expense"}}selected{{end}}>Expense</option>
+                        <option value="income" {{if eq .Form.Kind "income"}}selected{{end}}>Income</option>
+                    </select>
+                </div>
+
+                <div class="auth-field">
+                    <label class="label" for="category">Category</label>
+                    <select class="input" id="category" name="category">
+                        <option value="">No category</option>
+                        {{$picked := .Form.Category}}
+                        {{range .Categories}}
+                        <option value="{{.}}" {{if eq . $picked}}selected{{end}}>{{.}}</option>
+                        {{end}}
+                    </select>
+                </div>
+
+                <div class="auth-field">
+                    <label class="label" for="date">Date</label>
+                    <input type="date" id="date" name="date" class="input" value="{{.Form.Date}}">
+                    <p class="hint">Leave as today unless you're logging something older.</p>
+                </div>
+                {{end}}
+
+                <div class="wizard-actions">
+                    <button type="submit" name="action" value="skip" class="btn btn-soft">Skip setup</button>
+                    <button type="submit" name="action" value="next" class="btn btn-primary">
+                        {{if eq .Step 4}}Finish{{else}}Next{{end}}
+                    </button>
+                </div>
+            </form>
+
+            <p class="auth-foot">Skipping leaves the rest to Settings.</p>
+        </div>
+    </main>
+
+    <template id="category-row-template">
+        <div class="category-item">
+            {{/*
+              A row that does not exist yet has no name the server has seen, so
+              it shows the neutral tag until the form is saved and the page
+              comes back with the icon its name resolves to.
+            */}}
+            <span class="category-icon" aria-hidden="true">
+                <svg class="icon-sm"><use href="/static/icons.svg?v=7#tag"/></svg>
+            </span>
+            <input type="text" name="category" placeholder="New category" class="input" aria-label="Category name">
+            <button type="button" class="btn-icon" data-remove-category>
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#close"/></svg>
+                <span class="visually-hidden">Remove category</span>
+            </button>
+        </div>
+    </template>
+
+    <script src="/static/app.js?v=6" defer></script>
+</body>
+</html>
+{{end}}
