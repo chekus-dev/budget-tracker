@@ -4,33 +4,342 @@
 <head>
     <title>Premium — Budget Tracker</title>
     {{template "head.html" .}}
+    <style>
+        /* ============================================================
+           Billing / Premium — refined layout
+           ============================================================ */
+
+        /* ---------- Status alerts (top of page) ---------- */
+        .billing-alert {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            font-size: 13.5px;
+            line-height: 1.5;
+            margin-bottom: 16px;
+            border: 1px solid transparent;
+        }
+        .billing-alert svg { flex: none; margin-top: 1px; width: 18px; height: 18px; }
+        .billing-alert.is-safe { background: var(--safe-soft); border-color: var(--safe); color: var(--safe-ink); }
+        .billing-alert.is-over { background: var(--over-soft); border-color: var(--over); color: var(--over-ink); }
+        .billing-alert.is-near { background: var(--near-soft); border-color: var(--near); color: var(--near-ink); }
+
+        /* ---------- Premium hero ---------- */
+        .premium-hero-v2 {
+            position: relative;
+            overflow: hidden;
+            border-radius: 22px;
+            padding: 24px 22px 22px;
+            color: #fff;
+            background:
+                radial-gradient(120% 80% at 100% 0%, rgba(255, 255, 255, 0.14), transparent 55%),
+                linear-gradient(140deg, #4F46E5 0%, #7C3AED 55%, #6D28D9 100%);
+            box-shadow:
+                0 1px 2px rgba(79, 70, 229, 0.10),
+                0 18px 40px -18px rgba(79, 70, 229, 0.55);
+            margin-bottom: 16px;
+        }
+        .premium-hero-v2::before {
+            content: "";
+            position: absolute;
+            top: -140px;
+            right: -110px;
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 68%);
+            pointer-events: none;
+        }
+        .premium-hero-v2::after {
+            content: "";
+            position: absolute;
+            bottom: -160px;
+            left: -80px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.10), transparent 68%);
+            pointer-events: none;
+        }
+        .premium-hero-v2 > * { position: relative; z-index: 1; }
+
+        .premium-badge-v2 {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px 5px 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            backdrop-filter: blur(4px);
+        }
+        .premium-badge-v2 svg { width: 13px; height: 13px; display: block; }
+
+        .premium-hero-eyebrow {
+            margin-top: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: rgba(255, 255, 255, 0.75);
+        }
+        .premium-hero-title {
+            margin-top: 4px;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.035em;
+            line-height: 1.08;
+        }
+        .premium-hero-sub {
+            margin-top: 8px;
+            font-size: 13.5px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.85);
+            max-width: 32ch;
+            text-wrap: pretty;
+        }
+
+        .premium-price-v2 {
+            margin-top: 22px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            font-variant-numeric: tabular-nums;
+        }
+        .premium-price-v2 .amount {
+            font-size: 38px;
+            font-weight: 700;
+            letter-spacing: -0.035em;
+            line-height: 1;
+        }
+        .premium-price-v2 .unit {
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.78);
+        }
+        .premium-price-v2.is-date .amount {
+            font-size: 22px;
+            letter-spacing: -0.02em;
+        }
+
+        .premium-cta {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 14px;
+            border: 0;
+            background: #fff;
+            color: #4338CA;
+            font-size: 14.5px;
+            font-weight: 700;
+            letter-spacing: -0.005em;
+            cursor: pointer;
+            box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.35);
+            transition: transform .12s, box-shadow .15s;
+        }
+        .premium-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px -10px rgba(0, 0, 0, 0.45);
+        }
+        .premium-cta:active { transform: translateY(0); }
+        .premium-cta svg { width: 18px; height: 18px; }
+
+        .premium-cta-secondary {
+            display: block;
+            margin-top: 12px;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.72);
+            letter-spacing: 0.01em;
+        }
+
+        /* Trust row under CTA */
+        .premium-trust {
+            margin-top: 18px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.16);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 18px;
+            font-size: 11.5px;
+            color: rgba(255, 255, 255, 0.75);
+        }
+        .premium-trust-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .premium-trust-item svg { width: 13px; height: 13px; flex: none; opacity: 0.9; }
+
+        .premium-disabled-note {
+            margin-top: 16px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+        }
+
+        /* ---------- Section headings ---------- */
+        .billing-section-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 28px 0 12px;
+        }
+        .billing-section-head:first-of-type { margin-top: 0; }
+        .billing-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--ink-muted);
+        }
+
+        /* ---------- Perks grid ---------- */
+        .perk-grid {
+            display: grid;
+            gap: 10px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        .perk-v2 {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+        }
+        .perk-v2-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            background: var(--premium-soft);
+            color: var(--premium-ink);
+            flex: none;
+        }
+        .perk-v2-icon svg { width: 15px; height: 15px; }
+        .perk-v2-body {
+            flex: 1;
+            min-width: 0;
+            font-size: 13.5px;
+            line-height: 1.5;
+            color: var(--ink);
+        }
+
+        /* ---------- "How it works" summary ---------- */
+        .billing-summary-card {
+            padding: 18px 18px 4px;
+            border-radius: 18px;
+            margin-bottom: 16px;
+        }
+        .billing-summary-card .summary-row {
+            padding: 13px 0;
+        }
+        .billing-summary-card .summary-label {
+            font-size: 13px;
+        }
+        .billing-summary-card .summary-value {
+            font-size: 14.5px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ---------- FAQ ---------- */
+        .billing-faq-card {
+            padding: 6px 18px;
+            border-radius: 18px;
+            margin-bottom: 16px;
+        }
+        .billing-faq-card .faq {
+            padding: 14px 0;
+        }
+        .billing-faq-card .faq summary {
+            font-size: 14px;
+        }
+
+        /* ---------- Footer ---------- */
+        .billing-footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 12.5px;
+            color: var(--ink-muted);
+        }
+        .billing-footer a {
+            color: var(--brand-ink);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .billing-footer a:hover { text-decoration: underline; }
+
+        /* Reassurance bar above CTA on non-premium */
+        .premium-reassure {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 14px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.78);
+        }
+        .premium-reassure svg { width: 14px; height: 14px; flex: none; opacity: 0.85; }
+    </style>
 </head>
 <body class="has-chrome">
     {{template "nav.html" .}}
 
     <main class="app-main">
 
+        {{/* ---------- Status alerts ---------- */}}
         {{if eq .Status "paid"}}
-        <div class="alert alert-safe mb-4" role="status">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#check"/></svg>
+        <div class="billing-alert is-safe" role="status">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="m8.5 12 2.5 2.5 4.5-5"/>
+            </svg>
             <p><strong>Payment received.</strong> Thank you — Premium is now active.</p>
         </div>
         {{end}}
 
         {{if eq .Status "failed"}}
-        <div class="alert alert-over mb-4" role="alert">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#alert"/></svg>
+        <div class="billing-alert is-over" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M12 8v5"/>
+                <circle cx="12" cy="16.5" r="0.5" fill="currentColor" stroke="none"/>
+            </svg>
             <p><strong>That payment was not completed.</strong> You have not been charged. You can try again below.</p>
         </div>
         {{end}}
 
         {{if eq .Status "error"}}
-        <div class="alert alert-near mb-4" role="alert">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#alert"/></svg>
+        <div class="billing-alert is-near" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M12 8v5"/>
+                <circle cx="12" cy="16.5" r="0.5" fill="currentColor" stroke="none"/>
+            </svg>
             <p><strong>We could not confirm your payment yet.</strong> If you were charged, it will appear shortly. Contact support if it does not.</p>
         </div>
         {{end}}
 
+        {{/* ---------- Page title ---------- */}}
         {{if .Premium}}
         <div class="page-head">
             <h1 class="page-title">You're a supporter</h1>
@@ -43,56 +352,120 @@
         </div>
         {{end}}
 
-        <div class="premium-layout">
+        {{/* ---------- Premium hero ---------- */}}
+        <section class="premium-hero-v2" aria-label="Premium">
+            <span class="premium-badge-v2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 3l2.6 5.6 6.1.6-4.6 4 1.4 6L12 16.9 6.5 19.2l1.4-6-4.6-4 6.1-.6L12 3z"/>
+                </svg>
+                {{if .Premium}}Premium active{{else}}Premium{{end}}
+            </span>
 
-            <div class="premium-hero">
-                <span class="premium-badge">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#check"/></svg>
-                    {{if .Premium}}Premium active{{else}}Premium{{end}}
-                </span>
+            {{if .Premium}}
+            <p class="premium-hero-eyebrow">Your plan</p>
+            <h2 class="premium-hero-title">Supporter</h2>
+            <p class="premium-hero-sub">Thanks for keeping this app alive. Every payment goes straight into servers, email, and time spent building.</p>
 
-                {{if .Premium}}
-                <p class="premium-price is-date">Until {{.Until}}</p>
-                <p class="premium-note">Pay again to add {{.Days}} more days to your account.</p>
-                {{else}}
-                <p class="premium-price">{{.Price}}<small>for {{.Days}} days</small></p>
-                <p class="premium-note">One-time payment. Does not renew automatically.</p>
-                {{end}}
-
-                {{if .Enabled}}
-                <form action="/billing/checkout" method="POST" class="mt-4">
-                    <button type="submit" class="btn btn-premium btn-block">
-                        {{if .Premium}}Add {{.Days}} more days{{else}}Pay {{.Price}}{{end}}
-                    </button>
-                </form>
-                <p class="premium-note mt-4" style="text-align:center;font-size:12px;">
-                    Secure payment via Paystack · We never see your card details
-                </p>
-                {{else}}
-                <p class="premium-note mt-4">Payments are not available right now. Try again later.</p>
-                {{end}}
+            <div class="premium-price-v2 is-date">
+                <span class="amount">Until {{.Until}}</span>
             </div>
 
-            <section class="card">
-                {{if .Perks}}
-                <h2 class="card-title mb-4">What your support funds</h2>
-                <ul class="perk-list">
-                    {{range .Perks}}
-                    <li class="perk">
-                        <span class="tile is-premium">
-                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#check"/></svg>
-                        </span>
-                        <span>{{.}}</span>
-                    </li>
-                    {{end}}
-                </ul>
-                {{end}}
-            </section>
+            {{if .Enabled}}
+            <form action="/billing/checkout" method="POST" class="mt-4">
+                <button type="submit" class="premium-cta">
+                    Add {{.Days}} more days
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 12h14"/>
+                        <path d="m13 6 6 6-6 6"/>
+                    </svg>
+                </button>
+            </form>
+            {{else}}
+            <div class="premium-disabled-note">Payments are not available right now. Try again later.</div>
+            {{end}}
 
+            {{else}}
+            <p class="premium-hero-eyebrow">One-time payment · No subscription</p>
+            <h2 class="premium-hero-title">Keep it independent</h2>
+            <p class="premium-hero-sub">No ads. No investors. No tracking. Just a small, honest app that works.</p>
+
+            <div class="premium-price-v2">
+                <span class="amount">{{.Price}}</span>
+                <span class="unit">for {{.Days}} days</span>
+            </div>
+
+            {{if .Enabled}}
+            <form action="/billing/checkout" method="POST" class="mt-4">
+                <button type="submit" class="premium-cta">
+                    Pay {{.Price}}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 12h14"/>
+                        <path d="m13 6 6 6-6 6"/>
+                    </svg>
+                </button>
+            </form>
+            <p class="premium-reassure">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="4" y="10" width="16" height="11" rx="2"/>
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+                </svg>
+                Secure payment via Paystack · We never see your card details
+            </p>
+            {{else}}
+            <div class="premium-disabled-note">Payments are not available right now. Try again later.</div>
+            {{end}}
+
+            <div class="premium-trust">
+                <span class="premium-trust-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 13l4 4L19 7"/>
+                    </svg>
+                    One-time charge
+                </span>
+                <span class="premium-trust-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Never auto-renews
+                </span>
+                <span class="premium-trust-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 13l4 4L19 7"/>
+                    </svg>
+                    14-day refund
+                </span>
+            </div>
+            {{end}}
+        </section>
+
+        {{/* ---------- Perks ---------- */}}
+        {{if .Perks}}
+        <div class="billing-section-head">
+            <h2 class="billing-section-title">What your support funds</h2>
         </div>
 
-        <section class="card mb-4 mt-6">
-            <h2 class="card-title mb-4">How it works</h2>
+        <section class="card" style="padding:16px;">
+            <ul class="perk-grid">
+                {{range .Perks}}
+                <li class="perk-v2">
+                    <span class="perk-v2-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </span>
+                    <span class="perk-v2-body">{{.}}</span>
+                </li>
+                {{end}}
+            </ul>
+        </section>
+        {{end}}
+
+        {{/* ---------- How it works ---------- */}}
+        <div class="billing-section-head">
+            <h2 class="billing-section-title">How it works</h2>
+        </div>
+
+        <section class="card billing-summary-card">
             <div class="summary-list">
                 <div class="summary-row">
                     <span class="summary-label">Payment</span>
@@ -113,9 +486,13 @@
             </div>
         </section>
 
-        <section class="card mb-4">
-            <h2 class="card-title mb-4">Common questions</h2>
-            <div class="stack">
+        {{/* ---------- FAQ ---------- */}}
+        <div class="billing-section-head">
+            <h2 class="billing-section-title">Common questions</h2>
+        </div>
+
+        <section class="card billing-faq-card">
+            <div class="stack" style="gap:0;">
                 <details class="faq">
                     <summary>Does Premium charge me every month?</summary>
                     <p class="note mt-2">No. Every payment is a single charge that adds {{.Days}} days to your account. Nothing is charged automatically and there is nothing to cancel.</p>
@@ -139,10 +516,9 @@
             </div>
         </section>
 
-        <p class="hint text-center mt-6">
+        <p class="billing-footer">
             Questions? Read the <a href="/terms">terms</a> or <a href="/support">contact support</a>.
         </p>
-
 
     </main>
 </body>

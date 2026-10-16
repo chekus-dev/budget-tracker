@@ -5,9 +5,70 @@
     <title>Trends — Budget Tracker</title>
     {{template "head.html" .}}
     <style>
-        /* ---------- Trends page — scoped polish ---------- */
+        /* ============================================================
+           Trends — refined layout
+           ============================================================ */
 
-        /* Section headings with eyebrow style */
+        /* ---------- Hero year card ---------- */
+        .trend-hero {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            box-shadow: var(--shadow-card);
+            padding: 18px 18px 16px;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .trend-hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 6%, transparent), transparent 40%);
+            pointer-events: none;
+        }
+        .trend-hero > * { position: relative; }
+        .trend-hero-eyebrow {
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+            color: var(--ink-muted);
+            margin-bottom: 4px;
+        }
+        .trend-hero-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .trend-hero-year {
+            font-size: 30px;
+            font-weight: 700;
+            letter-spacing: -.03em;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Year switcher inside the hero */
+        .trend-hero .trend-year {
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-pill);
+            padding: 3px;
+            margin: 0;
+        }
+        .trend-hero .trend-year-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+        }
+        .trend-hero .trend-year-label {
+            font-size: 14px;
+            padding: 0 8px;
+        }
+
+        /* ---------- Section headings ---------- */
         .trend-section-head {
             display: flex;
             align-items: baseline;
@@ -15,10 +76,13 @@
             gap: 12px;
             margin: 28px 0 12px;
         }
+        .trend-section-head:first-of-type { margin-top: 0; }
         .trend-section-title {
-            font-size: 15px;
+            font-size: 12px;
             font-weight: 700;
-            letter-spacing: -.01em;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--ink-muted);
         }
         .trend-section-link {
             font-size: 13px;
@@ -26,16 +90,50 @@
             color: var(--brand-ink);
             text-decoration: none;
         }
-        .trend-section-link:hover {
-            text-decoration: underline;
+        .trend-section-link:hover { text-decoration: underline; }
+
+        /* ---------- Tabs — pill style ---------- */
+        .trend-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+        .trend-tab {
+            flex: 1;
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 14px;
+            border-radius: var(--radius-pill);
+            background: var(--surface);
+            border: 1px solid var(--line);
+            color: var(--ink-muted);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: border-color .15s, background-color .15s, color .15s;
+        }
+        .trend-tab:hover {
+            color: var(--ink);
+            border-color: var(--line-strong);
+        }
+        .trend-tab.is-active {
+            background: var(--brand);
+            border-color: var(--brand);
+            color: #fff;
+            box-shadow: 0 4px 10px -4px #4f46e566;
+        }
+        @media (max-width: 400px) {
+            .trend-tab { font-size: 12px; padding: 8px 10px; }
         }
 
-        /* Stat cards — bigger, softer */
+        /* ---------- Stat cards ---------- */
         .trend-stats {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
         @media (max-width: 480px) {
             .trend-stats { gap: 8px; }
@@ -45,15 +143,15 @@
             border: 1px solid var(--line);
             border-radius: 16px;
             box-shadow: var(--shadow-card);
-            padding: 14px 12px;
+            padding: 14px 14px 13px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
             min-width: 0;
         }
         .trend-stat-icon {
-            width: 30px;
-            height: 30px;
+            width: 32px;
+            height: 32px;
             border-radius: 10px;
             display: grid;
             place-items: center;
@@ -61,14 +159,18 @@
             color: var(--brand-ink);
             flex: none;
         }
-        .trend-stat-icon svg { width: 15px; height: 15px; }
+        .trend-stat-icon svg {
+            width: 17px;
+            height: 17px;
+            display: block;
+        }
         .trend-stat.is-safe .trend-stat-icon { background: var(--safe-soft); color: var(--safe-ink); }
         .trend-stat.is-over .trend-stat-icon { background: var(--over-soft); color: var(--over-ink); }
         .trend-stat.is-primary {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            background: linear-gradient(140deg, #4f46e5 0%, #7c3aed 100%);
             border-color: transparent;
             color: #fff;
-            box-shadow: 0 6px 18px -8px #4f46e580;
+            box-shadow: 0 8px 20px -10px #4f46e580;
         }
         .trend-stat.is-primary .trend-stat-icon {
             background: #ffffff29;
@@ -78,44 +180,45 @@
         .trend-stat-label {
             font-size: 10px;
             font-weight: 700;
-            letter-spacing: .06em;
+            letter-spacing: .08em;
             text-transform: uppercase;
             color: var(--ink-muted);
             line-height: 1.3;
         }
         .trend-stat-value {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 700;
-            letter-spacing: -.02em;
+            letter-spacing: -.025em;
             font-variant-numeric: tabular-nums;
-            line-height: 1.15;
+            line-height: 1.1;
             word-break: break-all;
         }
         @media (max-width: 480px) {
-            .trend-stat { padding: 12px 10px; }
+            .trend-stat { padding: 12px 11px; }
             .trend-stat-value { font-size: 15px; }
         }
 
-        /* Chart cards — refine spacing */
+        /* ---------- Chart cards ---------- */
         .trend-chart-card {
-            padding: 20px 18px 16px;
-            margin-bottom: 16px;
+            padding: 18px 18px 12px;
+            margin-bottom: 14px;
+            border-radius: 18px;
         }
         .trend-chart-head {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
             gap: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
         .trend-chart-title {
-            font-size: 17px;
+            font-size: 15px;
             font-weight: 700;
             letter-spacing: -.015em;
             line-height: 1.2;
         }
         .trend-chart-caption {
-            font-size: 12.5px;
+            font-size: 12px;
             color: var(--ink-muted);
             margin-top: 3px;
         }
@@ -124,66 +227,64 @@
             flex: none;
         }
         .trend-chart-total .trend-total-main {
-            font-size: 26px;
+            font-size: 22px;
             letter-spacing: -.025em;
             font-variant-numeric: tabular-nums;
             font-weight: 700;
             line-height: 1;
         }
         .trend-chart-total .trend-total-frac {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             font-variant-numeric: tabular-nums;
             color: var(--ink-muted);
         }
 
-        /* Category list — richer rows */
+        /* ---------- Category / month list ---------- */
         .trend-list-card {
-            padding: 18px 16px 8px;
-            margin-bottom: 16px;
+            padding: 18px 16px 6px;
+            margin-bottom: 14px;
+            border-radius: 18px;
+        }
+        .trend-list-card .trend-rows {
+            margin: 0 -8px;
         }
         .trend-list-card .trend-row {
-            padding: 14px 0;
+            padding: 12px 8px;
+            border-radius: 12px;
+            transition: background-color .15s;
+        }
+        .trend-list-card .trend-row:hover {
+            background: var(--surface-2);
         }
         .trend-list-card .trend-row:hover .trend-row-name {
             color: var(--brand-ink);
         }
-        .trend-tile svg {
-            width: 20px;
-            height: 20px;
-        }
+        .trend-list-card .trend-tile svg { width: 20px; height: 20px; }
 
-        /* Summary card — cleaner rows */
+        /* ---------- Summary ---------- */
         .trend-summary {
-            padding: 20px;
-            margin-bottom: 16px;
+            padding: 18px 18px 6px;
+            margin-bottom: 14px;
+            border-radius: 18px;
         }
         .trend-summary .summary-row {
-            padding: 14px 0;
+            padding: 12px 0;
         }
         .trend-summary .summary-label {
             font-size: 13px;
         }
         .trend-summary .summary-value {
-            font-size: 17px;
-            letter-spacing: -.01em;
+            font-size: 16px;
+            letter-spacing: -.015em;
+            font-variant-numeric: tabular-nums;
         }
 
-        /* Tabs — refine */
-        .trend-tabs {
-            margin-bottom: 20px;
-        }
-        .trend-tab {
-            background: var(--surface-2);
-            border: 1px solid transparent;
-        }
-        .trend-tab:hover {
-            background: var(--surface-3);
-        }
-        .trend-tab.is-active {
-            background: var(--brand-soft);
-            border-color: var(--brand);
-            color: var(--brand-ink);
+        /* ---------- Empty state ---------- */
+        .trend-empty-card {
+            padding: 12px;
+            margin-bottom: 14px;
+            border-radius: 18px;
         }
     </style>
 </head>
@@ -201,25 +302,30 @@
             </p>
         </div>
 
-        <div class="trend-top">
-            <div class="trend-year" role="group" aria-label="Year">
-                {{if .HasPrev}}
-                <a class="trend-year-btn" href="{{.PrevHref}}" aria-label="Previous year, {{.PrevYear}}">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-left"/></svg>
-                </a>
-                {{end}}
-                <span class="trend-year-label">{{.Year}}</span>
-                {{if .HasNext}}
-                <a class="trend-year-btn" href="{{.NextHref}}" aria-label="Next year, {{.NextYear}}">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
-                </a>
-                {{else}}
-                <span class="trend-year-btn" aria-disabled="true" aria-label="Next year">
-                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
-                </span>
-                {{end}}
+        {{/* ---------- Hero year card ---------- */}}
+        <section class="trend-hero" aria-label="Year selector">
+            <div class="trend-hero-eyebrow">Viewing</div>
+            <div class="trend-hero-row">
+                <div class="trend-hero-year">{{.Year}}</div>
+                <div class="trend-year" role="group" aria-label="Year">
+                    {{if .HasPrev}}
+                    <a class="trend-year-btn" href="{{.PrevHref}}" aria-label="Previous year, {{.PrevYear}}">
+                        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-left"/></svg>
+                    </a>
+                    {{end}}
+                    <span class="trend-year-label">{{.Year}}</span>
+                    {{if .HasNext}}
+                    <a class="trend-year-btn" href="{{.NextHref}}" aria-label="Next year, {{.NextYear}}">
+                        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
+                    </a>
+                    {{else}}
+                    <span class="trend-year-btn" aria-disabled="true" aria-label="Next year">
+                        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
+                    </span>
+                    {{end}}
+                </div>
             </div>
-        </div>
+        </section>
 
         <div class="trend-tabs" role="group" aria-label="Trends view">
             {{range .Tabs}}
@@ -233,14 +339,20 @@
         <div class="trend-stats">
             <div class="trend-stat is-safe">
                 <span class="trend-stat-icon">
-                    <svg aria-hidden="true"><use href="/static/icons.svg?v=7#trending-up"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 17l6-6 4 4 8-8"/>
+                        <path d="M15 7h6v6"/>
+                    </svg>
                 </span>
                 <span class="trend-stat-label">Avg income</span>
                 <span class="trend-stat-value">{{money0 .CurrencySymbol .AvgIncome}}</span>
             </div>
             <div class="trend-stat is-over">
                 <span class="trend-stat-icon">
-                    <svg aria-hidden="true"><use href="/static/icons.svg?v=7#trending-down"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 7l6 6 4-4 8 8"/>
+                        <path d="M15 17h6v-6"/>
+                    </svg>
                 </span>
                 <span class="trend-stat-label">Avg expense</span>
                 <span class="trend-stat-value">{{money0 .CurrencySymbol .AvgExpense}}</span>
@@ -248,7 +360,11 @@
             {{if .HasIncome}}
             <div class="trend-stat is-primary">
                 <span class="trend-stat-icon">
-                    <svg aria-hidden="true"><use href="/static/icons.svg?v=7#target"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9"/>
+                        <circle cx="12" cy="12" r="5"/>
+                        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+                    </svg>
                 </span>
                 <span class="trend-stat-label">Savings rate</span>
                 <span class="trend-stat-value">{{printf "%.0f" .SavingsRate}}%</span>
@@ -256,7 +372,12 @@
             {{else}}
             <div class="trend-stat">
                 <span class="trend-stat-icon">
-                    <svg aria-hidden="true"><use href="/static/icons.svg?v=7#calendar"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="5" width="18" height="16" rx="2"/>
+                        <path d="M3 10h18"/>
+                        <path d="M8 3v4"/>
+                        <path d="M16 3v4"/>
+                    </svg>
                 </span>
                 <span class="trend-stat-label">Months tracked</span>
                 <span class="trend-stat-value">{{.AvgDivisor}}</span>
@@ -308,20 +429,29 @@
         {{end}}
 
         {{if .NoBudget}}
-        <section class="card" style="margin-bottom:16px;">
+        <section class="card trend-empty-card">
             <div class="empty">
                 <span class="empty-icon">
-                    <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg?v=7#check"/></svg>
+                    <svg class="icon icon-xl" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="m8.5 12 2.5 2.5 4.5-5"/>
+                    </svg>
                 </span>
                 <p class="empty-title">No monthly budget yet</p>
                 <p class="empty-sub">Set a monthly limit in <a href="/settings">Settings</a> and this view will show which months stayed within it.</p>
             </div>
         </section>
         {{else if not .HasData}}
-        <section class="card" style="margin-bottom:16px;">
+        <section class="card trend-empty-card">
             <div class="empty">
                 <span class="empty-icon">
-                    <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg?v=7#chart"/></svg>
+                    <svg class="icon icon-xl" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19V5"/>
+                        <path d="M4 19h16"/>
+                        <path d="M8 15V9"/>
+                        <path d="M13 15V7"/>
+                        <path d="M18 15v-3"/>
+                    </svg>
                 </span>
                 <p class="empty-title">Nothing in {{.Year}}</p>
                 <p class="empty-sub">Entries you log will appear here, month by month.</p>

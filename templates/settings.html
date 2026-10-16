@@ -120,13 +120,15 @@
             margin-top: 3px;
         }
 
-        /* Theme picker — richer cards */
+        /* Theme picker — richer cards.
+           Every rule is scoped under .theme-grid-v2 so it beats the
+           legacy .theme-btn rules in app.css without needing !important. */
         .theme-grid-v2 {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 10px;
         }
-        .theme-card {
+        .theme-grid-v2 .theme-card {
             border: 1px solid var(--line-strong);
             border-radius: 14px;
             background: var(--surface);
@@ -140,18 +142,21 @@
             font-size: 12px;
             font-weight: 600;
             transition: border-color .15s, background-color .15s, color .15s, transform .15s;
+            box-shadow: none;
+            min-height: 0;
         }
-        .theme-card:hover {
+        .theme-grid-v2 .theme-card:hover {
             border-color: var(--brand);
             color: var(--ink);
             transform: translateY(-1px);
+            background: var(--surface);
         }
-        .theme-card[aria-pressed="true"] {
+        .theme-grid-v2 .theme-card[aria-pressed="true"] {
             border-color: var(--brand);
             background: var(--brand-soft);
             color: var(--brand-ink);
         }
-        .theme-card .preview {
+        .theme-grid-v2 .theme-card .preview {
             width: 100%;
             height: 44px;
             border-radius: 10px;
@@ -160,15 +165,15 @@
             border: 1px solid var(--line);
             background: #f7f8fa;
         }
-        .theme-card .preview span {
+        .theme-grid-v2 .theme-card .preview span {
             display: block;
         }
-        .theme-card .preview .pv-side {
+        .theme-grid-v2 .theme-card .preview .pv-side {
             width: 32%;
             background: #ffffff;
             border-right: 1px solid #e5e7eb;
         }
-        .theme-card .preview .pv-main {
+        .theme-grid-v2 .theme-card .preview .pv-main {
             flex: 1;
             padding: 6px;
             display: flex;
@@ -176,38 +181,38 @@
             gap: 4px;
             background: #f7f8fa;
         }
-        .theme-card .preview .pv-line {
+        .theme-grid-v2 .theme-card .preview .pv-line {
             height: 5px;
             border-radius: 3px;
             background: #d1d5db;
         }
-        .theme-card .preview .pv-line.short { width: 60%; }
-        .theme-card[data-theme="dark"] .preview {
+        .theme-grid-v2 .theme-card .preview .pv-line.short { width: 60%; }
+        .theme-grid-v2 .theme-card[data-theme="dark"] .preview {
             background: #0b1220;
             border-color: #22304a;
         }
-        .theme-card[data-theme="dark"] .preview .pv-side {
+        .theme-grid-v2 .theme-card[data-theme="dark"] .preview .pv-side {
             background: #111c2e;
             border-right-color: #22304a;
         }
-        .theme-card[data-theme="dark"] .preview .pv-main {
+        .theme-grid-v2 .theme-card[data-theme="dark"] .preview .pv-main {
             background: #0b1220;
         }
-        .theme-card[data-theme="dark"] .preview .pv-line {
+        .theme-grid-v2 .theme-card[data-theme="dark"] .preview .pv-line {
             background: #2f4162;
         }
-        .theme-card[data-theme="system"] .preview {
+        .theme-grid-v2 .theme-card[data-theme="system"] .preview {
             background: linear-gradient(90deg, #f7f8fa 50%, #0b1220 50%);
             border-color: #6b7280;
         }
-        .theme-card[data-theme="system"] .preview .pv-side {
+        .theme-grid-v2 .theme-card[data-theme="system"] .preview .pv-side {
             background: linear-gradient(90deg, #ffffff 50%, #111c2e 50%);
             border-right-color: #6b7280;
         }
-        .theme-card[data-theme="system"] .preview .pv-main {
+        .theme-grid-v2 .theme-card[data-theme="system"] .preview .pv-main {
             background: linear-gradient(90deg, #f7f8fa 50%, #0b1220 50%);
         }
-        .theme-card[data-theme="system"] .preview .pv-line {
+        .theme-grid-v2 .theme-card[data-theme="system"] .preview .pv-line {
             background: linear-gradient(90deg, #d1d5db 50%, #2f4162 50%);
         }
 
@@ -416,7 +421,7 @@
                 <input type="hidden" name="theme" id="theme-input" value="system">
 
                 <div class="theme-grid-v2" role="group" aria-labelledby="appearance-label">
-                    <button type="button" class="theme-card" data-theme="light" aria-pressed="false">
+                    <button type="button" class="theme-btn theme-card" data-theme="light" aria-pressed="false">
                         <span class="preview" aria-hidden="true">
                             <span class="pv-side"></span>
                             <span class="pv-main">
@@ -426,7 +431,7 @@
                         </span>
                         <span>Light</span>
                     </button>
-                    <button type="button" class="theme-card" data-theme="dark" aria-pressed="false">
+                    <button type="button" class="theme-btn theme-card" data-theme="dark" aria-pressed="false">
                         <span class="preview" aria-hidden="true">
                             <span class="pv-side"></span>
                             <span class="pv-main">
@@ -436,7 +441,7 @@
                         </span>
                         <span>Dark</span>
                     </button>
-                    <button type="button" class="theme-card" data-theme="system" aria-pressed="false">
+                    <button type="button" class="theme-btn theme-card" data-theme="system" aria-pressed="false">
                         <span class="preview" aria-hidden="true">
                             <span class="pv-side"></span>
                             <span class="pv-main">

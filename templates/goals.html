@@ -5,18 +5,20 @@
     <title>Goals — Budget Tracker</title>
     {{template "head.html" .}}
     <style>
-        /* ---------- Goals page — scoped polish ---------- */
+        /* ============================================================
+           Goals — refined layout
+           ============================================================ */
 
-        /* Hero progress card */
+        /* ---------- Hero progress card ---------- */
         .goals-hero {
             background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
             color: #fff;
             border-radius: 20px;
-            padding: 22px 22px 20px;
-            margin-bottom: 24px;
+            padding: 22px;
+            margin-bottom: 16px;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 8px 24px -10px #4f46e580;
+            box-shadow: 0 10px 26px -12px #4f46e580;
         }
         .goals-hero::after {
             content: "";
@@ -34,19 +36,19 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 700;
-            letter-spacing: .08em;
+            letter-spacing: .09em;
             text-transform: uppercase;
-            opacity: .85;
+            opacity: .9;
         }
-        .goals-hero-eyebrow .icon { width: 14px; height: 14px; }
+        .goals-hero-eyebrow svg { width: 14px; height: 14px; display: block; }
         .goals-hero-title {
             font-size: 26px;
             font-weight: 700;
-            letter-spacing: -.025em;
+            letter-spacing: -.03em;
             margin-top: 6px;
-            line-height: 1.15;
+            line-height: 1.1;
         }
         .goals-hero-sub {
             font-size: 13px;
@@ -63,7 +65,7 @@
             background: #ffffff24;
             border: 1px solid #ffffff33;
             border-radius: 12px;
-            padding: 8px 12px;
+            padding: 9px 12px;
             flex: 1 1 90px;
             min-width: 0;
         }
@@ -74,7 +76,9 @@
             line-height: 1.1;
         }
         .goals-hero-pill-label {
-            font-size: 11px;
+            font-size: 10.5px;
+            letter-spacing: .06em;
+            text-transform: uppercase;
             opacity: .85;
             margin-top: 2px;
         }
@@ -93,26 +97,65 @@
             transition: width .4s ease;
         }
 
-        /* Group header with progress ring */
+        /* ---------- Section headings ---------- */
+        .goals-section-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 28px 0 12px;
+        }
+        .goals-section-head:first-of-type { margin-top: 0; }
+        .goals-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--ink-muted);
+        }
+        .goals-section-meta {
+            font-size: 12.5px;
+            color: var(--ink-muted);
+        }
+
+        /* ---------- Group card ---------- */
+        .goal-group-card {
+            padding: 18px 16px 8px;
+            border-radius: 18px;
+            margin-bottom: 14px;
+        }
         .goal-group-head {
+            display: flex;
             align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 4px;
         }
         .goal-group-title {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -.015em;
         }
-        .goal-group-title .tile {
-            width: 32px;
-            height: 32px;
-            border-radius: 10px;
+        .goal-group-title .goal-group-tile {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            background: var(--brand-soft);
+            color: var(--brand-ink);
+            flex: none;
         }
-        .goal-group-title .tile svg { width: 16px; height: 16px; }
+        .goal-group-title .goal-group-tile svg { width: 18px; height: 18px; }
 
+        /* Progress ring */
         .goal-ring {
             --pct: 0;
-            --ring-size: 40px;
+            --ring-size: 42px;
             width: var(--ring-size);
             height: var(--ring-size);
             border-radius: 50%;
@@ -128,7 +171,86 @@
                 conic-gradient(var(--brand) calc(var(--pct) * 1%), var(--surface-3) 0);
         }
 
-        /* Collapsible add form */
+        /* ---------- Goal list inside a group ---------- */
+        .goal-list {
+            list-style: none;
+            margin: 0 -8px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .goal-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 8px;
+            border-radius: 12px;
+            transition: background-color .15s;
+        }
+        .goal-row:hover { background: var(--surface-2); }
+        .goal-row.is-done { opacity: .68; }
+        .goal-row.is-done .goal-title {
+            text-decoration: line-through;
+            color: var(--ink-muted);
+        }
+
+        .goal-toggle-form { flex: none; margin-top: 1px; }
+        .goal-check {
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            border: 2px solid var(--line-strong);
+            border-radius: 7px;
+            background: transparent;
+            color: #fff;
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            transition: border-color .15s, background-color .15s;
+        }
+        .goal-check:hover { border-color: var(--brand); }
+        .goal-check svg { width: 13px; height: 13px; }
+        .goal-row.is-done .goal-check {
+            background: var(--brand);
+            border-color: var(--brand);
+        }
+
+        .goal-body { flex: 1; min-width: 0; }
+        .goal-title {
+            font-size: 14.5px;
+            font-weight: 600;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+        .goal-note {
+            font-size: 12.5px;
+            color: var(--ink-muted);
+            margin-top: 3px;
+            line-height: 1.4;
+            text-wrap: pretty;
+        }
+        .goal-meta {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 3px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--brand-ink);
+            background: var(--brand-soft);
+            border-radius: 999px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Row action button — smaller than default so it sits nicely */
+        .goal-row .btn-icon {
+            width: 36px;
+            height: 36px;
+            flex: none;
+        }
+        .goal-row .btn-icon .icon { width: 16px; height: 16px; }
+
+        /* ---------- Collapsible add toggle ---------- */
         .goal-add-toggle {
             display: flex;
             align-items: center;
@@ -137,7 +259,7 @@
             width: 100%;
             padding: 14px;
             border: 1px dashed var(--line-strong);
-            border-radius: var(--radius-card);
+            border-radius: 16px;
             background: var(--surface);
             color: var(--brand-ink);
             font-weight: 600;
@@ -155,12 +277,16 @@
             background: var(--brand-soft);
             border-color: var(--brand);
         }
-        .goal-add-wrap {
-            margin-top: 16px;
-        }
+        .goal-add-toggle svg { width: 18px; height: 18px; }
+
+        .goal-add-wrap { margin-top: 14px; }
         .goal-add-wrap[hidden] { display: none; }
 
-        /* Form sections */
+        /* ---------- Form ---------- */
+        .goal-form-card {
+            padding: 18px;
+            border-radius: 18px;
+        }
         .goal-form-section {
             padding: 16px 0;
             border-bottom: 1px solid var(--line);
@@ -176,16 +302,36 @@
             font-weight: 400;
         }
 
-        /* Completed details chevron */
+        /* ---------- Completed disclosure ---------- */
+        .goal-completed {
+            margin-top: 20px;
+            border-top: 1px solid var(--line);
+            padding-top: 12px;
+        }
+        .goal-completed summary {
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--ink-muted);
+            list-style: none;
+            padding: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color .15s;
+        }
+        .goal-completed summary::-webkit-details-marker { display: none; }
         .goal-completed summary::before {
             content: "▸";
             display: inline-block;
-            transition: transform .15s;
             font-size: 11px;
+            transition: transform .15s;
         }
-        .goal-completed[open] summary::before {
-            transform: rotate(90deg);
-        }
+        .goal-completed[open] summary::before { transform: rotate(90deg); }
+        .goal-completed summary:hover { color: var(--ink); }
+        .goal-completed .goal-list { margin-top: 6px; }
     </style>
 </head>
 <body class="has-chrome no-fab">
@@ -193,11 +339,20 @@
 
     <main class="app-main">
 
+        <div class="page-head">
+            <h2 class="page-title">Goals</h2>
+            <p class="page-sub">What you mean to do this month and this year</p>
+        </div>
+
         {{/* ---------- Hero progress card ---------- */}}
         {{if or .ActiveGroups .Completed}}
         <section class="goals-hero" aria-labelledby="goals-hero-title">
             <span class="goals-hero-eyebrow">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#target"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"/>
+                    <circle cx="12" cy="12" r="5"/>
+                    <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+                </svg>
                 Your goals
             </span>
             <h2 class="goals-hero-title" id="goals-hero-title">
@@ -234,19 +389,24 @@
         </section>
         {{end}}
 
-        <div class="page-head">
-            <h2 class="page-title">Goals</h2>
-            <p class="page-sub">What you mean to do this month and this year</p>
-        </div>
-
         {{/* ---------- Active groups ---------- */}}
         {{if .ActiveGroups}}
+        <div class="goals-section-head">
+            <h2 class="goals-section-title">Open goals</h2>
+            <span class="goals-section-meta">{{.TotalOpen}} open</span>
+        </div>
+
         {{range .ActiveGroups}}
-        <section class="goal-group" aria-labelledby="goal-group-{{.Period}}">
+        <section class="card goal-group-card" aria-labelledby="goal-group-{{.Period}}">
             <div class="goal-group-head">
                 <h2 class="goal-group-title" id="goal-group-{{.Period}}">
-                    <span class="tile">
-                        <svg aria-hidden="true"><use href="/static/icons.svg?v=7#target"/></svg>
+                    <span class="goal-group-tile" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="5" width="18" height="16" rx="2"/>
+                            <path d="M3 10h18"/>
+                            <path d="M8 3v4"/>
+                            <path d="M16 3v4"/>
+                        </svg>
                     </span>
                     {{.Label}}
                 </h2>
@@ -255,6 +415,7 @@
                     {{.PercentDone}}%
                 </div>
             </div>
+
             <ul class="goal-list">
                 {{range .Goals}}
                 <li class="goal-row">
@@ -284,11 +445,16 @@
             </ul>
         </section>
         {{end}}
+
         {{else if not .Completed}}
         {{/* Empty state — only show if there's literally nothing */}}
         <div class="empty mb-6">
             <span class="empty-icon">
-                <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg?v=7#target"/></svg>
+                <svg class="icon icon-xl" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"/>
+                    <circle cx="12" cy="12" r="5"/>
+                    <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+                </svg>
             </span>
             <p class="empty-title">No goals yet</p>
             <p class="empty-sub">Set yourself something to do this month or this year — save for something, pay something off, or just remember to do something.</p>
@@ -299,7 +465,7 @@
         {{if .Completed}}
         <details class="goal-completed">
             <summary>{{len .Completed}} completed</summary>
-            <ul class="goal-list mt-4">
+            <ul class="goal-list">
                 {{range .Completed}}
                 <li class="goal-row is-done">
                     <form action="/goals/toggle/{{.ID}}" method="POST" class="goal-toggle-form">
@@ -330,12 +496,15 @@
         <button type="button" class="goal-add-toggle mt-6"
                 aria-expanded="false" aria-controls="goal-add-wrap"
                 id="goal-add-toggle">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#plus"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 5v14"/>
+                <path d="M5 12h14"/>
+            </svg>
             New goal
         </button>
 
         <div class="goal-add-wrap" id="goal-add-wrap" hidden>
-            <section class="card">
+            <section class="card goal-form-card">
                 <h2 class="card-title mb-4">New goal</h2>
                 <form action="/goals/create" method="POST">
 
@@ -375,7 +544,10 @@
                     </div>
 
                     <button type="submit" class="btn btn-primary btn-block mt-6">
-                        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#plus"/></svg>
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 5v14"/>
+                            <path d="M5 12h14"/>
+                        </svg>
                         Add goal
                     </button>
                 </form>
