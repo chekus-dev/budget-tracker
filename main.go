@@ -1006,6 +1006,23 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
+
+		// Soft-deleted users are locked out even if their session cookie is
+		// still valid. This is what makes "disable account" take effect on
+		// the next request, rather than at the end of the session lifetime.
+		var deleted sql.NullTime
+		if err := db.QueryRow(
+			`SELECT deleted_at FROM users WHERE id = $1`, userID,
+		).Scan(&deleted); err != nil || deleted.Valid {
+			session := getSession(r)
+			session.Options.MaxAge = -1
+			if err := session.Save(r, w); err != nil {
+				log.Printf("failed to clear disabled session: %v", err)
+			}
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
 		session := getSession(r)
 		session.Options.MaxAge = sessionMaxAge
 		if err := session.Save(r, w); err != nil {
