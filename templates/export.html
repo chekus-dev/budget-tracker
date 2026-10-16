@@ -10,6 +10,12 @@
 
     <main class="app-main">
 
+        <div class="page-head">
+            <h2 class="page-title">Export</h2>
+            <p class="page-sub">Download your ledger for {{.Label}}</p>
+        </div>
+
+        <div class="trend-top">
             <div class="trend-year" role="group" aria-label="Month">
                 <a class="trend-year-btn" href="/export?month={{.PrevMonth}}" aria-label="Previous month">
                     <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-left"/></svg>
@@ -25,10 +31,6 @@
                 </span>
                 {{end}}
             </div>
-        </div>
-        <div class="page-head">
-            <h2 class="page-title">Export</h2>
-            <p class="page-sub">Download your ledger for {{.Label}}</p>
         </div>
 
         <div class="stack">

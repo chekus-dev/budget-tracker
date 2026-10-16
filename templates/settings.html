@@ -4,41 +4,346 @@
 <head>
     <title>Settings — Budget Tracker</title>
     {{template "head.html" .}}
+    <style>
+        /* ---------- Settings page — scoped polish ---------- */
+
+        /* Section heading with leading icon */
+        .settings-section-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 32px 0 12px;
+        }
+        .settings-section-head:first-of-type { margin-top: 0; }
+        .settings-section-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            background: var(--brand-soft);
+            color: var(--brand-ink);
+            flex: none;
+        }
+        .settings-section-icon svg { width: 18px; height: 18px; }
+        .settings-section-title {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -.01em;
+        }
+        .settings-section-sub {
+            font-size: 12px;
+            color: var(--ink-muted);
+            margin-top: 1px;
+        }
+
+        /* Card polish */
+        .settings-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-card);
+            padding: 20px;
+            margin-bottom: 14px;
+        }
+        .settings-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .settings-card-label {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .settings-card-hint {
+            font-size: 12.5px;
+            color: var(--ink-muted);
+            line-height: 1.5;
+            margin-top: 4px;
+            text-wrap: pretty;
+        }
+
+        /* Account hero — gradient */
+        .account-hero {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: #fff;
+            border-radius: 20px;
+            padding: 22px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 24px -10px #4f46e580;
+            margin-bottom: 24px;
+        }
+        .account-hero::after {
+            content: "";
+            position: absolute;
+            top: -90px;
+            right: -70px;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ffffff2e, transparent 68%);
+            pointer-events: none;
+        }
+        .account-hero > * { position: relative; z-index: 1; }
+        .account-hero-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .account-hero-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            background: #ffffff2e;
+            display: grid;
+            place-items: center;
+            font-size: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            flex: none;
+        }
+        .account-hero-name {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -.01em;
+            line-height: 1.15;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .account-hero-sub {
+            font-size: 12.5px;
+            opacity: .85;
+            margin-top: 3px;
+        }
+
+        /* Theme picker — richer cards */
+        .theme-grid-v2 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .theme-card {
+            border: 1px solid var(--line-strong);
+            border-radius: 14px;
+            background: var(--surface);
+            padding: 14px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--ink-muted);
+            font-size: 12px;
+            font-weight: 600;
+            transition: border-color .15s, background-color .15s, color .15s, transform .15s;
+        }
+        .theme-card:hover {
+            border-color: var(--brand);
+            color: var(--ink);
+            transform: translateY(-1px);
+        }
+        .theme-card[aria-pressed="true"] {
+            border-color: var(--brand);
+            background: var(--brand-soft);
+            color: var(--brand-ink);
+        }
+        .theme-card .preview {
+            width: 100%;
+            height: 44px;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            border: 1px solid var(--line);
+            background: #f7f8fa;
+        }
+        .theme-card .preview span {
+            display: block;
+        }
+        .theme-card .preview .pv-side {
+            width: 32%;
+            background: #ffffff;
+            border-right: 1px solid #e5e7eb;
+        }
+        .theme-card .preview .pv-main {
+            flex: 1;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: #f7f8fa;
+        }
+        .theme-card .preview .pv-line {
+            height: 5px;
+            border-radius: 3px;
+            background: #d1d5db;
+        }
+        .theme-card .preview .pv-line.short { width: 60%; }
+        .theme-card[data-theme="dark"] .preview {
+            background: #0b1220;
+            border-color: #22304a;
+        }
+        .theme-card[data-theme="dark"] .preview .pv-side {
+            background: #111c2e;
+            border-right-color: #22304a;
+        }
+        .theme-card[data-theme="dark"] .preview .pv-main {
+            background: #0b1220;
+        }
+        .theme-card[data-theme="dark"] .preview .pv-line {
+            background: #2f4162;
+        }
+        .theme-card[data-theme="system"] .preview {
+            background: linear-gradient(90deg, #f7f8fa 50%, #0b1220 50%);
+            border-color: #6b7280;
+        }
+        .theme-card[data-theme="system"] .preview .pv-side {
+            background: linear-gradient(90deg, #ffffff 50%, #111c2e 50%);
+            border-right-color: #6b7280;
+        }
+        .theme-card[data-theme="system"] .preview .pv-main {
+            background: linear-gradient(90deg, #f7f8fa 50%, #0b1220 50%);
+        }
+        .theme-card[data-theme="system"] .preview .pv-line {
+            background: linear-gradient(90deg, #d1d5db 50%, #2f4162 50%);
+        }
+
+        /* Category rows — cleaner */
+        .cat-row {
+            display: grid;
+            grid-template-columns: 36px 1fr auto 40px;
+            gap: 8px;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--line);
+        }
+        .cat-row:last-child { border-bottom: 0; }
+        .cat-row .cat-icon-box {
+            width: 36px;
+            height: 36px;
+            border-radius: 11px;
+            display: grid;
+            place-items: center;
+            background: var(--surface-3);
+            color: var(--ink-muted);
+            flex: none;
+        }
+        .cat-row .cat-icon-box svg { width: 16px; height: 16px; }
+        .cat-row .cat-limit {
+            display: flex;
+            align-items: center;
+            border: 1px solid var(--line-strong);
+            border-radius: var(--radius-field);
+            background: var(--surface);
+            padding-left: 12px;
+            min-height: 44px;
+            width: 140px;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .cat-row .cat-limit:focus-within {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent);
+        }
+        .cat-row .cat-limit .sym {
+            color: var(--ink-muted);
+            font-size: 13px;
+            flex: none;
+        }
+        .cat-row .cat-limit input {
+            border: 0;
+            outline: 0;
+            background: transparent;
+            width: 100%;
+            min-height: 42px;
+            padding: 0 10px 0 4px;
+            font-size: 14px;
+            color: var(--ink);
+            font-family: inherit;
+        }
+        .cat-row .cat-limit input::placeholder { color: var(--ink-faint); }
+        @media (max-width: 480px) {
+            .cat-row { grid-template-columns: 32px 1fr 40px; }
+            .cat-row .cat-limit { grid-column: 2; width: 100%; margin-top: 6px; }
+            .cat-row .btn-icon { grid-column: 3; grid-row: 1; }
+        }
+
+        /* Sticky save bar */
+        .save-bar {
+            position: sticky;
+            bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+            z-index: 20;
+            margin-top: 24px;
+            padding: 10px;
+            background: color-mix(in srgb, var(--canvas) 88%, transparent);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: var(--radius-field);
+            border: 1px solid var(--line);
+        }
+        .save-bar .btn { box-shadow: 0 4px 12px -4px #4f46e566; }
+    </style>
 </head>
 <body class="has-chrome no-fab">
     {{template "nav.html" .}}
-        </p>
 
     <main class="app-main">
-          
-        <p class="note mt-6" style="color: var(--ink-faint); text-align: center;">
-            Budget Tracker v{{.Version}}
-        </p>
+
         <div class="page-head">
             <h2 class="page-title">Settings</h2>
             <p class="page-sub">Your budget, appearance, data and account</p>
         </div>
 
+        {{/* Account hero */}}
+        {{if .Username}}
+        <section class="account-hero" aria-label="Signed in as">
+            <div class="account-hero-row">
+                <div class="account-hero-avatar" aria-hidden="true">{{slice .Username 0 1}}</div>
+                <div style="min-width:0;">
+                    <div class="account-hero-name">{{.Username}}</div>
+                    <div class="account-hero-sub">Signed in · Budget Tracker</div>
+                </div>
+            </div>
+        </section>
+        {{end}}
+
         <form action="/settings/saved" method="POST">
 
-            <h2 class="card-title mb-2">Budget</h2>
+            {{/* ---------- BUDGET ---------- */}}
+            <div class="settings-section-head">
+                <span class="settings-section-icon">
+                    <svg aria-hidden="true"><use href="/static/icons.svg?v=7#wallet"/></svg>
+                </span>
+                <div>
+                    <div class="settings-section-title">Budget</div>
+                    <div class="settings-section-sub">Limits, currency and categories</div>
+                </div>
+            </div>
 
-            <section class="card mb-4">
-                <label class="label" for="budget">Monthly budget limit</label>
-                <p class="hint">Leave blank for no limit.</p>
+            <section class="settings-card">
+                <div class="settings-card-head">
+                    <div>
+                        <label class="settings-card-label" for="budget">Monthly budget limit</label>
+                        <p class="settings-card-hint">Leave blank for no limit.</p>
+                    </div>
+                </div>
                 <input type="number" step="0.01" min="0" inputmode="decimal"
                        id="budget" name="budget" placeholder="0.00"
                        value="{{if .BudgetLimit}}{{printf "%.2f" .BudgetLimit}}{{end}}"
                        class="input">
             </section>
 
-            <section class="card mb-4">
-                <label class="label" for="currency">Currency</label>
-                <p class="hint">
-                    Changes the symbol on every amount in the app. Past expenses
-                    are not converted — this sets how the numbers are labelled,
-                    not what they are worth.
-                </p>
+            <section class="settings-card">
+                <div class="settings-card-head">
+                    <div>
+                        <label class="settings-card-label" for="currency">Currency</label>
+                        <p class="settings-card-hint">
+                            Changes the symbol on every amount. Past expenses are not converted — this sets how numbers are labelled, not what they are worth.
+                        </p>
+                    </div>
+                </div>
                 <select class="input" id="currency" name="currency">
                     {{$selected := .Currency}}
                     {{range .CurrencyList}}
@@ -50,78 +355,118 @@
                 </p>
             </section>
 
-            <section class="card mb-4">
-                <div class="label" id="categories-label">Categories</div>
-                <p class="hint">
-                    The chips you pick from when logging an entry. Give a
-                    category a monthly limit and it gets its own bar on the home
-                    screen. Leave the limit blank for no limit — that is not the
-                    same as a limit of zero, which would cap it at nothing.
-                </p>
+            <section class="settings-card">
+                <div class="settings-card-head">
+                    <div>
+                        <div class="settings-card-label" id="categories-label">Categories</div>
+                        <p class="settings-card-hint">
+                            Give a category a monthly limit and it gets its own bar on the home screen. Leave blank for no limit.
+                        </p>
+                    </div>
+                </div>
 
                 <div id="category-list" role="group" aria-labelledby="categories-label">
                     {{range .Categories}}
-                    <div class="category-item">
-                        <span class="category-icon" aria-hidden="true">
-                            <svg class="icon-sm"><use href="/static/icons.svg?v=7#{{catIcon .}}"/></svg>
+                    <div class="cat-row">
+                        <span class="cat-icon-box" aria-hidden="true">
+                            <svg><use href="/static/icons.svg?v=7#{{catIcon .}}"/></svg>
                         </span>
                         <input type="text" name="category" value="{{.}}" class="input" aria-label="Category name">
-                        <span class="category-limit">
-                            <span class="category-limit-symbol" aria-hidden="true">{{$.CurrencySymbol}}</span>
+                        <span class="cat-limit">
+                            <span class="sym" aria-hidden="true">{{$.CurrencySymbol}}</span>
                             <input type="number" name="category_limit" step="0.01" min="0"
-                                   inputmode="decimal" placeholder="No limit" class="input"
+                                   inputmode="decimal" placeholder="No limit"
                                    value="{{with index $.CategoryLimits .}}{{printf "%.2f" .}}{{end}}"
                                    aria-label="Monthly limit for {{.}}">
                         </span>
-                        <button type="button" class="btn-icon" data-remove-category>
+                        <button type="button" class="btn-icon is-danger" data-remove-category aria-label="Remove category">
                             <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#close"/></svg>
-                            <span class="visually-hidden">Remove category</span>
                         </button>
                     </div>
                     {{end}}
                 </div>
 
-                <button type="button" class="btn btn-soft btn-sm mt-2" id="add-category-row">
+                <button type="button" class="btn btn-soft btn-sm mt-4" id="add-category-row">
                     <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#plus"/></svg>
                     Add category
                 </button>
             </section>
 
-            <h2 class="card-title mb-2 mt-8">Appearance</h2>
+            {{/* ---------- APPEARANCE ---------- */}}
+            <div class="settings-section-head">
+                <span class="settings-section-icon">
+                    <svg aria-hidden="true"><use href="/static/icons.svg?v=7#sun"/></svg>
+                </span>
+                <div>
+                    <div class="settings-section-title">Appearance</div>
+                    <div class="settings-section-sub">How the app looks on this device</div>
+                </div>
+            </div>
 
-            <section class="card mb-4">
-                <div class="label" id="appearance-label">Theme</div>
-                <p class="hint">
-                    Applies to this browser. System follows your device setting.
-                    <br>
-                    Your choice is saved to your account too, so signing in elsewhere
-                    restores it — but each browser remembers its own until you open
-                    this page.
-                </p>
+            <section class="settings-card">
+                <div class="settings-card-head">
+                    <div>
+                        <div class="settings-card-label" id="appearance-label">Theme</div>
+                        <p class="settings-card-hint">
+                            Applies to this browser. System follows your device setting. Your choice is saved to your account too.
+                        </p>
+                    </div>
+                </div>
 
-                <input type="hidden" name="theme" id="theme-input"
-                       value="system">
+                <input type="hidden" name="theme" id="theme-input" value="system">
 
-                <div class="theme-grid" role="group" aria-labelledby="appearance-label">
-                    <button type="button" class="theme-btn" data-theme="light" aria-pressed="false">
-                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg?v=7#sun"/></svg>
-                        Light
+                <div class="theme-grid-v2" role="group" aria-labelledby="appearance-label">
+                    <button type="button" class="theme-card" data-theme="light" aria-pressed="false">
+                        <span class="preview" aria-hidden="true">
+                            <span class="pv-side"></span>
+                            <span class="pv-main">
+                                <span class="pv-line"></span>
+                                <span class="pv-line short"></span>
+                            </span>
+                        </span>
+                        <span>Light</span>
                     </button>
-                    <button type="button" class="theme-btn" data-theme="dark" aria-pressed="false">
-                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg?v=7#moon"/></svg>
-                        Dark
+                    <button type="button" class="theme-card" data-theme="dark" aria-pressed="false">
+                        <span class="preview" aria-hidden="true">
+                            <span class="pv-side"></span>
+                            <span class="pv-main">
+                                <span class="pv-line"></span>
+                                <span class="pv-line short"></span>
+                            </span>
+                        </span>
+                        <span>Dark</span>
                     </button>
-                    <button type="button" class="theme-btn" data-theme="system" aria-pressed="false">
-                        <svg class="icon-lg" aria-hidden="true"><use href="/static/icons.svg?v=7#monitor"/></svg>
-                        System
+                    <button type="button" class="theme-card" data-theme="system" aria-pressed="false">
+                        <span class="preview" aria-hidden="true">
+                            <span class="pv-side"></span>
+                            <span class="pv-main">
+                                <span class="pv-line"></span>
+                                <span class="pv-line short"></span>
+                            </span>
+                        </span>
+                        <span>System</span>
                     </button>
                 </div>
             </section>
 
-            <button type="submit" class="btn btn-primary btn-block">Save settings</button>
+            <div class="save-bar">
+                <button type="submit" class="btn btn-primary btn-block">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#check"/></svg>
+                    Save settings
+                </button>
+            </div>
         </form>
 
-        <h2 class="card-title mb-2 mt-8">Your data</h2>
+        {{/* ---------- DATA ---------- */}}
+        <div class="settings-section-head">
+            <span class="settings-section-icon">
+                <svg aria-hidden="true"><use href="/static/icons.svg?v=7#archive"/></svg>
+            </span>
+            <div>
+                <div class="settings-section-title">Your data</div>
+                <div class="settings-section-sub">Export and backups</div>
+            </div>
+        </div>
 
         <a href="/export" class="card link-card mb-4">
             <span class="tile">
@@ -134,7 +479,16 @@
             <svg class="icon trailing-icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
         </a>
 
-        <h2 class="card-title mb-2 mt-8">Account</h2>
+        {{/* ---------- ACCOUNT ---------- */}}
+        <div class="settings-section-head">
+            <span class="settings-section-icon">
+                <svg aria-hidden="true"><use href="/static/icons.svg?v=7#settings"/></svg>
+            </span>
+            <div>
+                <div class="settings-section-title">Account</div>
+                <div class="settings-section-sub">Password and sign-out</div>
+            </div>
+        </div>
 
         <a href="/account/change-password" class="card link-card mb-4">
             <span class="tile">
@@ -153,29 +507,26 @@
                 Log out{{if .Username}} ({{.Username}}){{end}}
             </button>
         </form>
+
+        <p class="note mt-8" style="color: var(--ink-faint); text-align: center;">
+            Budget Tracker v{{.Version}}
+        </p>
     </main>
 
     <template id="category-row-template">
-        <div class="category-item">
-            {{/*
-              A category's icon is worked out from its name, and only the
-              server knows that table. A row that does not exist yet has no
-              name the server has seen, so it shows the neutral tag until the
-              form is saved and the page comes back with the real icon.
-            */}}
-            <span class="category-icon" aria-hidden="true">
-                <svg class="icon-sm"><use href="/static/icons.svg?v=7#tag"/></svg>
+        <div class="cat-row">
+            <span class="cat-icon-box" aria-hidden="true">
+                <svg><use href="/static/icons.svg?v=7#tag"/></svg>
             </span>
             <input type="text" name="category" placeholder="New category" class="input" aria-label="Category name">
-            <span class="category-limit">
-                <span class="category-limit-symbol" aria-hidden="true">{{.CurrencySymbol}}</span>
+            <span class="cat-limit">
+                <span class="sym" aria-hidden="true">{{.CurrencySymbol}}</span>
                 <input type="number" name="category_limit" step="0.01" min="0"
-                       inputmode="decimal" placeholder="No limit" class="input"
+                       inputmode="decimal" placeholder="No limit"
                        aria-label="Monthly limit">
             </span>
-            <button type="button" class="btn-icon" data-remove-category>
+            <button type="button" class="btn-icon is-danger" data-remove-category aria-label="Remove category">
                 <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#close"/></svg>
-                <span class="visually-hidden">Remove category</span>
             </button>
         </div>
     </template>

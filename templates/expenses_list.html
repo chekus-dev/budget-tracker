@@ -10,11 +10,17 @@
         <div class="expense-body">
             <div class="expense-title">{{.Description}}</div>
             <div class="expense-meta">
-                {{printf "%.16s" .CreatedAt}}{{if .Category}} · {{.Category}}{{end}}
+                <span class="expense-date">{{printf "%.16s" .CreatedAt}}</span>
+                {{if .Category}}
+                <span class="expense-dot" aria-hidden="true">·</span>
+                <span class="expense-cat">{{.Category}}</span>
+                {{end}}
             </div>
         </div>
 
-        <span class="expense-amount">{{if .Income}}+{{else}}−{{end}}{{money $.CurrencySymbol .Amount}}</span>
+        <span class="expense-amount">
+            {{if .Income}}+{{else}}−{{end}}{{money $.CurrencySymbol .Amount}}
+        </span>
 
         <span class="expense-actions">
             <button type="button" class="btn-icon" data-edit-expense

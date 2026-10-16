@@ -16,20 +16,22 @@
         </div>
 
         {{if and .Details (not .Searching)}}
-        <div class="trend-year" role="group" aria-label="Month">
-            <a class="trend-year-btn" href="/archive?month={{.Details.PrevMonth}}" aria-label="Previous month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-left"/></svg>
-            </a>
-            <span class="trend-year-label">{{.Label}}</span>
-            {{if lt .Month .Details.CurrentMonth}}
-            <a class="trend-year-btn" href="/archive?month={{.Details.NextMonth}}" aria-label="Next month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
-            </a>
-            {{else}}
-            <span class="trend-year-btn" aria-disabled="true" aria-label="Next month">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
-            </span>
-            {{end}}
+        <div class="trend-top">
+            <div class="trend-year" role="group" aria-label="Month">
+                <a class="trend-year-btn" href="/archive?month={{.Details.PrevMonth}}" aria-label="Previous month">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-left"/></svg>
+                </a>
+                <span class="trend-year-label">{{.Label}}</span>
+                {{if lt .Month .Details.CurrentMonth}}
+                <a class="trend-year-btn" href="/archive?month={{.Details.NextMonth}}" aria-label="Next month">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
+                </a>
+                {{else}}
+                <span class="trend-year-btn" aria-disabled="true" aria-label="Next month">
+                    <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#chevron-right"/></svg>
+                </span>
+                {{end}}
+            </div>
         </div>
         {{end}}
 

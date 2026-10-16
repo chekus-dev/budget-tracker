@@ -37,7 +37,7 @@ import (
 
 // appVersion is shown in the footer of Settings and Terms, and returned by
 // /healthz. Bump it before each deploy so a bug report can name the build.
-const appVersion = "2.2.1"
+const appVersion = "2.2.2"
 
 const (
 	kindExpense = "expense"

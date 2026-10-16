@@ -4,15 +4,204 @@
 <head>
     <title>Trends — Budget Tracker</title>
     {{template "head.html" .}}
+    <style>
+        /* ---------- Trends page — scoped polish ---------- */
+
+        /* Section headings with eyebrow style */
+        .trend-section-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 28px 0 12px;
+        }
+        .trend-section-title {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -.01em;
+        }
+        .trend-section-link {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--brand-ink);
+            text-decoration: none;
+        }
+        .trend-section-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Stat cards — bigger, softer */
+        .trend-stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 480px) {
+            .trend-stats { gap: 8px; }
+        }
+        .trend-stat {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            box-shadow: var(--shadow-card);
+            padding: 14px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+        }
+        .trend-stat-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            background: var(--brand-soft);
+            color: var(--brand-ink);
+            flex: none;
+        }
+        .trend-stat-icon svg { width: 15px; height: 15px; }
+        .trend-stat.is-safe .trend-stat-icon { background: var(--safe-soft); color: var(--safe-ink); }
+        .trend-stat.is-over .trend-stat-icon { background: var(--over-soft); color: var(--over-ink); }
+        .trend-stat.is-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            border-color: transparent;
+            color: #fff;
+            box-shadow: 0 6px 18px -8px #4f46e580;
+        }
+        .trend-stat.is-primary .trend-stat-icon {
+            background: #ffffff29;
+            color: #fff;
+        }
+        .trend-stat.is-primary .trend-stat-label { color: #ffffffd9; }
+        .trend-stat-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            color: var(--ink-muted);
+            line-height: 1.3;
+        }
+        .trend-stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -.02em;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.15;
+            word-break: break-all;
+        }
+        @media (max-width: 480px) {
+            .trend-stat { padding: 12px 10px; }
+            .trend-stat-value { font-size: 15px; }
+        }
+
+        /* Chart cards — refine spacing */
+        .trend-chart-card {
+            padding: 20px 18px 16px;
+            margin-bottom: 16px;
+        }
+        .trend-chart-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .trend-chart-title {
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -.015em;
+            line-height: 1.2;
+        }
+        .trend-chart-caption {
+            font-size: 12.5px;
+            color: var(--ink-muted);
+            margin-top: 3px;
+        }
+        .trend-chart-total {
+            text-align: right;
+            flex: none;
+        }
+        .trend-chart-total .trend-total-main {
+            font-size: 26px;
+            letter-spacing: -.025em;
+            font-variant-numeric: tabular-nums;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .trend-chart-total .trend-total-frac {
+            font-size: 16px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            color: var(--ink-muted);
+        }
+
+        /* Category list — richer rows */
+        .trend-list-card {
+            padding: 18px 16px 8px;
+            margin-bottom: 16px;
+        }
+        .trend-list-card .trend-row {
+            padding: 14px 0;
+        }
+        .trend-list-card .trend-row:hover .trend-row-name {
+            color: var(--brand-ink);
+        }
+        .trend-tile svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Summary card — cleaner rows */
+        .trend-summary {
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .trend-summary .summary-row {
+            padding: 14px 0;
+        }
+        .trend-summary .summary-label {
+            font-size: 13px;
+        }
+        .trend-summary .summary-value {
+            font-size: 17px;
+            letter-spacing: -.01em;
+        }
+
+        /* Tabs — refine */
+        .trend-tabs {
+            margin-bottom: 20px;
+        }
+        .trend-tab {
+            background: var(--surface-2);
+            border: 1px solid transparent;
+        }
+        .trend-tab:hover {
+            background: var(--surface-3);
+        }
+        .trend-tab.is-active {
+            background: var(--brand-soft);
+            border-color: var(--brand);
+            color: var(--brand-ink);
+        }
+    </style>
 </head>
-<body class="has-chrome no-fab">    
+<body class="has-chrome no-fab">
     {{template "nav.html" .}}
 
     <main class="app-main">
 
-        <div class="trend-top">
-            
+        <div class="page-head">
+            <h2 class="page-title">Trends</h2>
+            <p class="page-sub">
+                {{if eq .View "balance"}}Income vs expenses, month by month
+                {{else if eq .View "target"}}How each month compared to your budget
+                {{else}}Where your money went this year{{end}}
+            </p>
+        </div>
 
+        <div class="trend-top">
             <div class="trend-year" role="group" aria-label="Year">
                 {{if .HasPrev}}
                 <a class="trend-year-btn" href="{{.PrevHref}}" aria-label="Previous year, {{.PrevYear}}">
@@ -32,15 +221,6 @@
             </div>
         </div>
 
-        <div class="page-head">
-            <h2 class="page-title">Trends</h2>
-            <p class="page-sub">
-                {{if eq .View "balance"}}Income vs expenses, month by month
-                {{else if eq .View "target"}}How each month compared to your budget
-                {{else}}Where your money went this year{{end}}
-            </p>
-        </div>
-
         <div class="trend-tabs" role="group" aria-label="Trends view">
             {{range .Tabs}}
             <a class="trend-tab{{if .Active}} is-active{{end}}" href="{{.Href}}"{{if .Active}} aria-current="true"{{end}}>
@@ -50,36 +230,36 @@
         </div>
 
         {{if .HasData}}
-        <div class="stat-grid stat-grid-three mb-4">
-            <div class="stat-card">
-                <div class="stat-icon is-safe">
-                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#trending-up"/></svg>
-                </div>
-                <div class="stat-label">Avg monthly income</div>
-                <div class="stat-value">{{money0 .CurrencySymbol .AvgIncome}}</div>
+        <div class="trend-stats">
+            <div class="trend-stat is-safe">
+                <span class="trend-stat-icon">
+                    <svg aria-hidden="true"><use href="/static/icons.svg?v=7#trending-up"/></svg>
+                </span>
+                <span class="trend-stat-label">Avg income</span>
+                <span class="trend-stat-value">{{money0 .CurrencySymbol .AvgIncome}}</span>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon is-over">
-                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#trending-down"/></svg>
-                </div>
-                <div class="stat-label">Avg monthly expense</div>
-                <div class="stat-value">{{money0 .CurrencySymbol .AvgExpense}}</div>
+            <div class="trend-stat is-over">
+                <span class="trend-stat-icon">
+                    <svg aria-hidden="true"><use href="/static/icons.svg?v=7#trending-down"/></svg>
+                </span>
+                <span class="trend-stat-label">Avg expense</span>
+                <span class="trend-stat-value">{{money0 .CurrencySymbol .AvgExpense}}</span>
             </div>
             {{if .HasIncome}}
-            <div class="stat-card is-primary">
-                <div class="stat-icon">
-                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#target"/></svg>
-                </div>
-                <div class="stat-label">Savings rate</div>
-                <div class="stat-value">{{printf "%.0f" .SavingsRate}}%</div>
+            <div class="trend-stat is-primary">
+                <span class="trend-stat-icon">
+                    <svg aria-hidden="true"><use href="/static/icons.svg?v=7#target"/></svg>
+                </span>
+                <span class="trend-stat-label">Savings rate</span>
+                <span class="trend-stat-value">{{printf "%.0f" .SavingsRate}}%</span>
             </div>
             {{else}}
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#calendar"/></svg>
-                </div>
-                <div class="stat-label">Months tracked</div>
-                <div class="stat-value">{{.AvgDivisor}}</div>
+            <div class="trend-stat">
+                <span class="trend-stat-icon">
+                    <svg aria-hidden="true"><use href="/static/icons.svg?v=7#calendar"/></svg>
+                </span>
+                <span class="trend-stat-label">Months tracked</span>
+                <span class="trend-stat-value">{{.AvgDivisor}}</span>
             </div>
             {{end}}
         </div>
@@ -87,16 +267,23 @@
 
         {{if .HasData}}
         <div class="trend-charts{{if .DonutJSON}} is-double{{end}}">
-            <section class="card trend-card" aria-labelledby="trend-title">
-                <div class="trend-head">
-                    <div>
-                        <h2 class="trend-title" id="trend-title">{{.Year}}</h2>
-                        <p class="trend-caption">{{.HeadCaption}}</p>
+            <section class="card trend-chart-card" aria-labelledby="trend-title">
+                <div class="trend-chart-head">
+                    <div style="min-width:0;">
+                        <h2 class="trend-chart-title" id="trend-title">{{.Year}}</h2>
+                        <p class="trend-chart-caption">{{.HeadCaption}}</p>
                     </div>
-                    <div class="trend-total">
-                        <p>
-                            {{if .HeadMoney}}<span class="amt"><span class="amt-v"><span class="trend-total-main">{{.HeadMain}}</span><span class="trend-total-frac">{{.HeadFrac}}</span></span><span class="amt-m trend-total-main" aria-hidden="true">{{bullets .HeadMain .HeadFrac}}</span></span>{{else}}<span class="trend-total-main">{{.HeadMain}}</span><span class="trend-total-frac">{{.HeadFrac}}</span>{{end}}
-                        </p>
+                    <div class="trend-chart-total">
+                        {{if .HeadMoney}}
+                        <span class="amt">
+                            <span class="amt-v">
+                                <span class="trend-total-main">{{.HeadMain}}</span><span class="trend-total-frac">{{.HeadFrac}}</span>
+                            </span>
+                            <span class="amt-m trend-total-main" aria-hidden="true">{{bullets .HeadMain .HeadFrac}}</span>
+                        </span>
+                        {{else}}
+                        <span class="trend-total-main">{{.HeadMain}}</span><span class="trend-total-frac">{{.HeadFrac}}</span>
+                        {{end}}
                     </div>
                 </div>
                 <div class="trend-chart-canvas">
@@ -105,11 +292,11 @@
             </section>
 
             {{if .DonutJSON}}
-            <section class="card trend-card" aria-labelledby="donut-title">
-                <div class="trend-head">
+            <section class="card trend-chart-card" aria-labelledby="donut-title">
+                <div class="trend-chart-head">
                     <div>
-                        <h2 class="trend-title" id="donut-title">By category</h2>
-                        <p class="trend-caption">Top spending categories</p>
+                        <h2 class="trend-chart-title" id="donut-title">By category</h2>
+                        <p class="trend-chart-caption">Top spending categories</p>
                     </div>
                 </div>
                 <div class="trend-donut-canvas">
@@ -121,7 +308,7 @@
         {{end}}
 
         {{if .NoBudget}}
-        <section class="card">
+        <section class="card" style="margin-bottom:16px;">
             <div class="empty">
                 <span class="empty-icon">
                     <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg?v=7#check"/></svg>
@@ -131,7 +318,7 @@
             </div>
         </section>
         {{else if not .HasData}}
-        <section class="card">
+        <section class="card" style="margin-bottom:16px;">
             <div class="empty">
                 <span class="empty-icon">
                     <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg?v=7#chart"/></svg>
@@ -144,10 +331,10 @@
 
         {{if eq .View "spending"}}
         {{if .Rows}}
-        <section class="card trend-list" aria-labelledby="trend-list-title">
-            <div class="section-head">
-                <h2 class="card-title" id="trend-list-title">Spending by category</h2>
-                <a class="trend-link" href="{{.SeeAllHref}}">See entries</a>
+        <section class="card trend-list-card" aria-labelledby="trend-list-title">
+            <div class="trend-section-head" style="margin-top:0;">
+                <h2 class="trend-section-title" id="trend-list-title">Spending by category</h2>
+                <a class="trend-section-link" href="{{.SeeAllHref}}">See entries →</a>
             </div>
 
             <ul class="trend-rows">
@@ -161,7 +348,12 @@
                             <span class="trend-row-name">{{.Name}}</span>
                             <span class="trend-row-meta">{{.Count}} transaction{{if ne .Count 1}}s{{end}}</span>
                         </span>
-                        <span class="trend-row-amount"><span class="amt"><span class="amt-v">{{.AmtMain}}<small>{{.AmtFrac}}</small></span><span class="amt-m" aria-hidden="true">{{bullets .AmtMain .AmtFrac}}</span></span></span>
+                        <span class="trend-row-amount">
+                            <span class="amt">
+                                <span class="amt-v">{{.AmtMain}}<small>{{.AmtFrac}}</small></span>
+                                <span class="amt-m" aria-hidden="true">{{bullets .AmtMain .AmtFrac}}</span>
+                            </span>
+                        </span>
                     </a>
                 </li>
                 {{end}}
@@ -181,7 +373,12 @@
                                 <span class="trend-row-name">{{.Name}}</span>
                                 <span class="trend-row-meta">{{.Count}} transaction{{if ne .Count 1}}s{{end}}</span>
                             </span>
-                            <span class="trend-row-amount"><span class="amt"><span class="amt-v">{{.AmtMain}}<small>{{.AmtFrac}}</small></span><span class="amt-m" aria-hidden="true">{{bullets .AmtMain .AmtFrac}}</span></span></span>
+                            <span class="trend-row-amount">
+                                <span class="amt">
+                                    <span class="amt-v">{{.AmtMain}}<small>{{.AmtFrac}}</small></span>
+                                    <span class="amt-m" aria-hidden="true">{{bullets .AmtMain .AmtFrac}}</span>
+                                </span>
+                            </span>
                         </a>
                     </li>
                     {{end}}
@@ -193,9 +390,9 @@
         {{end}}
 
         {{if and (eq .View "balance") .HasData}}
-        <section class="card trend-list" aria-labelledby="trend-summary-title">
-            <div class="section-head">
-                <h2 class="card-title" id="trend-summary-title">{{.Year}} in total</h2>
+        <section class="card trend-summary" aria-labelledby="trend-summary-title">
+            <div class="trend-section-head" style="margin-top:0;">
+                <h2 class="trend-section-title" id="trend-summary-title">{{.Year}} in total</h2>
             </div>
             <div class="summary-list">
                 <div class="summary-row">
@@ -215,9 +412,9 @@
         {{end}}
 
         {{if and (eq .View "target") .Months}}
-        <section class="card trend-list" aria-labelledby="trend-months-title">
-            <div class="section-head">
-                <h2 class="card-title" id="trend-months-title">Month by month</h2>
+        <section class="card trend-list-card" aria-labelledby="trend-months-title">
+            <div class="trend-section-head" style="margin-top:0;">
+                <h2 class="trend-section-title" id="trend-months-title">Month by month</h2>
                 <span class="hint mt-0">Budget {{money0 .CurrencySymbol .BudgetLimit}}</span>
             </div>
 
@@ -232,9 +429,13 @@
                                 {{if .Over}}<strong>Over budget</strong> by {{money0 $.CurrencySymbol .Diff}}{{else}}{{money0 $.CurrencySymbol .Diff}} under budget{{end}}
                             </span>
                         </span>
-                        <span class="trend-row-amount"><span class="amt"><span class="amt-v">{{.AmtMain}}<small>{{.AmtFrac}}</small></span><span class="amt-m" aria-hidden="true">{{bullets .AmtMain .AmtFrac}}</span></span></span>
+                        <span class="trend-row-amount">
+                            <span class="amt">
+                                <span class="amt-v">{{.AmtMain}}<small>{{.AmtFrac}}</small></span>
+                                <span class="amt-m" aria-hidden="true">{{bullets .AmtMain .AmtFrac}}</span>
+                            </span>
+                        </span>
                     </a>
-                    
                 </li>
                 {{end}}
             </ul>

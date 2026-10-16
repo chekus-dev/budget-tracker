@@ -39,11 +39,14 @@ type Goal struct {
 }
 
 // GoalGroup is one period's worth of active goals — a month or a year.
+// PercentDone counts both the open goals in this group and any completed
+// goals whose period matches, so a group with 1 open and 1 done reads 50%.
 type GoalGroup struct {
-	Period string
-	Scope  string
-	Label  string
-	Goals  []Goal
+	Period      string
+	Scope       string
+	Label       string
+	Goals       []Goal
+	PercentDone int
 }
 
 type GoalsPageData struct {
@@ -54,6 +57,12 @@ type GoalsPageData struct {
 	DefaultMonth string // "2026-10" — the create form's default
 	CurrentMonth string
 	CurrentYear  string
+
+	// Hero-card aggregates (all goals, active + completed).
+	TotalGoals  int
+	TotalOpen   int
+	TotalDone   int
+	PercentDone int
 }
 
 // goalPeriodLabel turns a scope+period pair into something a person reads.
@@ -148,6 +157,31 @@ func goalsHandler(w http.ResponseWriter, r *http.Request) {
 		groups[len(groups)-1].Goals = append(groups[len(groups)-1].Goals, g)
 	}
 
+	// Per-group completion: count how many goals in each period are already
+	// done (they live in the completed slice, not the active one), then
+	// compute done / (open + done) as a percentage.
+	completedByKey := map[string]int{}
+	for _, g := range completed {
+		completedByKey[g.Scope+":"+g.Period]++
+	}
+	for i := range groups {
+		key := groups[i].Scope + ":" + groups[i].Period
+		done := completedByKey[key]
+		total := len(groups[i].Goals) + done
+		if total > 0 {
+			groups[i].PercentDone = done * 100 / total
+		}
+	}
+
+	// Hero-card aggregates across everything.
+	totalOpen := len(active)
+	totalDone := len(completed)
+	totalGoals := totalOpen + totalDone
+	percentDone := 0
+	if totalGoals > 0 {
+		percentDone = totalDone * 100 / totalGoals
+	}
+
 	data := GoalsPageData{
 		PageChrome: PageChrome{
 			Username:       username,
@@ -159,6 +193,11 @@ func goalsHandler(w http.ResponseWriter, r *http.Request) {
 		DefaultMonth: currentMonth(),
 		CurrentMonth: currentMonth(),
 		CurrentYear:  time.Now().Format("2006"),
+
+		TotalGoals:  totalGoals,
+		TotalOpen:   totalOpen,
+		TotalDone:   totalDone,
+		PercentDone: percentDone,
 	}
 
 	if err := tmpl.ExecuteTemplate(w, "goals.html", data); err != nil {
