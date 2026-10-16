@@ -238,6 +238,10 @@ type AuthPageData struct {
 	// page); the secret key stays server-side and is never sent to the client.
 	// When no site key is configured the widget is omitted entirely.
 	RecaptchaSiteKey string
+
+	// Version is stamped onto every auth page so the login/register
+	// footers can print the build number.
+	Version string
 }
 
 type ChangePasswordPageData struct {
@@ -898,7 +902,7 @@ func resetLockoutMessage(wait time.Duration) string {
 
 func tooManyAttempts(w http.ResponseWriter, wait time.Duration) {
 	writeRetryAfter(w, wait)
-	tmpl.ExecuteTemplate(w, "login.html", AuthPageData{Error: loginLockoutMessage(wait)})
+	tmpl.ExecuteTemplate(w, "login.html", AuthPageData{Error: loginLockoutMessage(wait), Version: appVersion})
 }
 
 func tooManyResets(w http.ResponseWriter, wait time.Duration) {
@@ -1031,8 +1035,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			Username:         username,
 			Email:            email,
 			TermsChecked:     accepted,
-			RecaptchaSiteKey: recaptchaSiteKey(),
-		}
+			RecaptchaSiteKey: recaptchaSiteKey(), Version: appVersion}
 		reject := func(msg string) {
 			echo.Error = msg
 			tmpl.ExecuteTemplate(w, "register.html", echo)
@@ -1119,7 +1122,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/welcome", http.StatusSeeOther)
 		return
 	}
-	tmpl.ExecuteTemplate(w, "register.html", AuthPageData{RecaptchaSiteKey: recaptchaSiteKey()})
+	tmpl.ExecuteTemplate(w, "register.html", AuthPageData{RecaptchaSiteKey: recaptchaSiteKey(), Version: appVersion})
 }
 
 func termsHandler(w http.ResponseWriter, r *http.Request) {
@@ -1157,7 +1160,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 				tooManyAttempts(w, wait)
 				return
 			}
-			tmpl.ExecuteTemplate(w, "login.html", AuthPageData{Error: "Invalid username or password."})
+			tmpl.ExecuteTemplate(w, "login.html", AuthPageData{Error: "Invalid username or password.", Version: appVersion})
 			return
 		}
 		if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password)); err != nil {
@@ -1165,7 +1168,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 				tooManyAttempts(w, wait)
 				return
 			}
-			tmpl.ExecuteTemplate(w, "login.html", AuthPageData{Error: "Invalid username or password."})
+			tmpl.ExecuteTemplate(w, "login.html", AuthPageData{Error: "Invalid username or password.", Version: appVersion})
 			return
 		}
 
@@ -1182,7 +1185,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
-	tmpl.ExecuteTemplate(w, "login.html", AuthPageData{})
+	tmpl.ExecuteTemplate(w, "login.html", AuthPageData{Version: appVersion})
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
@@ -2291,8 +2294,8 @@ func verifyTemplatesRender() {
 			"Month": "2026-01", "Label": "January 2026",
 			"PrevMonth": "2025-12", "NextMonth": "2026-02", "CurrentMonth": "2026-01",
 		}},
-		{"login.html", AuthPageData{Error: "nope"}},
-		{"register.html", AuthPageData{RecaptchaSiteKey: "site-key", TermsChecked: true}},
+		{"login.html", AuthPageData{Error: "nope", Version: appVersion}},
+		{"register.html", AuthPageData{RecaptchaSiteKey: "site-key", TermsChecked: true, Version: appVersion}},
 		{"change-password.html", ChangePasswordPageData{
 			PageChrome: PageChrome{Username: "sam", CurrencySymbol: "₦"},
 		}},

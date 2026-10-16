@@ -1,4 +1,3 @@
-
 {{define "index.html"}}
 <!DOCTYPE html>
 <html lang="en">
@@ -267,6 +266,9 @@
         </div>
         {{end}}
         {{end}}
+        <p class="note mt-8" style="color: var(--ink-faint); text-align: center;">
+            Budget Tracker v{{.Version}}
+        </p>
     </main>
     {{if .DeletedID}}
     <template id="undo-template">
