@@ -5,34 +5,43 @@
     <title>Budget-Tracker. Admin · Audit log</title>
     {{template "head.html" .}}
     <style>
-        .admin-shell { width: 100%; max-width: 1060px; margin: 0 auto; padding: 24px 20px 80px; }
-        .admin-topbar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-        .admin-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-muted); }
-        .admin-title { font-size: 26px; font-weight: 700; letter-spacing: -0.025em; margin-top: 4px; }
-        .admin-nav { display: flex; gap: 6px; }
-        .admin-nav a { font-size: 13px; font-weight: 600; text-decoration: none; padding: 6px 14px; border-radius: 999px; color: var(--ink-muted); border: 1px solid var(--line); background: var(--surface); }
-        .admin-nav a:hover { color: var(--ink); border-color: var(--line-strong); }
-        .admin-nav a.is-active { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-ink); }
-        .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-        .filters a { display: inline-block; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; text-decoration: none; color: var(--ink-muted); background: var(--surface); border: 1px solid var(--line); font-family: var(--font-mono); }
-        .filters a:hover { color: var(--ink); border-color: var(--line-strong); }
-        .filters a.is-active { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-ink); }
-        .table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-        .table thead th { text-align: left; font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-muted); padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
-        .table tbody td { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
-        .table tbody tr:last-child td { border-bottom: 0; }
+        .admin-shell { width: 100%; max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+        
+        /* Top Navigation */
+        .admin-topbar { display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .admin-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 4px; }
+        .admin-title { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+        .admin-nav { display: flex; gap: 24px; }
+        .admin-nav a { font-size: 14px; font-weight: 500; text-decoration: none; color: var(--ink-muted); padding-bottom: 17px; margin-bottom: -17px; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
+        .admin-nav a:hover { color: var(--ink); }
+        .admin-nav a.is-active { color: var(--ink); border-bottom-color: var(--ink); }
+
+        /* Filters */
+        .filters { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+        .filters a { font-size: 13px; font-weight: 500; text-decoration: none; color: var(--ink-muted); padding-bottom: 10px; border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: var(--font-mono); }
+        .filters a:hover { color: var(--ink); }
+        .filters a.is-active { color: var(--ink); border-bottom-color: var(--brand); }
+
+        /* Data Table */
+        .admin-table-container { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); overflow: hidden; }
+        .table { width: 100%; border-collapse: collapse; text-align: left; }
+        .table thead th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-muted); padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+        .table tbody td { padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--ink); vertical-align: middle; }
+        .table tbody tr:last-child td { border-bottom: none; }
         .table tbody tr:hover { background: var(--surface-2); }
+
         .mono { font-family: var(--font-mono); font-size: 12px; }
-        .action { font-family: var(--font-mono); font-weight: 600; }
-        .action.is-danger { color: var(--over-ink); }
-        .empty { text-align: center; padding: 60px 20px; color: var(--ink-muted); font-size: 13.5px; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: 14px; }
+        .action { font-family: var(--font-mono); font-weight: 600; font-size: 12px; padding: 2px 6px; border-radius: 4px; background: var(--surface-3); }
+        .action.is-danger { color: var(--over-ink); background: var(--over-soft); }
+        .target-link { color: var(--brand-ink); text-decoration: none; font-weight: 500; }
+        .target-link:hover { text-decoration: underline; }
     </style>
 </head>
-<body>
+<body style="background: var(--canvas);">
     <main class="admin-shell">
         <div class="admin-topbar">
             <div>
-                <div class="admin-eyebrow">Internal · restricted</div>
+                <div class="admin-eyebrow">Internal · Restricted</div>
                 <h1 class="admin-title">Audit log</h1>
             </div>
             <nav class="admin-nav">
@@ -43,7 +52,7 @@
         </div>
 
         <div class="filters">
-            <a class="{{if eq .Filter ""}}is-active{{end}}" href="/admin/audit">All</a>
+            <a class="{{if eq .Filter ""}}is-active{{end}}" href="/admin/audit">All actions</a>
             <a class="{{if eq .Filter "disable"}}is-active{{end}}" href="/admin/audit?action=disable">disable</a>
             <a class="{{if eq .Filter "restore"}}is-active{{end}}" href="/admin/audit?action=restore">restore</a>
             <a class="{{if eq .Filter "force_logout"}}is-active{{end}}" href="/admin/audit?action=force_logout">force_logout</a>
@@ -53,30 +62,34 @@
         </div>
 
         {{if .Entries}}
-        <table class="table">
-            <thead>
-                <tr>
-                    <th style="width:150px">When</th>
-                    <th style="width:140px">Admin</th>
-                    <th style="width:140px">Target</th>
-                    <th style="width:130px">Action</th>
-                    <th>Note</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{range .Entries}}
-                <tr>
-                    <td class="mono">{{.When}}</td>
-                    <td class="mono">{{.Admin}}</td>
-                    <td><a href="/admin/users/{{.TargetID}}" style="color:var(--brand-ink);text-decoration:none">{{.TargetName}}</a></td>
-                    <td><span class="action{{if or (eq .Action "disable") (eq .Action "hard_delete")}} is-danger{{end}}">{{.Action}}</span></td>
-                    <td style="color:var(--ink-muted)">{{.Note}}</td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
+        <div class="admin-table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width:160px">Timestamp</th>
+                        <th style="width:140px">Admin</th>
+                        <th style="width:160px">Target User</th>
+                        <th style="width:140px">Action</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Entries}}
+                    <tr>
+                        <td class="mono" style="color:var(--ink-muted)">{{.When}}</td>
+                        <td class="mono">{{.Admin}}</td>
+                        <td><a href="/admin/users/{{.TargetID}}" class="target-link">{{.TargetName}}</a></td>
+                        <td><span class="action{{if or (eq .Action "disable") (eq .Action "hard_delete")}} is-danger{{end}}">{{.Action}}</span></td>
+                        <td style="color:var(--ink-muted)">{{.Note}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
         {{else}}
-        <div class="empty">No admin actions logged yet.</div>
+        <div style="text-align: center; padding: 64px 24px; color: var(--ink-muted); border: 1px dashed var(--line-strong); border-radius: 8px;">
+            No admin actions logged yet.
+        </div>
         {{end}}
     </main>
 </body>

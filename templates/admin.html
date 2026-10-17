@@ -5,45 +5,59 @@
     <title>Budget-Tracker. Admin · Users</title>
     {{template "head.html" .}}
     <style>
-        .admin-shell { width: 100%; max-width: 1060px; margin: 0 auto; padding: 24px 20px 80px; }
-        .admin-topbar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-        .admin-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-muted); }
-        .admin-title { font-size: 26px; font-weight: 700; letter-spacing: -0.025em; margin-top: 4px; }
-        .admin-nav { display: flex; gap: 6px; }
-        .admin-nav a { font-size: 13px; font-weight: 600; text-decoration: none; padding: 6px 14px; border-radius: 999px; color: var(--ink-muted); border: 1px solid var(--line); background: var(--surface); }
-        .admin-nav a:hover { color: var(--ink); border-color: var(--line-strong); }
-        .admin-nav a.is-active { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-ink); }
-        .admin-flash { background: var(--safe-soft); border: 1px solid var(--safe); color: var(--safe-ink); padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 600; margin-bottom: 14px; }
-        .admin-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
-        .admin-toolbar form { display: flex; gap: 8px; flex: 1; min-width: 240px; }
-        .admin-toolbar .input { flex: 1; }
-        .admin-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-        .admin-filter { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; text-decoration: none; color: var(--ink-muted); background: var(--surface); border: 1px solid var(--line); }
-        .admin-filter:hover { color: var(--ink); border-color: var(--line-strong); }
-        .admin-filter.is-active { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-ink); }
-        .admin-filter .n { font-variant-numeric: tabular-nums; opacity: 0.7; font-weight: 700; }
-        .admin-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-        .admin-table thead th { text-align: left; font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-muted); padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
-        .admin-table tbody td { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: middle; }
-        .admin-table tbody tr:last-child td { border-bottom: 0; }
-        .admin-table tbody tr:hover { background: var(--surface-2); }
-        .u-name { font-weight: 600; color: var(--ink); }
-        .u-email { font-size: 12px; color: var(--ink-muted); }
-        .u-id { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
-        .u-metric { font-variant-numeric: tabular-nums; font-size: 13px; }
-        .pill { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; }
-        .pill.is-deleted { background: var(--over-soft); color: var(--over-ink); }
-        .pill.is-active { background: var(--safe-soft); color: var(--safe-ink); }
-        .pill.is-inactive { background: var(--surface-3); color: var(--ink-muted); }
-        .pill.is-note { background: var(--near-soft); color: var(--near-ink); }
-        .admin-empty { text-align: center; padding: 60px 20px; color: var(--ink-muted); font-size: 13.5px; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: 14px; }
+        .admin-shell { width: 100%; max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+        
+        /* Top Navigation */
+        .admin-topbar { display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .admin-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 4px; }
+        .admin-title { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+        .admin-nav { display: flex; gap: 24px; }
+        .admin-nav a { font-size: 14px; font-weight: 500; text-decoration: none; color: var(--ink-muted); padding-bottom: 17px; margin-bottom: -17px; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
+        .admin-nav a:hover { color: var(--ink); }
+        .admin-nav a.is-active { color: var(--ink); border-bottom-color: var(--ink); }
+
+        /* Toolbar & Filters */
+        .admin-toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+        .admin-toolbar form { display: flex; gap: 8px; flex: 1; min-width: 280px; }
+        .admin-toolbar .input { flex: 1; border-radius: 6px; height: 38px; font-size: 13px; }
+        .admin-toolbar .btn { height: 38px; border-radius: 6px; padding: 0 16px; }
+        
+        .admin-filters { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+        .admin-filter { font-size: 13px; font-weight: 500; text-decoration: none; color: var(--ink-muted); padding-bottom: 10px; border-bottom: 2px solid transparent; margin-bottom: -1px; display: flex; align-items: center; gap: 6px; }
+        .admin-filter:hover { color: var(--ink); }
+        .admin-filter.is-active { color: var(--ink); border-bottom-color: var(--brand); }
+        .admin-filter .n { font-variant-numeric: tabular-nums; background: var(--surface-3); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+        /* Data Table */
+        .admin-table-container { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); overflow: hidden; }
+        .admin-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .admin-table thead th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-muted); padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--surface-2); white-space: nowrap; }
+        .admin-table tbody td { padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--ink); vertical-align: middle; }
+        .admin-table tbody tr:last-child td { border-bottom: none; }
+        .admin-table tbody tr:hover { background: var(--surface-2); cursor: pointer; }
+        
+        /* Alignment Classes */
+        .text-right { text-align: right !important; }
+        .num { font-variant-numeric: tabular-nums; }
+        
+        /* Typography inside table */
+        .u-name { font-weight: 500; }
+        .u-email { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+        .u-id { font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+        
+        /* Status Badges */
+        .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid transparent; }
+        .badge.is-deleted { background: var(--over-soft); color: var(--over-ink); border-color: color-mix(in srgb, var(--over) 20%, transparent); }
+        .badge.is-active { background: var(--safe-soft); color: var(--safe-ink); border-color: color-mix(in srgb, var(--safe) 20%, transparent); }
+        .badge.is-inactive { background: var(--surface-3); color: var(--ink-muted); border-color: var(--line); }
+        .badge.is-note { background: var(--near-soft); color: var(--near-ink); border-color: color-mix(in srgb, var(--near) 20%, transparent); }
     </style>
 </head>
-<body>
+<body style="background: var(--canvas);">
     <main class="admin-shell">
         <div class="admin-topbar">
             <div>
-                <div class="admin-eyebrow">Internal · restricted</div>
+                <div class="admin-eyebrow">Internal · Restricted</div>
                 <h1 class="admin-title">Users</h1>
             </div>
             <nav class="admin-nav">
@@ -52,8 +66,6 @@
                 <a href="/admin/audit">Audit log</a>
             </nav>
         </div>
-
-        {{if .Flash}}<div class="admin-flash">{{.Flash}}</div>{{end}}
 
         <div class="admin-toolbar">
             <form method="GET" action="/admin/users">
@@ -72,41 +84,45 @@
         </div>
 
         {{if .Users}}
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th style="width:60px">ID</th>
-                    <th>User</th>
-                    <th style="width:110px">Last seen</th>
-                    <th style="width:110px">Signed up</th>
-                    <th style="width:70px; text-align:right;">Txns</th>
-                    <th style="width:70px; text-align:right;">Goals</th>
-                    <th style="width:100px">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{range .Users}}
-                <tr onclick="window.location='/admin/users/{{.ID}}'" style="cursor:pointer">
-                    <td class="u-id">#{{.ID}}</td>
-                    <td>
-                        <div class="u-name">{{.Username}} {{if .HasNote}}<span class="pill is-note" style="margin-left:6px">Note</span>{{end}}</div>
-                        <div class="u-email">{{.Email}}</div>
-                    </td>
-                    <td class="u-metric">{{.LastSeenAt}}</td>
-                    <td class="u-metric">{{.SignedUpAt}}</td>
-                    <td class="u-metric" style="text-align:right;">{{.ExpenseCount}}</td>
-                    <td class="u-metric" style="text-align:right;">{{.GoalCount}}</td>
-                    <td>
-                        {{if .Deleted}}<span class="pill is-deleted">Disabled</span>
-                        {{else if eq .LastSeenAt "never"}}<span class="pill is-inactive">Inactive</span>
-                        {{else}}<span class="pill is-active">Active</span>{{end}}
-                    </td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
+        <div class="admin-table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width:60px">ID</th>
+                        <th>User</th>
+                        <th>Last seen</th>
+                        <th>Signed up</th>
+                        <th class="text-right">Txns</th>
+                        <th class="text-right">Goals</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Users}}
+                    <tr onclick="window.location='/admin/users/{{.ID}}'">
+                        <td class="u-id">#{{.ID}}</td>
+                        <td>
+                            <div class="u-name">{{.Username}} {{if .HasNote}}<span class="badge is-note" style="margin-left:6px">Note</span>{{end}}</div>
+                            <div class="u-email">{{.Email}}</div>
+                        </td>
+                        <td class="num">{{.LastSeenAt}}</td>
+                        <td class="num">{{.SignedUpAt}}</td>
+                        <td class="num text-right">{{.ExpenseCount}}</td>
+                        <td class="num text-right">{{.GoalCount}}</td>
+                        <td>
+                            {{if .Deleted}}<span class="badge is-deleted">Disabled</span>
+                            {{else if eq .LastSeenAt "never"}}<span class="badge is-inactive">Inactive</span>
+                            {{else}}<span class="badge is-active">Active</span>{{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
         {{else}}
-        <div class="admin-empty">No users match.</div>
+        <div style="text-align: center; padding: 64px 24px; color: var(--ink-muted); border: 1px dashed var(--line-strong); border-radius: 8px;">
+            No users match your criteria.
+        </div>
         {{end}}
     </main>
 </body>
