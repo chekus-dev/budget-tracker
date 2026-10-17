@@ -553,6 +553,7 @@ func main() {
 		"templates/admin.html",
 		"templates/admin_dashboard.html",
 		"templates/admin_audit.html",
+		"templates/admin_user.html",
 		"templates/notifications.html",
 	))
 	verifyTemplatesRender()
