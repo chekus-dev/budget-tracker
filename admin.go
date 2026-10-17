@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -801,4 +802,159 @@ func humanAgo(t time.Time) string {
 	default:
 		return t.Format("2 Jan 2006")
 	}
+}
+
+// ---------- Broadcast ----------
+
+// adminBroadcastHandler shows the form for sending one message to every
+// active user. POSTs go to adminBroadcastSendHandler.
+func adminBroadcastHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireDB(w) {
+		return
+	}
+	userID, username, _ := currentUser(r)
+	settings, err := loadSettings(userID)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	var count int
+	db.QueryRow(`SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`).Scan(&count)
+
+	data := map[string]interface{}{
+		"Username":           username,
+		"CurrencySymbol":     currencySymbol(settings.Currency),
+		"Version":            appVersion,
+		"UnreadMessageCount": unreadMessageCount(userID),
+		"RecipientCount":     count,
+		"Cleanup":            loadCleanupStats(),
+		"Flash":              strings.TrimSpace(r.URL.Query().Get("flash")),
+	}
+	if err := tmpl.ExecuteTemplate(w, "admin_broadcast.html", data); err != nil {
+		if !isClientDisconnect(err) {
+			log.Printf("failed to render admin_broadcast: %v", err)
+		}
+	}
+}
+
+// adminBroadcastSendHandler inserts one row per active user in a single
+// INSERT ... SELECT, so this is one round trip rather than one per user.
+// Requires the operator to type SEND, mirroring the confirm gate on
+// hard-delete, because it cannot be undone.
+func adminBroadcastSendHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireDB(w) || r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	adminID, _, _ := currentUser(r)
+
+	subject := strings.TrimSpace(r.FormValue("subject"))
+	body := strings.TrimSpace(r.FormValue("body"))
+	confirm := strings.TrimSpace(r.FormValue("confirm"))
+
+	if confirm != "SEND" {
+		http.Redirect(w, r, "/admin/broadcast?flash="+url.QueryEscape("Type SEND to confirm"), http.StatusSeeOther)
+		return
+	}
+	if body == "" {
+		http.Redirect(w, r, "/admin/broadcast?flash="+url.QueryEscape("Message body is required"), http.StatusSeeOther)
+		return
+	}
+	if len(subject) > 200 {
+		subject = subject[:200]
+	}
+	if len(body) > 4000 {
+		body = body[:4000]
+	}
+
+	res, err := db.Exec(`
+		INSERT INTO user_messages (user_id, admin_id, subject, body)
+		SELECT id, $1, $2, $3 FROM users WHERE deleted_at IS NULL`,
+		adminID, subject, body,
+	)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	n, _ := res.RowsAffected()
+	log.Printf("admin %d broadcast to %d users: %s", adminID, n, subject)
+	http.Redirect(w, r, "/admin/broadcast?flash="+url.QueryEscape(fmt.Sprintf("Sent to %d users", n)), http.StatusSeeOther)
+}
+
+// CleanupStats summarizes how many read messages fall into each age bucket,
+// so the broadcast page can show what each option would delete before the
+// operator commits.
+type CleanupStats struct {
+	TotalRead int
+	Unread    int
+	Read7d    int
+	Read30d   int
+	Read90d   int
+}
+
+func loadCleanupStats() CleanupStats {
+	var s CleanupStats
+	if db == nil {
+		return s
+	}
+	_ = db.QueryRow(`
+		SELECT
+			COUNT(*) FILTER (WHERE read_at IS NOT NULL),
+			COUNT(*) FILTER (WHERE read_at IS NULL),
+			COUNT(*) FILTER (WHERE read_at IS NOT NULL AND created_at < NOW() - INTERVAL '7 days'),
+			COUNT(*) FILTER (WHERE read_at IS NOT NULL AND created_at < NOW() - INTERVAL '30 days'),
+			COUNT(*) FILTER (WHERE read_at IS NOT NULL AND created_at < NOW() - INTERVAL '90 days')
+		FROM user_messages`,
+	).Scan(&s.TotalRead, &s.Unread, &s.Read7d, &s.Read30d, &s.Read90d)
+	return s
+}
+
+// adminBroadcastCleanupHandler permanently deletes messages users have already
+// read. Unread messages are never deleted — they have not been seen yet, and
+// dropping one would silently discard something a person has not acted on.
+//
+// Requires the operator to type DELETE, mirroring the SEND gate on broadcast
+// and the confirm gate on hard-delete, because cleanup cannot be undone.
+func adminBroadcastCleanupHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireDB(w) || r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	adminID, _, _ := currentUser(r)
+
+	age := strings.TrimSpace(r.FormValue("age"))
+	confirm := strings.TrimSpace(r.FormValue("confirm"))
+
+	if confirm != "DELETE" {
+		http.Redirect(w, r, "/admin/broadcast?flash="+url.QueryEscape("Type DELETE to confirm cleanup"), http.StatusSeeOther)
+		return
+	}
+
+	var query, label string
+	switch age {
+	case "7":
+		query = `DELETE FROM user_messages WHERE read_at IS NOT NULL AND created_at < NOW() - INTERVAL '7 days'`
+		label = "older than 7 days"
+	case "30":
+		query = `DELETE FROM user_messages WHERE read_at IS NOT NULL AND created_at < NOW() - INTERVAL '30 days'`
+		label = "older than 30 days"
+	case "90":
+		query = `DELETE FROM user_messages WHERE read_at IS NOT NULL AND created_at < NOW() - INTERVAL '90 days'`
+		label = "older than 90 days"
+	default:
+		query = `DELETE FROM user_messages WHERE read_at IS NOT NULL`
+		label = "any age"
+	}
+
+	res, err := db.Exec(query)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	n, _ := res.RowsAffected()
+	log.Printf("admin %d cleanup: deleted %d read messages (%s)", adminID, n, label)
+	// The audit row needs a target user id; cleanup is not scoped to one user,
+	// so the admin is recorded as the target with an action that names itself.
+	logAdminAction(adminID, adminID, "cleanup_read_messages", fmt.Sprintf("deleted %d (%s)", n, label))
+	http.Redirect(w, r, "/admin/broadcast?flash="+url.QueryEscape(fmt.Sprintf("Deleted %d read messages (%s)", n, label)), http.StatusSeeOther)
 }

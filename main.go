@@ -553,6 +553,7 @@ func main() {
 		"templates/admin.html",
 		"templates/admin_dashboard.html",
 		"templates/admin_audit.html",
+		"templates/admin_broadcast.html",
 		"templates/admin_user.html",
 		"templates/notifications.html",
 	))
@@ -606,6 +607,9 @@ func main() {
 	mux.HandleFunc("/notifications/all-read", requireAuth(notificationsAllReadHandler))
 	mux.HandleFunc("/notifications/", requireAuth(notificationsReadHandler))
 	mux.HandleFunc("/admin/audit", requireAdmin(adminAuditHandler))
+	mux.HandleFunc("/admin/broadcast", requireAdmin(adminBroadcastHandler))
+	mux.HandleFunc("/admin/broadcast/send", requireAdmin(adminBroadcastSendHandler))
+	mux.HandleFunc("/admin/broadcast/cleanup", requireAdmin(adminBroadcastCleanupHandler))
 
 	mux.HandleFunc("/healthz", healthzHandler)
 	mux.HandleFunc("/login", loginHandler)

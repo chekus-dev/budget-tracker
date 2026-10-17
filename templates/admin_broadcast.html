@@ -1,0 +1,161 @@
+{{define "admin_broadcast.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Budget-Tracker. Admin · Broadcast</title>
+    {{template "head.html" .}}
+    <style>
+        .admin-shell { width: 100%; max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+        .admin-topbar { display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+        .admin-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 4px; }
+        .admin-title { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+        .admin-nav { display: flex; gap: 24px; }
+        .admin-nav a { font-size: 14px; font-weight: 500; text-decoration: none; color: var(--ink-muted); padding-bottom: 17px; margin-bottom: -17px; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
+        .admin-nav a:hover { color: var(--ink); }
+        .admin-nav a.is-active { color: var(--ink); border-bottom-color: var(--ink); }
+
+        .admin-flash { background: var(--safe-soft); border-left: 3px solid var(--safe); color: var(--safe-ink); padding: 12px 16px; border-radius: 4px; font-size: 13px; font-weight: 500; margin-bottom: 24px; }
+
+        /* Stats strip */
+        .bcast-stats { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 32px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .bcast-stat { padding: 20px; border-right: 1px solid var(--line); }
+        .bcast-stat:last-child { border-right: none; }
+        .bcast-stat-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 8px; }
+        .bcast-stat-value { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+        .bcast-stat-sub { font-size: 12px; color: var(--ink-muted); margin-top: 4px; }
+        @media (max-width: 700px) { .bcast-stats { grid-template-columns: 1fr; } .bcast-stat { border-right: none; border-bottom: 1px solid var(--line); } }
+
+        /* Layout */
+        .bcast-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start; }
+        @media (max-width: 900px) { .bcast-grid { grid-template-columns: 1fr; } }
+
+        /* Cards */
+        .bcast-card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); overflow: hidden; }
+        .bcast-card-head { padding: 18px 20px; border-bottom: 1px solid var(--line); }
+        .bcast-card-title { font-size: 15px; font-weight: 600; color: var(--ink); margin: 0; }
+        .bcast-card-desc { font-size: 12.5px; color: var(--ink-muted); margin: 4px 0 0; line-height: 1.5; }
+        .bcast-card-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+        .bcast-card-foot { padding: 14px 20px; background: color-mix(in srgb, var(--canvas) 40%, var(--surface)); border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .bcast-card-foot-meta { font-size: 12px; color: var(--ink-muted); }
+
+        /* Form */
+        .bcast-field { display: flex; flex-direction: column; gap: 6px; }
+        .bcast-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); }
+        .bcast-field .input { width: 100%; }
+        .bcast-field textarea.input { resize: vertical; font-family: inherit; min-height: 160px; line-height: 1.55; }
+        .bcast-field .bcast-confirm { max-width: 200px; letter-spacing: 0.12em; font-weight: 600; text-transform: uppercase; }
+        .bcast-hint { font-size: 12px; color: var(--ink-muted); margin: 0; line-height: 1.5; }
+
+        .bcast-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: background 0.15s, border-color 0.15s; }
+        .bcast-btn--primary { background: var(--ink); color: var(--surface); }
+        .bcast-btn--primary:hover { background: color-mix(in srgb, var(--ink) 85%, black); }
+        .bcast-btn--danger { background: var(--over-soft); color: var(--over-ink); border-color: color-mix(in srgb, var(--over) 30%, transparent); }
+        .bcast-btn--danger:hover { background: color-mix(in srgb, var(--over-soft) 65%, var(--over) 35%); }
+
+        .bcast-card--danger .bcast-card-head { background: color-mix(in srgb, var(--over-soft) 35%, var(--surface)); }
+        .bcast-card--danger .bcast-card-title { color: var(--over-ink); }
+
+        .bcast-divider { height: 1px; background: var(--line); margin: 4px -20px; }
+    </style>
+</head>
+<body>
+<div class="admin-shell">
+    <div class="admin-topbar">
+        <div>
+            <div class="admin-eyebrow">Admin · Messaging</div>
+            <h1 class="admin-title">Broadcast</h1>
+        </div>
+        <nav class="admin-nav">
+            <a href="/admin">Dashboard</a>
+            <a href="/admin/users">Users</a>
+            <a href="/admin/audit">Audit log</a>
+            <a href="/admin/broadcast" class="is-active">Broadcast</a>
+        </nav>
+    </div>
+
+    {{if .Flash}}<div class="admin-flash">{{.Flash}}</div>{{end}}
+
+    <div class="bcast-stats">
+        <div class="bcast-stat">
+            <div class="bcast-stat-label">Recipients</div>
+            <div class="bcast-stat-value">{{.RecipientCount}}</div>
+            <div class="bcast-stat-sub">active users will receive this message</div>
+        </div>
+        <div class="bcast-stat">
+            <div class="bcast-stat-label">Unread messages</div>
+            <div class="bcast-stat-value">{{.Cleanup.Unread}}</div>
+            <div class="bcast-stat-sub">across all users · never auto-deleted</div>
+        </div>
+        <div class="bcast-stat">
+            <div class="bcast-stat-label">Read messages</div>
+            <div class="bcast-stat-value">{{.Cleanup.TotalRead}}</div>
+            <div class="bcast-stat-sub">eligible for cleanup</div>
+        </div>
+    </div>
+
+    <div class="bcast-grid">
+        <div class="bcast-card">
+            <div class="bcast-card-head">
+                <h2 class="bcast-card-title">Compose broadcast</h2>
+                <p class="bcast-card-desc">Appears in every active user's <a href="/notifications" style="color:inherit;text-decoration:underline;">notifications page</a>.</p>
+            </div>
+            <form method="POST" action="/admin/broadcast/send">
+                <div class="bcast-card-body">
+                    <div class="bcast-field">
+                        <label class="bcast-label" for="subject">Subject</label>
+                        <input class="input" type="text" name="subject" id="subject" placeholder="Optional — e.g. Welcome to version 2.3" maxlength="200">
+                    </div>
+                    <div class="bcast-field">
+                        <label class="bcast-label" for="body">Message</label>
+                        <textarea class="input" name="body" id="body" placeholder="Write the message users will read…" maxlength="4000" required></textarea>
+                        <p class="bcast-hint">Rendered as plain text. Short messages are easier to scan.</p>
+                    </div>
+                    <div class="bcast-divider"></div>
+                    <div class="bcast-field">
+                        <label class="bcast-label" for="confirm">Confirm</label>
+                        <input class="input bcast-confirm" type="text" name="confirm" id="confirm" placeholder="SEND" required autocomplete="off">
+                        <p class="bcast-hint">Type <strong>SEND</strong> to enable the button.</p>
+                    </div>
+                </div>
+                <div class="bcast-card-foot">
+                    <div class="bcast-card-foot-meta">Sending to <strong>{{.RecipientCount}}</strong> active users · cannot be unsent</div>
+                    <button type="submit" class="bcast-btn bcast-btn--primary">Send to all users</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bcast-card bcast-card--danger">
+            <div class="bcast-card-head">
+                <h2 class="bcast-card-title">Cleanup read messages</h2>
+                <p class="bcast-card-desc">Unread messages are never touched.</p>
+            </div>
+            <form method="POST" action="/admin/broadcast/cleanup">
+                <div class="bcast-card-body">
+                    <div class="bcast-field">
+                        <label class="bcast-label" for="age">Delete messages read</label>
+                        <select name="age" id="age" class="input" style="width:100%;">
+                            <option value="7">Older than 7 days · {{.Cleanup.Read7d}}</option>
+                            <option value="30">Older than 30 days · {{.Cleanup.Read30d}}</option>
+                            <option value="90">Older than 90 days · {{.Cleanup.Read90d}}</option>
+                            <option value="any">Any age · {{.Cleanup.TotalRead}}</option>
+                        </select>
+                    </div>
+                    <div class="bcast-field">
+                        <label class="bcast-label" for="cleanup-confirm">Confirm</label>
+                        <input class="input bcast-confirm" type="text" name="confirm" id="cleanup-confirm" placeholder="DELETE" required autocomplete="off">
+                        <p class="bcast-hint">Type <strong>DELETE</strong> to enable the button.</p>
+                    </div>
+                    <p class="bcast-hint" style="padding-top:4px; border-top:1px solid var(--line); margin-top:4px; padding-top:12px;">
+                        <strong>{{.Cleanup.Unread}}</strong> unread messages will be preserved.
+                    </p>
+                </div>
+                <div class="bcast-card-foot" style="justify-content:flex-end;">
+                    <button type="submit" class="bcast-btn bcast-btn--danger">Delete read messages</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+{{end}}
