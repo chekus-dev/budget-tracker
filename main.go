@@ -1058,6 +1058,18 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		// Admins are locked out of the regular app so they cannot
+		// accidentally change data on an ordinary user's behalf. /logout is
+		// exempt — without that exemption an admin could never sign out,
+		// because the sign-out handler itself goes through this middleware.
+		// ADMIN_LOCK_TO_PANEL=false disables the redirect entirely.
+		if adminLockToPanel() && adminIDs()[userID] {
+			if !strings.HasPrefix(r.URL.Path, "/logout") {
+				http.Redirect(w, r, "/admin", http.StatusSeeOther)
+				return
+			}
+		}
+
 		session := getSession(r)
 		session.Options.MaxAge = sessionMaxAge
 		if err := session.Save(r, w); err != nil {
@@ -3612,4 +3624,15 @@ func exportPDFHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `<footer class="doc-foot"><span>Budget Tracker — monthly expense export</span><span>Generated %s</span></footer>
 </div>
 </body></html>`, time.Now().Format("2 Jan 2006 15:04"))
+}
+
+// adminLockToPanel reports whether admins are bounced to /admin when they
+// try to use a regular app page. Set ADMIN_LOCK_TO_PANEL=false (or 0/no/off)
+// in .env to let admins use the normal pages. Unset defaults to true.
+func adminLockToPanel() bool {
+	v := strings.TrimSpace(os.Getenv("ADMIN_LOCK_TO_PANEL"))
+	if v == "" {
+		return true
+	}
+	return isTruthy(v)
 }

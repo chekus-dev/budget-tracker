@@ -85,6 +85,7 @@
             <div class="admin-id-tags">
                 {{if .User.DeletedAt}}<span class="badge is-deleted">Disabled {{.User.DeletedAt}}</span>
                 {{else}}<span class="badge is-active">Active</span>{{end}}
+                {{if .User.Inactive}}<span class="badge" style="background:#fef3c7; color:#92400e; border-color:#fcd34d;">Inactive</span>{{end}}
             </div>
         </div>
 
@@ -119,6 +120,33 @@
                     </ul>
                 </div>
                 
+                <div class="admin-card">
+                    <h2 class="admin-card-title">Send a Message</h2>
+                    <p style="padding:12px 20px 0; margin:0; font-size:12px; color:var(--ink-muted);">The user sees this on their <a href="/notifications" style="color:inherit; text-decoration:underline;">notifications page</a>.</p>
+                    <form method="POST" action="/admin/users/message/{{.User.ID}}" style="display:flex; flex-direction:column; gap:8px; padding:16px 20px;">
+                        <input class="input" type="text" name="subject" placeholder="Subject (optional)" maxlength="200">
+                        <textarea class="input" name="body" placeholder="Write a private message…" rows="3" maxlength="4000" required style="resize:vertical; font-family:inherit;"></textarea>
+                        <div style="display:flex; justify-content:flex-end;">
+                            <button type="submit" class="btn btn-primary">Send</button>
+                        </div>
+                    </form>
+                    {{if .SentMessages}}
+                    <div style="border-top:1px solid var(--line);">
+                        {{range .SentMessages}}
+                        <div class="note-item">
+                            <div class="note-head">
+                                <span class="note-author">{{.FromAdmin}}</span>
+                                <span>{{.When}}</span>
+                                {{if .Unread}}<span class="badge" style="background:#fef3c7; color:#92400e; border-color:#fcd34d;">Unread</span>{{end}}
+                            </div>
+                            {{if .Subject}}<div style="font-weight:600; margin-bottom:4px; font-size:13px;">{{.Subject}}</div>{{end}}
+                            <div class="note-body">{{.Body}}</div>
+                        </div>
+                        {{end}}
+                    </div>
+                    {{end}}
+                </div>
+
                 <div class="admin-card">
                     <h2 class="admin-card-title">Internal Notes</h2>
                     <form method="POST" action="/admin/users/notes/add/{{.User.ID}}" style="display:flex; gap:8px; padding:16px 20px; border-bottom:1px solid var(--line);">

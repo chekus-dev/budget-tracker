@@ -328,6 +328,11 @@ type AdminUserDetail struct {
 	LastSeenAt   string
 	DeletedAt    string
 	BannedReason string
+	// Inactive mirrors the "inactive" filter on the users list (no login
+	// in 30 days, or never), so the profile badge cannot contradict the
+	// filter the admin clicked from. Independent of DeletedAt: a user can
+	// be Active (not disabled) and Inactive (not recently seen) at once.
+	Inactive     bool
 	ExpenseCount int
 	GoalCount    int
 	TotalSpent   float64
@@ -410,6 +415,10 @@ func adminUserHandler(w http.ResponseWriter, r *http.Request) {
 		u.BannedReason = banned.String
 	}
 	u.Currency = currency.String
+	// Same rule the "inactive" filter uses: not disabled, and either never
+	// seen or last seen more than 30 days ago.
+	u.Inactive = !deletedAt.Valid &&
+		(!lastSeen.Valid || time.Since(lastSeen.Time) > 30*24*time.Hour)
 
 	db.QueryRow(`SELECT COUNT(*) FROM expenses WHERE user_id = $1 AND deleted_at IS NULL`, u.ID).Scan(&u.ExpenseCount)
 	db.QueryRow(`SELECT COUNT(*) FROM goals WHERE user_id = $1`, u.ID).Scan(&u.GoalCount)
@@ -472,10 +481,13 @@ func adminUserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	sentMessages := loadUserMessages(u.ID, 20)
+
 	data := map[string]interface{}{
-		"User":    u,
-		"Version": appVersion,
-		"Flash":   strings.TrimSpace(r.URL.Query().Get("flash")),
+		"User":         u,
+		"Version":      appVersion,
+		"Flash":        strings.TrimSpace(r.URL.Query().Get("flash")),
+		"SentMessages": sentMessages,
 	}
 	if err := tmpl.ExecuteTemplate(w, "admin_user.html", data); err != nil {
 		if !isClientDisconnect(err) {
