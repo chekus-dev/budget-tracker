@@ -4,7 +4,6 @@
 
 **A personal finance app built from the ground up — Go, PostgreSQL, and a vanilla JS frontend, with no framework hiding the hard parts.**
 
-<img width="1300" height="884" alt="Budget Tracker screenshot" src="https://github.com/user-attachments/assets/65d3a5c3-cd5e-448b-8515-a0c9923dc326" />
 
 <br/><br/>
 
