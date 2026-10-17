@@ -123,6 +123,9 @@ type PageChrome struct {
 	// Version is stamped onto every page's chrome so a template that shows
 	// the footer can print it without the handler passing it separately.
 	Version string
+
+	// UnreadMessageCount drives the notification badge in the top bar.
+	UnreadMessageCount int
 }
 
 type PageData struct {
@@ -547,6 +550,10 @@ func main() {
 		"templates/goals.html",
 		"templates/help.html",
 		"templates/welcome.html",
+		"templates/admin.html",
+		"templates/admin_dashboard.html",
+		"templates/admin_audit.html",
+		"templates/notifications.html",
 	))
 	verifyTemplatesRender()
 
@@ -579,9 +586,25 @@ func main() {
 	mux.HandleFunc("/goals/delete/", requireAuth(goalsDeleteHandler))
 	mux.HandleFunc("/welcome", requireAuth(welcomeHandler))
 
-	mux.HandleFunc("/admin", requireAdmin(func(w http.ResponseWriter, r *http.Request) {
-		http.NotFound(w, r) // placeholder until step 5
-	}))
+	// FIX 4: the previous comment claimed this redirected to /admin/users;
+	// it renders the dashboard. Comment now matches the handler.
+	// /admin renders the dashboard; /admin/users renders the user list.
+	mux.HandleFunc("/admin", requireAdmin(adminDashboardHandler))
+	mux.HandleFunc("/admin/users", requireAdmin(adminUsersHandler))
+	mux.HandleFunc("/admin/users/disable/", requireAdmin(adminDisableHandler))
+	mux.HandleFunc("/admin/users/restore/", requireAdmin(adminRestoreHandler))
+	mux.HandleFunc("/admin/users/force-logout/", requireAdmin(adminForceLogoutHandler))
+	mux.HandleFunc("/admin/users/send-reset/", requireAdmin(adminSendResetHandler))
+	mux.HandleFunc("/admin/users/hard-delete/", requireAdmin(adminHardDeleteHandler))
+	mux.HandleFunc("/admin/users/", requireAdmin(adminUserHandler))
+	mux.HandleFunc("/admin/users/export.csv", requireAdmin(adminExportCSVHandler))
+	mux.HandleFunc("/admin/users/notes/add/", requireAdmin(adminAddNoteHandler))
+	mux.HandleFunc("/admin/users/notes/delete/", requireAdmin(adminDeleteNoteHandler))
+	mux.HandleFunc("/admin/users/message/", requireAdmin(adminSendMessageHandler))
+	mux.HandleFunc("/notifications", requireAuth(notificationsHandler))
+	mux.HandleFunc("/notifications/all-read", requireAuth(notificationsAllReadHandler))
+	mux.HandleFunc("/notifications/", requireAuth(notificationsReadHandler))
+	mux.HandleFunc("/admin/audit", requireAdmin(adminAuditHandler))
 
 	mux.HandleFunc("/healthz", healthzHandler)
 	mux.HandleFunc("/login", loginHandler)
@@ -992,10 +1015,17 @@ func currentUser(r *http.Request) (id int, username string, ok bool) {
 	return idVal, nameVal, true
 }
 
+// FIX 2: the old comment said "Currently just the version", which is why
+// callers drifted and skipped the call. It sets two fields. Say so.
 // initChrome fills in the shared chrome fields that every handler needs and
-// none of them should have to remember. Currently just the version.
-func initChrome(c *PageChrome) {
+// none of them should have to remember: the app version and the unread
+// notification badge count. Handlers that build a PageChrome directly (or
+// that pass a map instead of a struct) must set both by hand — prefer
+// calling this so that a newly added chrome field is filled in everywhere
+// automatically instead of on the one page someone remembered to update.
+func initChrome(c *PageChrome, userID int) {
 	c.Version = appVersion
+	c.UnreadMessageCount = unreadMessageCount(userID)
 }
 
 func requireAuth(next http.HandlerFunc) http.HandlerFunc {
@@ -1252,7 +1282,7 @@ func changePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	render := func(d ChangePasswordPageData) {
 		d.Username = username
 		d.CurrencySymbol = currencySymbol(settings.Currency)
-		initChrome(&d.PageChrome)
+		initChrome(&d.PageChrome, userID)
 		if err := tmpl.ExecuteTemplate(w, "change-password.html", d); err != nil {
 			log.Printf("failed to render change-password template: %v", err)
 		}
@@ -2157,6 +2187,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		"DeletedID":    r.URL.Query().Get("deleted"),
 		"Version":      appVersion,
 	}
+	templateData["UnreadMessageCount"] = unreadMessageCount(userID)
 
 	if filters.Active() {
 		result, err := searchExpenses(userID, filters)
@@ -2400,7 +2431,9 @@ func verifyTemplatesRender() {
 			Categories:   []string{"Food", "Transport", "Bills"},
 			Form:         welcomeEntryForm{Description: "Lunch", Amount: "", Kind: kindExpense, Category: "Food"},
 		}},
-		{"terms.html", nil},
+		// FIX 5: termsHandler passes a map with Version, not nil. Match it so
+		// this smoke test actually exercises the template's real data shape.
+		{"terms.html", map[string]interface{}{"Version": appVersion}},
 	}
 
 	for _, p := range pages {
@@ -2666,16 +2699,20 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		percentOfBudget = (total / settings.BudgetLimit) * 100
 	}
 
+	// FIX 3: initChrome so UnreadMessageCount (and Version) are set the same
+	// way they are everywhere else.
+	chrome := PageChrome{
+		Username:       username,
+		CurrencySymbol: currencySymbol(settings.Currency),
+	}
+	initChrome(&chrome, userID)
+
 	if err := tmpl.ExecuteTemplate(w, "report.html", ReportData{
 		Count: len(amounts), Total: total, Average: average, Largest: largest,
 		BudgetLimit: settings.BudgetLimit, PercentOfBudget: percentOfBudget,
 		ChartExists: total > 0, CategoryTotals: breakdown,
 		CategoryJSON: template.JS(chartJSON),
-		PageChrome: PageChrome{
-			Username:       username,
-			CurrencySymbol: currencySymbol(settings.Currency),
-			Version:        appVersion,
-		},
+		PageChrome:   chrome,
 	}); err != nil {
 		log.Printf("failed to render report template: %v", err)
 	}
@@ -2694,7 +2731,8 @@ func settingsHandler(w http.ResponseWriter, r *http.Request) {
 	settings.Username = username
 	settings.CurrencySymbol = currencySymbol(settings.Currency)
 	settings.CurrencyList = currencyOptions
-	settings.Version = appVersion
+	// FIX 3: Version + UnreadMessageCount in one call.
+	initChrome(&settings.PageChrome, userID)
 
 	limits, err := categoryLimits(userID)
 	if err != nil {
@@ -2777,7 +2815,8 @@ func savedSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	settings.Username = username
 	settings.CurrencySymbol = currencySymbol(settings.Currency)
-	settings.Version = appVersion
+	// FIX 3: initChrome so Version + UnreadMessageCount are both set.
+	initChrome(&settings.PageChrome, userID)
 	tmpl.ExecuteTemplate(w, "saved-settings.html", settings)
 }
 
@@ -2840,19 +2879,22 @@ func archiveHandler(w http.ResponseWriter, r *http.Request) {
 			serverError(w, err)
 			return
 		}
+		// FIX 3: UnreadMessageCount in the map (archive passes maps, not a
+		// PageChrome struct, so initChrome can't be used here).
 		tmpl.ExecuteTemplate(w, "archive.html", map[string]interface{}{
-			"Searching":       true,
-			"Filters":         filters,
-			"Expenses":        result.Expenses,
-			"Spent":           result.Spent,
-			"Received":        result.Received,
-			"Net":             result.Received - result.Spent,
-			"Truncated":       result.Truncated,
-			"ResultLimit":     searchResultLimit,
-			"Username":        username,
-			"CurrencySymbol":  currencySymbol(settings.Currency),
-			"CategoryOptions": categoryOptions(settings.Categories, filters.Category),
-			"Version":         appVersion,
+			"Searching":          true,
+			"Filters":            filters,
+			"Expenses":           result.Expenses,
+			"Spent":              result.Spent,
+			"Received":           result.Received,
+			"Net":                result.Received - result.Spent,
+			"Truncated":          result.Truncated,
+			"ResultLimit":        searchResultLimit,
+			"Username":           username,
+			"CurrencySymbol":     currencySymbol(settings.Currency),
+			"CategoryOptions":    categoryOptions(settings.Categories, filters.Category),
+			"Version":            appVersion,
+			"UnreadMessageCount": unreadMessageCount(userID),
 		})
 		return
 	}
@@ -2899,11 +2941,13 @@ func archiveHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		categoryOptions := categoryOptions(settings.Categories, filters.Category)
+		// FIX 3: UnreadMessageCount.
 		tmpl.ExecuteTemplate(w, "archive.html", map[string]interface{}{
 			"Months": months, "Details": nil, "Username": username,
 			"CurrencySymbol": currencySymbol(settings.Currency),
 			"Filters":        filters, "CategoryOptions": categoryOptions,
-			"Version": appVersion,
+			"Version":            appVersion,
+			"UnreadMessageCount": unreadMessageCount(userID),
 		})
 		return
 	}
@@ -2917,11 +2961,13 @@ func archiveHandler(w http.ResponseWriter, r *http.Request) {
 		serverError(w, err)
 		return
 	}
+	// FIX 3: UnreadMessageCount.
 	tmpl.ExecuteTemplate(w, "archive.html", map[string]interface{}{
 		"Months": nil, "Details": data, "Label": monthLabel(month), "Month": month, "Username": username,
 		"CurrencySymbol": data.CurrencySymbol,
 		"Filters":        filters, "CategoryOptions": categoryOptions(settings.Categories, filters.Category),
-		"Version": appVersion,
+		"Version":            appVersion,
+		"UnreadMessageCount": unreadMessageCount(userID),
 	})
 }
 
@@ -3025,7 +3071,6 @@ func supportHandler(w http.ResponseWriter, r *http.Request) {
 		PageChrome: PageChrome{
 			Username:       username,
 			CurrencySymbol: currencySymbol(settings.Currency),
-			Version:        appVersion,
 		},
 		Email:        supportEmail,
 		Phone:        supportPhone,
@@ -3033,6 +3078,8 @@ func supportHandler(w http.ResponseWriter, r *http.Request) {
 		WhatsApp:     supportWhatsApp,
 		WhatsAppText: msg,
 	}
+	// FIX 3: Version + UnreadMessageCount.
+	initChrome(&data.PageChrome, userID)
 
 	if err := tmpl.ExecuteTemplate(w, "support.html", data); err != nil {
 		if !isClientDisconnect(err) {
@@ -3059,8 +3106,9 @@ func helpHandler(w http.ResponseWriter, r *http.Request) {
 	chrome := PageChrome{
 		Username:       username,
 		CurrencySymbol: currencySymbol(settings.Currency),
-		Version:        appVersion,
 	}
+	// FIX 3: Version + UnreadMessageCount.
+	initChrome(&chrome, userID)
 
 	if err := tmpl.ExecuteTemplate(w, "help.html", chrome); err != nil {
 		if !isClientDisconnect(err) {
@@ -3116,15 +3164,18 @@ func exportPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// FIX 3: UnreadMessageCount alongside Version (map-based data, so
+	// initChrome can't be used).
 	if err := tmpl.ExecuteTemplate(w, "export.html", map[string]interface{}{
-		"Username":       username,
-		"Month":          month,
-		"Label":          monthLabel(month),
-		"PrevMonth":      addMonth(month, -1),
-		"NextMonth":      addMonth(month, 1),
-		"CurrentMonth":   currentMonth(),
-		"CurrencySymbol": currencySymbol(settings.Currency),
-		"Version":        appVersion,
+		"Username":           username,
+		"Month":              month,
+		"Label":              monthLabel(month),
+		"PrevMonth":          addMonth(month, -1),
+		"NextMonth":          addMonth(month, 1),
+		"CurrentMonth":       currentMonth(),
+		"CurrencySymbol":     currencySymbol(settings.Currency),
+		"Version":            appVersion,
+		"UnreadMessageCount": unreadMessageCount(userID),
 	}); err != nil {
 		log.Printf("failed to render export template: %v", err)
 	}
@@ -3265,14 +3316,17 @@ func currencySymbol(code string) string {
 	return code + " "
 }
 
-/* amountMarkup renders a formatted amount together with a masked twin, which
-   is what the screenshot deterrents swap in when the window loses focus. Both
-   are in the DOM at all times, so toggling between them never reflows the page.
+/*
+amountMarkup renders a formatted amount together with a masked twin, which
 
-   The result is template.HTML, which opts out of html/template's automatic
-   escaping, so the symbol is escaped here by hand. currencySymbol falls back to
-   "<code> " for a code it does not recognise, and that value comes out of the
-   settings row, so it cannot be trusted to be a bare glyph. */
+	is what the screenshot deterrents swap in when the window loses focus. Both
+	are in the DOM at all times, so toggling between them never reflows the page.
+
+	The result is template.HTML, which opts out of html/template's automatic
+	escaping, so the symbol is escaped here by hand. currencySymbol falls back to
+	"<code> " for a code it does not recognise, and that value comes out of the
+	settings row, so it cannot be trusted to be a bare glyph.
+*/
 func amountMarkup(symbol string, v float64, prec int) template.HTML {
 	sign, abs := "", v
 	if v < 0 {
@@ -3289,15 +3343,18 @@ func amountMarkup(symbol string, v float64, prec int) template.HTML {
 			`</span><span class="amt-m" aria-hidden="true">` + mask + `</span></span>`)
 }
 
-/* bullets renders one bullet per character of the amount it stands in for, so
-   the mask occupies roughly the width of the figure it replaces. Some amounts
-   are split into a whole part and a fraction before they reach the template —
-   the trends headline and its rows size the fraction separately — so the parts
-   arrive as separate arguments and are counted together.
+/*
+bullets renders one bullet per character of the amount it stands in for, so
 
-   The result is template.HTML because the entity has to survive html/template's
-   escaping. Nothing that reaches it is page data: the value is a repetition
-   count and the entity is a literal. */
+	the mask occupies roughly the width of the figure it replaces. Some amounts
+	are split into a whole part and a fraction before they reach the template —
+	the trends headline and its rows size the fraction separately — so the parts
+	arrive as separate arguments and are counted together.
+
+	The result is template.HTML because the entity has to survive html/template's
+	escaping. Nothing that reaches it is page data: the value is a repetition
+	count and the entity is a literal.
+*/
 func bullets(parts ...string) template.HTML {
 	n := 0
 	for _, p := range parts {

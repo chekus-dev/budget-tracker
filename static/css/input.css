@@ -2494,3 +2494,28 @@ form:has(> .btn-danger) > .btn-danger {
 }
 .archive-results-head .page-title { font-size: 22px; margin-top: 4px; }
 .archive-results-head .page-sub { margin-top: 4px; }
+
+/* ============================================================
+   Notification bell + unread badge (top bar)
+   ============================================================ */
+.topbar-notify {
+  position: relative;
+}
+.topbar-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--over);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--surface);
+  pointer-events: none;
+}

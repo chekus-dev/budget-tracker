@@ -1,0 +1,129 @@
+{{define "admin_dashboard.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Budget-Tracker. Admin · Dashboard</title>
+    {{template "head.html" .}}
+    <style>
+        .admin-shell { width: 100%; max-width: 1060px; margin: 0 auto; padding: 24px 20px 80px; }
+        .admin-topbar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+        .admin-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-muted); }
+        .admin-title { font-size: 26px; font-weight: 700; letter-spacing: -0.025em; margin-top: 4px; }
+        .admin-nav { display: flex; gap: 6px; }
+        .admin-nav a { font-size: 13px; font-weight: 600; text-decoration: none; padding: 6px 14px; border-radius: 999px; color: var(--ink-muted); border: 1px solid var(--line); background: var(--surface); }
+        .admin-nav a:hover { color: var(--ink); border-color: var(--line-strong); }
+        .admin-nav a.is-active { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-ink); }
+        .admin-flash { background: var(--safe-soft); border: 1px solid var(--safe); color: var(--safe-ink); padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
+        @media (max-width: 780px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+        .kpi-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); }
+        .kpi-value { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin-top: 6px; font-variant-numeric: tabular-nums; }
+        .kpi-sub { font-size: 11px; color: var(--ink-muted); margin-top: 2px; }
+        .panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 780px) { .panel-grid { grid-template-columns: 1fr; } }
+        .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+        .panel-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+        .panel-title { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); }
+        .panel-head a { font-size: 12px; font-weight: 600; color: var(--brand-ink); text-decoration: none; }
+        .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+        .row:last-child { border-bottom: 0; }
+        .row-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .row-meta { font-size: 11.5px; color: var(--ink-muted); }
+        .row-when { margin-left: auto; font-size: 11px; color: var(--ink-muted); font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; }
+        .avatar { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: #fff; font-weight: 700; text-transform: uppercase; font-size: 13px; flex: none; }
+        .action-tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; background: var(--surface-3); color: var(--ink-muted); font-family: var(--font-mono); }
+        .action-tag.is-danger { background: var(--over-soft); color: var(--over-ink); }
+    </style>
+</head>
+<body>
+    <main class="admin-shell">
+        <div class="admin-topbar">
+            <div>
+                <div class="admin-eyebrow">Internal · restricted</div>
+                <h1 class="admin-title">Dashboard</h1>
+            </div>
+            <nav class="admin-nav">
+                <a href="/admin" class="is-active">Dashboard</a>
+                <a href="/admin/users">Users</a>
+                <a href="/admin/audit">Audit log</a>
+            </nav>
+        </div>
+
+        {{if .Flash}}<div class="admin-flash">{{.Flash}}</div>{{end}}
+
+        <div class="kpi-grid">
+            <div class="kpi">
+                <div class="kpi-label">Total users</div>
+                <div class="kpi-value">{{.TotalUsers}}</div>
+                <div class="kpi-sub">active accounts</div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-label">Active 7d</div>
+                <div class="kpi-value">{{.Active7d}}</div>
+                <div class="kpi-sub">seen this week</div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-label">New this week</div>
+                <div class="kpi-value">{{.NewThisWeek}}</div>
+                <div class="kpi-sub">signups</div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-label">Disabled</div>
+                <div class="kpi-value">{{.Disabled}}</div>
+                <div class="kpi-sub">locked accounts</div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-label">Admin actions</div>
+                <div class="kpi-value">{{.ActionsThisWeek}}</div>
+                <div class="kpi-sub">last 7 days</div>
+            </div>
+        </div>
+
+        <div class="panel-grid">
+            <section class="panel">
+                <div class="panel-head">
+                    <h2 class="panel-title">Recent signups</h2>
+                    <a href="/admin/users?filter=all">All users →</a>
+                </div>
+                {{if .RecentUsers}}
+                    {{range .RecentUsers}}
+                    <div class="row">
+                        <span class="avatar">{{printf "%.1s" .Username}}</span>
+                        <div style="min-width:0;">
+                            <div class="row-name">{{.Username}}</div>
+                            <div class="row-meta">{{.Email}}</div>
+                        </div>
+                        <span class="row-when">{{.SignedUpAt}}</span>
+                    </div>
+                    {{end}}
+                {{else}}
+                    <p style="font-size:13px;color:var(--ink-muted)">No users yet.</p>
+                {{end}}
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <h2 class="panel-title">Recent admin activity</h2>
+                    <a href="/admin/audit">Full log →</a>
+                </div>
+                {{if .RecentActions}}
+                    {{range .RecentActions}}
+                    <div class="row">
+                        <span class="action-tag{{if or (eq .Action "disable") (eq .Action "hard_delete")}} is-danger{{end}}">{{.Action}}</span>
+                        <div style="min-width:0;">
+                            <div class="row-name">{{.TargetName}} <span style="color:var(--ink-muted);font-weight:400">by {{.Admin}}</span></div>
+                            {{if .Note}}<div class="row-meta">{{.Note}}</div>{{end}}
+                        </div>
+                        <span class="row-when">{{.When}}</span>
+                    </div>
+                    {{end}}
+                {{else}}
+                    <p style="font-size:13px;color:var(--ink-muted)">No admin actions yet.</p>
+                {{end}}
+            </section>
+        </div>
+    </main>
+</body>
+</html>
+{{end}}

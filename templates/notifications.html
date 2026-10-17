@@ -1,0 +1,78 @@
+{{define "notifications.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Messages — Budget Tracker</title>
+    {{template "head.html" .}}
+</head>
+<body class="has-chrome no-fab">
+    {{template "nav.html" .}}
+
+    <main class="app-main">
+
+        <div class="page-head">
+            <h2 class="page-title">Messages</h2>
+            <p class="page-sub">
+                {{if .UnreadCount}}
+                    You have {{.UnreadCount}} unread message{{if ne .UnreadCount 1}}s{{end}}.
+                {{else if .Messages}}
+                    You're all caught up.
+                {{else}}
+                    Messages from support will appear here.
+                {{end}}
+            </p>
+        </div>
+
+        {{if .UnreadCount}}
+        <form method="POST" action="/notifications/all-read" style="margin-bottom:16px;">
+            <button type="submit" class="btn btn-soft btn-block">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#check"/></svg>
+                Mark all as read
+            </button>
+        </form>
+        {{end}}
+
+        {{if .Messages}}
+        <div class="stack">
+            {{range .Messages}}
+            <article class="card" style="{{if .Unread}}border-color:var(--brand);background:var(--brand-soft);{{end}}">
+                <header style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+                    <h3 style="font-size:15px;font-weight:700;margin:0;">
+                        {{if .Subject}}{{.Subject}}{{else}}Message from {{.FromAdmin}}{{end}}
+                    </h3>
+                    {{if .Unread}}
+                    <span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--brand);color:#fff;flex:none;">New</span>
+                    {{end}}
+                </header>
+                <p style="font-size:13.5px;line-height:1.55;white-space:pre-wrap;color:var(--ink);margin:0;">{{.Body}}</p>
+                <footer style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;">
+                    <span class="hint" style="margin:0;">From {{.FromAdmin}} · {{.When}}</span>
+                    {{if .Unread}}
+                    <form method="POST" action="/notifications/{{.ID}}/read" style="margin:0;">
+                        <button type="submit" class="btn btn-soft btn-sm">Mark as read</button>
+                    </form>
+                    {{else}}
+                    <span style="font-size:11px;color:var(--ink-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Read</span>
+                    {{end}}
+                </footer>
+            </article>
+            {{end}}
+        </div>
+        {{else}}
+        <div class="empty">
+            <span class="empty-icon">
+                <svg class="icon icon-xl" aria-hidden="true"><use href="/static/icons.svg?v=7#bell"/></svg>
+            </span>
+            <p class="empty-title">No messages</p>
+            <p class="empty-sub">When support sends you a message, it'll show up here and a red badge will appear on the bell icon at the top.</p>
+        </div>
+        {{end}}
+
+        <p class="note mt-8" style="color: var(--ink-faint); text-align: center;">
+            Budget Tracker v{{.Version}}
+        </p>
+
+    </main>
+</body>
+</html>
+{{end}}

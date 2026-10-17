@@ -19,6 +19,11 @@ CREATE TABLE IF NOT EXISTS users (
     reset_token VARCHAR(64),
     reset_token_expires TIMESTAMP,
     session_version INTEGER NOT NULL DEFAULT 0,
+    terms_accepted_at TIMESTAMP,
+    onboarded_at TIMESTAMP,
+    deleted_at TIMESTAMP,
+    last_seen_at TIMESTAMP,
+    admin_note TEXT NOT NULL DEFAULT '',
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -69,3 +74,44 @@ CREATE TABLE IF NOT EXISTS expenses (
 CREATE INDEX IF NOT EXISTS expenses_live_user_created_idx
     ON expenses (user_id, created_at DESC)
     WHERE deleted_at IS NULL;
+
+-- Admin audit and notes intentionally retain numeric IDs without foreign keys:
+-- audit history can outlive a deleted target or administrator.
+CREATE TABLE IF NOT EXISTS admin_actions (
+    id SERIAL PRIMARY KEY,
+    admin_id INTEGER NOT NULL,
+    target_id INTEGER NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS admin_actions_target_created_idx
+    ON admin_actions (target_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS admin_actions_created_idx
+    ON admin_actions (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS admin_notes (
+    id SERIAL PRIMARY KEY,
+    target_id INTEGER NOT NULL,
+    admin_id INTEGER NOT NULL,
+    body TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS admin_notes_target_created_idx
+    ON admin_notes (target_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS user_messages (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    admin_id INTEGER NOT NULL,
+    subject VARCHAR(200) NOT NULL DEFAULT '',
+    body TEXT NOT NULL,
+    is_system BOOLEAN NOT NULL DEFAULT FALSE,
+    read_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS user_messages_user_created_idx
+    ON user_messages (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS user_messages_unread_idx
+    ON user_messages (user_id)
+    WHERE read_at IS NULL;

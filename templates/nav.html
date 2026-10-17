@@ -13,6 +13,14 @@
   </a>
 
   <div class="topbar-actions">
+    <a href="/notifications" class="topbar-icon-btn topbar-notify"
+       aria-label="Messages{{if .UnreadMessageCount}} ({{.UnreadMessageCount}} unread){{end}}"
+       title="Messages">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#bell"/></svg>
+      {{if .UnreadMessageCount}}
+      <span class="topbar-badge">{{if gt .UnreadMessageCount 99}}99+{{else}}{{.UnreadMessageCount}}{{end}}</span>
+      {{end}}
+    </a>
     {{/*
       Hides every amount in the app. Lives in the top bar rather than on the
       home hero so it is reachable from any page, which matters because the

@@ -1,0 +1,84 @@
+{{define "admin_audit.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Budget-Tracker. Admin · Audit log</title>
+    {{template "head.html" .}}
+    <style>
+        .admin-shell { width: 100%; max-width: 1060px; margin: 0 auto; padding: 24px 20px 80px; }
+        .admin-topbar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+        .admin-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-muted); }
+        .admin-title { font-size: 26px; font-weight: 700; letter-spacing: -0.025em; margin-top: 4px; }
+        .admin-nav { display: flex; gap: 6px; }
+        .admin-nav a { font-size: 13px; font-weight: 600; text-decoration: none; padding: 6px 14px; border-radius: 999px; color: var(--ink-muted); border: 1px solid var(--line); background: var(--surface); }
+        .admin-nav a:hover { color: var(--ink); border-color: var(--line-strong); }
+        .admin-nav a.is-active { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-ink); }
+        .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+        .filters a { display: inline-block; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; text-decoration: none; color: var(--ink-muted); background: var(--surface); border: 1px solid var(--line); font-family: var(--font-mono); }
+        .filters a:hover { color: var(--ink); border-color: var(--line-strong); }
+        .filters a.is-active { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-ink); }
+        .table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+        .table thead th { text-align: left; font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-muted); padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+        .table tbody td { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
+        .table tbody tr:last-child td { border-bottom: 0; }
+        .table tbody tr:hover { background: var(--surface-2); }
+        .mono { font-family: var(--font-mono); font-size: 12px; }
+        .action { font-family: var(--font-mono); font-weight: 600; }
+        .action.is-danger { color: var(--over-ink); }
+        .empty { text-align: center; padding: 60px 20px; color: var(--ink-muted); font-size: 13.5px; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: 14px; }
+    </style>
+</head>
+<body>
+    <main class="admin-shell">
+        <div class="admin-topbar">
+            <div>
+                <div class="admin-eyebrow">Internal · restricted</div>
+                <h1 class="admin-title">Audit log</h1>
+            </div>
+            <nav class="admin-nav">
+                <a href="/admin">Dashboard</a>
+                <a href="/admin/users">Users</a>
+                <a href="/admin/audit" class="is-active">Audit log</a>
+            </nav>
+        </div>
+
+        <div class="filters">
+            <a class="{{if eq .Filter ""}}is-active{{end}}" href="/admin/audit">All</a>
+            <a class="{{if eq .Filter "disable"}}is-active{{end}}" href="/admin/audit?action=disable">disable</a>
+            <a class="{{if eq .Filter "restore"}}is-active{{end}}" href="/admin/audit?action=restore">restore</a>
+            <a class="{{if eq .Filter "force_logout"}}is-active{{end}}" href="/admin/audit?action=force_logout">force_logout</a>
+            <a class="{{if eq .Filter "send_reset"}}is-active{{end}}" href="/admin/audit?action=send_reset">send_reset</a>
+            <a class="{{if eq .Filter "hard_delete"}}is-active{{end}}" href="/admin/audit?action=hard_delete">hard_delete</a>
+            <a class="{{if eq .Filter "add_note"}}is-active{{end}}" href="/admin/audit?action=add_note">add_note</a>
+        </div>
+
+        {{if .Entries}}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="width:150px">When</th>
+                    <th style="width:140px">Admin</th>
+                    <th style="width:140px">Target</th>
+                    <th style="width:130px">Action</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Entries}}
+                <tr>
+                    <td class="mono">{{.When}}</td>
+                    <td class="mono">{{.Admin}}</td>
+                    <td><a href="/admin/users/{{.TargetID}}" style="color:var(--brand-ink);text-decoration:none">{{.TargetName}}</a></td>
+                    <td><span class="action{{if or (eq .Action "disable") (eq .Action "hard_delete")}} is-danger{{end}}">{{.Action}}</span></td>
+                    <td style="color:var(--ink-muted)">{{.Note}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        {{else}}
+        <div class="empty">No admin actions logged yet.</div>
+        {{end}}
+    </main>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,272 @@
+{{define "admin_user.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{{.User.Username}} · Admin</title>
+    {{template "head.html" .}}
+    <style>
+        .admin-shell { width: 100%; max-width: 960px; margin: 0 auto; padding: 24px 20px 80px; }
+        .admin-back { display: inline-block; font-size: 12.5px; font-weight: 600; color: var(--brand-ink); text-decoration: none; margin-bottom: 16px; }
+        .admin-back:hover { text-decoration: underline; }
+        .admin-flash { background: var(--safe-soft); border: 1px solid var(--safe); color: var(--safe-ink); padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+
+        .admin-id-head { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+        .admin-avatar { width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: #fff; display: grid; place-items: center; font-size: 22px; font-weight: 700; text-transform: uppercase; flex: none; }
+        .admin-id-name { font-size: 20px; font-weight: 700; letter-spacing: -0.015em; }
+        .admin-id-email { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
+        .admin-id-tags { display: flex; gap: 6px; margin-left: auto; }
+
+        .pill { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; }
+        .pill.is-deleted { background: var(--over-soft); color: var(--over-ink); }
+        .pill.is-active { background: var(--safe-soft); color: var(--safe-ink); }
+
+        .admin-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; margin-bottom: 14px; }
+        .admin-card-title { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 14px; }
+
+        .admin-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+        @media (max-width: 640px) { .admin-stats { grid-template-columns: repeat(2, 1fr); } }
+        .admin-stat { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+        .admin-stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); }
+        .admin-stat-value { font-size: 16px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+        .admin-meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 0; }
+        .admin-meta dt { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); }
+        .admin-meta dd { font-size: 13.5px; margin: 3px 0 0; font-variant-numeric: tabular-nums; }
+
+        /* --- Actions: each action is one flex row, description left / form right --- */
+        .admin-actions { display: flex; flex-direction: column; gap: 10px; }
+        .admin-action {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 16px;
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            flex-wrap: wrap;
+        }
+        .admin-action-copy { flex: 1; min-width: 220px; }
+        .admin-action-title { font-size: 13.5px; font-weight: 700; }
+        .admin-action-desc { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+        .admin-action-form { flex: none; display: flex; align-items: center; gap: 8px; }
+        .admin-action .btn { min-width: 130px; }
+        .admin-action.is-danger { border-color: color-mix(in srgb, var(--over) 40%, transparent); background: var(--over-soft); }
+        .admin-action.is-danger .admin-action-title { color: var(--over-ink); }
+        .admin-action.is-danger .admin-action-desc { color: var(--over-ink); opacity: 0.85; }
+
+        /* The disable action has a dropdown + text field, so it takes more width */
+        .admin-action-form .input { min-height: 40px; }
+        .admin-action-form .select-narrow { width: 180px; }
+        .admin-action-form .input-detail { width: 220px; }
+        .admin-action-form .input-confirm { width: 110px; font-family: var(--font-mono); font-size: 12px; text-align: center; }
+        @media (max-width: 640px) {
+            .admin-action { flex-direction: column; align-items: stretch; }
+            .admin-action-form { width: 100%; }
+            .admin-action-form .select-narrow,
+            .admin-action-form .input-detail { width: 100%; }
+            .admin-action-form .btn { flex: 1; }
+        }
+
+        .admin-inline-form { display: flex; gap: 8px; }
+        .admin-inline-form .input { flex: 1; }
+
+        .note { padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; }
+        .note-head { display: flex; align-items: baseline; gap: 8px; font-size: 11.5px; color: var(--ink-muted); margin-bottom: 6px; }
+        .note-author { font-weight: 700; color: var(--ink); font-family: var(--font-mono); }
+        .note-body { font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+        .note-del { margin-left: auto; background: none; border: 0; color: var(--over-ink); font-size: 11px; font-weight: 600; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+        .note-del:hover { background: var(--over-soft); }
+
+        .admin-log { display: flex; flex-direction: column; }
+        .admin-log-row { display: grid; grid-template-columns: 90px 130px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+        .admin-log-row:last-child { border-bottom: 0; }
+        .admin-log-when { color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+        .admin-log-admin { font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+        .admin-log-action { font-family: var(--font-mono); font-weight: 600; }
+        .admin-log-action.is-danger { color: var(--over-ink); }
+
+        .admin-tx { display: grid; grid-template-columns: 110px 70px 1fr auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; align-items: center; }
+        .admin-tx:last-child { border-bottom: 0; }
+        .admin-tx-when { color: var(--ink-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+        .admin-tx-kind { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); }
+        .admin-tx-amount { font-variant-numeric: tabular-nums; font-weight: 600; }
+        .admin-tx-amount.is-income { color: var(--safe-ink); }
+    </style>
+</head>
+<body>
+    <main class="admin-shell">
+        <a class="admin-back" href="/admin/users">← All users</a>
+
+        {{if .Flash}}<div class="admin-flash">{{.Flash}}</div>{{end}}
+
+        <div class="admin-id-head">
+            <div class="admin-avatar">{{printf "%.1s" .User.Username}}</div>
+            <div style="min-width:0;">
+                <div class="admin-id-name">{{.User.Username}}</div>
+                <div class="admin-id-email">{{.User.Email}}</div>
+            </div>
+            <div class="admin-id-tags">
+                {{if .User.DeletedAt}}<span class="pill is-deleted">Disabled {{.User.DeletedAt}}</span>
+                {{else}}<span class="pill is-active">Active</span>{{end}}
+            </div>
+        </div>
+
+        {{if .User.BannedReason}}
+        <div class="admin-card" style="border-color:color-mix(in srgb, var(--over) 40%, transparent); background:var(--over-soft);">
+            <div class="admin-card-title" style="color:var(--over-ink);">Reason on file</div>
+            <div style="font-size:13.5px;color:var(--over-ink);">{{.User.BannedReason}}</div>
+        </div>
+        {{end}}
+
+        <div class="admin-card">
+            <div class="admin-card-title">Account</div>
+            <dl class="admin-meta">
+                <div><dt>User ID</dt><dd>#{{.User.ID}}</dd></div>
+                <div><dt>Signed up</dt><dd>{{.User.SignedUpAt}}</dd></div>
+                <div><dt>Last seen</dt><dd>{{.User.LastSeenAt}}</dd></div>
+                <div><dt>Currency</dt><dd>{{.User.Currency}}</dd></div>
+            </dl>
+        </div>
+
+        <div class="admin-card">
+            <div class="admin-card-title">Activity</div>
+            <div class="admin-stats">
+                <div class="admin-stat"><div class="admin-stat-label">Transactions</div><div class="admin-stat-value">{{.User.ExpenseCount}}</div></div>
+                <div class="admin-stat"><div class="admin-stat-label">Goals</div><div class="admin-stat-value">{{.User.GoalCount}}</div></div>
+                <div class="admin-stat"><div class="admin-stat-label">Total spent</div><div class="admin-stat-value">{{printf "%.0f" .User.TotalSpent}}</div></div>
+                <div class="admin-stat"><div class="admin-stat-label">Total received</div><div class="admin-stat-value">{{printf "%.0f" .User.TotalIncome}}</div></div>
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <div class="admin-card-title">Internal notes</div>
+            <form class="admin-inline-form" method="POST" action="/admin/users/notes/add/{{.User.ID}}" style="margin-bottom:12px;">
+                <input class="input" type="text" name="body" placeholder="Add a note…" maxlength="2000" required>
+                <button type="submit" class="btn btn-primary">Add</button>
+            </form>
+            {{if .User.Notes}}
+                {{range .User.Notes}}
+                <div class="note">
+                    <div class="note-head">
+                        <span class="note-author">{{.Admin}}</span>
+                        <span>{{.When}}</span>
+                        <form method="POST" action="/admin/users/notes/delete/{{.ID}}" onsubmit="return confirm('Delete this note?')" style="margin-left:auto;">
+                            <button type="submit" class="note-del">Delete</button>
+                        </form>
+                    </div>
+                    <div class="note-body">{{.Body}}</div>
+                </div>
+                {{end}}
+            {{else}}
+                <p style="font-size:12.5px;color:var(--ink-muted)">No notes yet.</p>
+            {{end}}
+        </div>
+
+        <div class="admin-card">
+            <div class="admin-card-title">Actions</div>
+            <div class="admin-actions">
+
+                <div class="admin-action">
+                    <div class="admin-action-copy">
+                        <div class="admin-action-title">Send password reset</div>
+                        <div class="admin-action-desc">Emails a fresh 6-digit reset code to {{.User.Email}}.</div>
+                    </div>
+                    <form class="admin-action-form" method="POST" action="/admin/users/send-reset/{{.User.ID}}">
+                        <button type="submit" class="btn btn-soft">Send reset</button>
+                    </form>
+                </div>
+
+                <div class="admin-action">
+                    <div class="admin-action-copy">
+                        <div class="admin-action-title">Force sign-out</div>
+                        <div class="admin-action-desc">Invalidates every active session immediately.</div>
+                    </div>
+                    <form class="admin-action-form" method="POST" action="/admin/users/force-logout/{{.User.ID}}">
+                        <button type="submit" class="btn btn-soft">Force out</button>
+                    </form>
+                </div>
+
+                {{if .User.DeletedAt}}
+                <div class="admin-action">
+                    <div class="admin-action-copy">
+                        <div class="admin-action-title">Restore account</div>
+                        <div class="admin-action-desc">Re-enables sign-in. No data was removed.</div>
+                    </div>
+                    <form class="admin-action-form" method="POST" action="/admin/users/restore/{{.User.ID}}">
+                        <button type="submit" class="btn btn-primary">Restore</button>
+                    </form>
+                </div>
+                {{else}}
+                <div class="admin-action is-danger">
+                    <div class="admin-action-copy">
+                        <div class="admin-action-title">Disable account</div>
+                        <div class="admin-action-desc">Locks the user out immediately. Reversible.</div>
+                    </div>
+                    <form class="admin-action-form" method="POST" action="/admin/users/disable/{{.User.ID}}">
+                        <select class="input select-narrow" name="category" required>
+                            <option value="">Reason…</option>
+                            <option value="Terms violation">Terms violation</option>
+                            <option value="Fraud or abuse">Fraud or abuse</option>
+                            <option value="Spam">Spam</option>
+                            <option value="Payment dispute">Payment dispute</option>
+                            <option value="User request">User request</option>
+                            <option value="Inactive cleanup">Inactive cleanup</option>
+                            <option value="Legal or compliance">Legal or compliance</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <input class="input input-detail" type="text" name="reason" placeholder="Detail (optional)" maxlength="400">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Disable {{.User.Username}}? They will be signed out immediately.')">Disable</button>
+                    </form>
+                </div>
+                {{end}}
+
+                <div class="admin-action is-danger">
+                    <div class="admin-action-copy">
+                        <div class="admin-action-title">Permanently delete</div>
+                        <div class="admin-action-desc">Erases the account and every trace. Type DELETE to confirm.</div>
+                    </div>
+                    <form class="admin-action-form" method="POST" action="/admin/users/hard-delete/{{.User.ID}}">
+                        <input class="input input-confirm" type="text" name="confirm" placeholder="DELETE">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Permanently erase every trace of {{.User.Username}}?')">Erase</button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+
+        {{if .User.RecentTx}}
+        <div class="admin-card">
+            <div class="admin-card-title">Last 10 transactions</div>
+            {{range .User.RecentTx}}
+            <div class="admin-tx">
+                <span class="admin-tx-when">{{.When}}</span>
+                <span class="admin-tx-kind">{{.Kind}}</span>
+                <span>{{.Desc}}{{if .Category}} <span style="color:var(--ink-muted)">· {{.Category}}</span>{{end}}</span>
+                <span class="admin-tx-amount{{if eq .Kind "income"}} is-income{{end}}">{{printf "%.0f" .Amount}}</span>
+            </div>
+            {{end}}
+        </div>
+        {{end}}
+
+        {{if .User.Recent}}
+        <div class="admin-card">
+            <div class="admin-card-title">Admin actions on this account</div>
+            <div class="admin-log">
+                {{range .User.Recent}}
+                <div class="admin-log-row">
+                    <span class="admin-log-when">{{.When}}</span>
+                    <span class="admin-log-admin">{{.Admin}}</span>
+                    <span>
+                        <span class="admin-log-action{{if or (eq .Action "disable") (eq .Action "hard_delete")}} is-danger{{end}}">{{.Action}}</span>
+                        {{if .Note}}<span style="color:var(--ink-muted)"> — {{.Note}}</span>{{end}}
+                    </span>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        {{end}}
+    </main>
+</body>
+</html>
+{{end}}

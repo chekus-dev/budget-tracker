@@ -17,8 +17,14 @@ builds on the one before it, so **they must be applied in order**.
 | 010 | `010_rate_limits.sql` | Shared login and password-reset rate limits |
 | 011 | `011_session_version.sql` | Invalidates sessions after password changes or resets |
 | 012 | `012_remove_account_theme.sql` | Removes the obsolete account-level theme preference |
+| 013 | `013_unique_identity_case_insensitive.sql` | Enforces case-insensitive username and email uniqueness |
+| 014 | `014_amount_must_be_positive.sql` | Rejects non-positive expense amounts |
+| 015 | `015_schema_migrations.sql` | Adds migration tracking |
+| 016 | `016_goals.sql` | Adds user goals |
+| 017 | `017_add_onboarding.sql` | Records completion of the welcome flow |
+| 018 | `018_admin_portal.sql` | Adds admin account fields, audit logs, notes, and user messages |
 
-Running all twelve against an empty database produces the complete schema the
+Running all eighteen against an empty database produces the complete schema the
 app expects.
 
 ## Applying them
