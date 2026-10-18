@@ -958,3 +958,47 @@ func adminBroadcastCleanupHandler(w http.ResponseWriter, r *http.Request) {
 	logAdminAction(adminID, adminID, "cleanup_read_messages", fmt.Sprintf("deleted %d (%s)", n, label))
 	http.Redirect(w, r, "/admin/broadcast?flash="+url.QueryEscape(fmt.Sprintf("Deleted %d read messages (%s)", n, label)), http.StatusSeeOther)
 }
+
+func adminAppearanceHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireDB(w) {
+		return
+	}
+	adminID, _, _ := currentUser(r)
+
+	if r.Method == http.MethodPost {
+		surface := strings.TrimSpace(r.FormValue("surface"))
+		palette := strings.TrimSpace(r.FormValue("palette"))
+		if surface != "light" && surface != "dark" {
+			surface = "light"
+		}
+		validPalette := map[string]bool{"slate": true, "navy": true, "forest": true, "burgundy": true, "graphite": true}
+		if !validPalette[palette] {
+			palette = "slate"
+		}
+		if _, err := db.Exec(
+			`INSERT INTO admin_prefs (admin_id, surface, palette) VALUES ($1, $2, $3)
+			 ON CONFLICT (admin_id) DO UPDATE SET surface = EXCLUDED.surface, palette = EXCLUDED.palette`,
+			adminID, surface, palette,
+		); err != nil {
+			serverError(w, err)
+			return
+		}
+		http.Redirect(w, r, "/admin/appearance", http.StatusSeeOther)
+		return
+	}
+
+	var surface, palette string
+	err := db.QueryRow(`SELECT surface, palette FROM admin_prefs WHERE admin_id = $1`, adminID).Scan(&surface, &palette)
+	if err != nil {
+		surface, palette = "light", "slate"
+	}
+	userName, _, _ := currentUser(r)
+
+	tmpl.ExecuteTemplate(w, "admin_appearance.html", map[string]interface{}{
+		"Username":           userName,
+		"Version":            appVersion,
+		"Surface":            surface,
+		"Palette":            palette,
+		"UnreadMessageCount": unreadMessageCount(adminID),
+	})
+}

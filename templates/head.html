@@ -57,11 +57,13 @@
       }
     };
 
-    try {
-      window.budgetTheme.apply(window.budgetTheme.current());
-    } catch (e) {
-      root.classList.add('light');
-      root.classList.remove('dark');
+    if (!location.pathname.startsWith('/admin')) {
+      try {
+        window.budgetTheme.apply(window.budgetTheme.current());
+      } catch (e) {
+        root.classList.add('light');
+        root.classList.remove('dark');
+      }
     }
 
     /* Same reasoning as the theme above: applied before first paint so a
@@ -74,4 +76,8 @@
     } catch (e) {}
   })();
 </script>
+
+
+<link rel="stylesheet" href="/static/css/admin.css?v=2">
+<script src="/static/js/admin-theme.js?v=1" defer></script>
 {{end}}

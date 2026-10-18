@@ -1,0 +1,43 @@
+/* Admin theme system — CSS-only, follows OS preference */
+:root[data-scope="admin"] { --brand: #475569; --brand-ink: #334155; --brand-soft: #f1f5f9; }
+:root[data-scope="admin"][data-palette="slate"]    { --brand: #475569; --brand-ink: #334155; --brand-soft: #f1f5f9; }
+:root[data-scope="admin"][data-palette="navy"]     { --brand: #1e3a8a; --brand-ink: #172554; --brand-soft: #eff6ff; }
+:root[data-scope="admin"][data-palette="forest"]   { --brand: #14532d; --brand-ink: #052e16; --brand-soft: #f0fdf4; }
+:root[data-scope="admin"][data-palette="burgundy"] { --brand: #7f1d1d; --brand-ink: #450a0a; --brand-soft: #fef2f2; }
+:root[data-scope="admin"][data-palette="graphite"] { --brand: #111827; --brand-ink: #030712; --brand-soft: #f3f4f6; }
+
+/* Palette Accents */
+:root[data-scope="admin"] .admin-nav a.is-active { color: var(--brand) !important; border-bottom-color: var(--brand) !important; }
+:root[data-scope="admin"] .admin-eyebrow { color: var(--brand) !important; }
+:root[data-scope="admin"] .btn.btn-primary, :root[data-scope="admin"] .bcast-btn--primary { background: var(--brand) !important; border-color: var(--brand) !important; color: #fff !important; }
+:root[data-scope="admin"] .btn.btn-primary:hover, :root[data-scope="admin"] .bcast-btn--primary:hover { background: var(--brand-ink) !important; border-color: var(--brand-ink) !important; }
+
+/* Auto Dark Mode */
+@media (prefers-color-scheme: dark) {
+  :root[data-scope="admin"], :root[data-scope="admin"].light, :root[data-scope="admin"].dark {
+    color-scheme: dark;
+    --surface: #111a2e !important; --canvas: #020617 !important; --ink: #e2e8f0 !important;
+    --ink-muted: #94a3b8 !important; --line: #1f2a44 !important; --line-strong: #334155 !important;
+    --brand-soft: #1e293b !important;
+  }
+  :root[data-scope="admin"] body { background: #020617 !important; color: #e2e8f0 !important; }
+  :root[data-scope="admin"] .admin-card, :root[data-scope="admin"] .panel, :root[data-scope="admin"] .bcast-card, :root[data-scope="admin"] .kpi-bar, :root[data-scope="admin"] .bcast-stats {
+    background: #111a2e !important; border-color: #1f2a44 !important; box-shadow: none !important;
+  }
+  :root[data-scope="admin"] h1, :root[data-scope="admin"] h2, :root[data-scope="admin"] h3, :root[data-scope="admin"] .admin-title, :root[data-scope="admin"] .bcast-card-title, :root[data-scope="admin"] .kpi-value, :root[data-scope="admin"] .bcast-stat-value, :root[data-scope="admin"] td {
+    color: #e2e8f0 !important;
+  }
+  :root[data-scope="admin"] .admin-nav a, :root[data-scope="admin"] .admin-eyebrow, :root[data-scope="admin"] .bcast-card-desc, :root[data-scope="admin"] .bcast-stat-label, :root[data-scope="admin"] .bcast-card-foot-meta, :root[data-scope="admin"] .bcast-hint, :root[data-scope="admin"] .panel-head a {
+    color: #94a3b8 !important;
+  }
+  :root[data-scope="admin"] .admin-nav a.is-active, :root[data-scope="admin"] .admin-nav a:hover { color: #e2e8f0 !important; border-bottom-color: var(--brand) !important; }
+  :root[data-scope="admin"] .input, :root[data-scope="admin"] input, :root[data-scope="admin"] textarea, :root[data-scope="admin"] select {
+    background: #0b1220 !important; color: #e2e8f0 !important; border-color: #1f2a44 !important;
+  }
+  :root[data-scope="admin"] .admin-topbar, :root[data-scope="admin"] .panel-head, :root[data-scope="admin"] .bcast-card-head, :root[data-scope="admin"] .bcast-card-foot, :root[data-scope="admin"] .kpi, :root[data-scope="admin"] .bcast-stat {
+    border-color: #1f2a44 !important;
+  }
+  :root[data-scope="admin"] table, :root[data-scope="admin"] td, :root[data-scope="admin"] th { border-color: #1f2a44 !important; color: #cbd5e1 !important; }
+  :root[data-scope="admin"] .bcast-card-foot { background: #0e1626 !important; }
+  #admin-theme-btn, #admin-theme-pop { display: none !important; }
+}

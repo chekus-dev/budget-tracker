@@ -608,6 +608,7 @@ func main() {
 	mux.HandleFunc("/notifications/", requireAuth(notificationsReadHandler))
 	mux.HandleFunc("/admin/audit", requireAdmin(adminAuditHandler))
 	mux.HandleFunc("/admin/broadcast", requireAdmin(adminBroadcastHandler))
+	mux.HandleFunc("/admin/appearance", requireAdmin(adminAppearanceHandler))
 	mux.HandleFunc("/admin/broadcast/send", requireAdmin(adminBroadcastSendHandler))
 	mux.HandleFunc("/admin/broadcast/cleanup", requireAdmin(adminBroadcastCleanupHandler))
 
