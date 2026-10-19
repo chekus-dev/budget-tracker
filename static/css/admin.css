@@ -41,3 +41,6 @@
   :root[data-scope="admin"] .bcast-card-foot { background: #0e1626 !important; }
   #admin-theme-btn, #admin-theme-pop { display: none !important; }
 }
+
+/* Fix large numbers */
+.kpi-value, .bcast-stat-value, .data-value, .amt, td.amount { overflow-wrap: anywhere; word-break: break-word; }

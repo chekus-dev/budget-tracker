@@ -32,7 +32,7 @@ func adminIDs() map[int]bool {
 func requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, _, ok := currentUser(r)
-		if !ok {
+		if !ok || !sessionStillValid(r, userID) {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
