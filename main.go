@@ -37,7 +37,7 @@ import (
 
 // appVersion is shown in the footer of Settings and Terms, and returned by
 // /healthz. Bump it before each deploy so a bug report can name the build.
-const appVersion = "2.2.2"
+const appVersion = "2.3.0"
 
 const (
 	kindExpense = "expense"
@@ -2473,7 +2473,8 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 	userID, _, _ := currentUser(r)
 
 	description := strings.TrimSpace(r.FormValue("description"))
-	amount, err := strconv.ParseFloat(strings.TrimSpace(r.FormValue("amount")), 64)
+	rawAmount := strings.ReplaceAll(r.FormValue("amount"), ",", "")
+	amount, err := strconv.ParseFloat(strings.TrimSpace(rawAmount), 64)
 	if err != nil || amount < 0 {
 		http.Error(w, "enter a valid amount", http.StatusBadRequest)
 		return
@@ -2515,7 +2516,8 @@ func editHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	description := strings.TrimSpace(r.FormValue("description"))
-	amount, err := strconv.ParseFloat(strings.TrimSpace(r.FormValue("amount")), 64)
+	rawAmount := strings.ReplaceAll(r.FormValue("amount"), ",", "")
+	amount, err := strconv.ParseFloat(strings.TrimSpace(rawAmount), 64)
 	if err != nil || amount < 0 {
 		http.Error(w, "enter a valid amount", http.StatusBadRequest)
 		return

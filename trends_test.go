@@ -199,9 +199,12 @@ func TestBuildTrendRows(t *testing.T) {
 	}
 }
 
-/* The icon table in trends.go is the one part of the category feature with
-   no visible failure mode: a name it misses still gets a marker, so nothing
-   looks broken, it just looks wrong. These are the cases worth pinning. */
+/*
+The icon table in trends.go is the one part of the category feature with
+
+	no visible failure mode: a name it misses still gets a marker, so nothing
+	looks broken, it just looks wrong. These are the cases worth pinning.
+*/
 func TestCategoryIcon(t *testing.T) {
 	for _, tc := range []struct{ name, want string }{
 		// The three defaults a new account starts with.
@@ -273,11 +276,14 @@ func TestCategoryIconMatching(t *testing.T) {
 	}
 }
 
-/* catIcon is the template-facing one, and the only thing it guarantees beyond
-   categoryIcon is that the id is never empty. That is not cosmetic: an empty
-   id renders as <use href="/static/icons.svg?v=7#"/>, and an empty fragment
-   selects the sprite's root <svg>, so every symbol in the file would be drawn
-   inside one icon-sized box. */
+/*
+catIcon is the template-facing one, and the only thing it guarantees beyond
+
+	categoryIcon is that the id is never empty. That is not cosmetic: an empty
+	id renders as <use href="/static/icons.svg?v=7#"/>, and an empty fragment
+	selects the sprite's root <svg>, so every symbol in the file would be drawn
+	inside one icon-sized box.
+*/
 func TestCatIconNeverEmpty(t *testing.T) {
 	for _, name := range []string{
 		"", "   ", "\t", "\n",

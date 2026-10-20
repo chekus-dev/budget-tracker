@@ -29,9 +29,12 @@ import (
 	"time"
 )
 
-/* The steps, in order. Adding one here adds it to the dot indicator, to the
-   range welcomeStepFrom will accept, and to the copy table below — but not to
-   the handler's switch, which is the part to remember. */
+/*
+The steps, in order. Adding one here adds it to the dot indicator, to the
+
+	range welcomeStepFrom will accept, and to the copy table below — but not to
+	the handler's switch, which is the part to remember.
+*/
 var welcomeStepLabels = []string{"Currency", "Budget", "Categories", "First entry"}
 
 // welcomeStep is one dot in the indicator.
@@ -75,13 +78,15 @@ func welcomeCopy(step int) (title, sub string) {
 	}
 }
 
-/* welcomeStepFrom reads the current step out of the request.
+/*
+welcomeStepFrom reads the current step out of the request.
 
-   FormValue covers both cases in one call: on a GET it reads the ?step= query,
-   and on a POST it reads the hidden field, the body taking precedence over any
-   query string. Anything missing, unparseable or outside the range starts the
-   flow again from the top — a stale or hand-edited URL lands somewhere real
-   rather than on a blank page. */
+	FormValue covers both cases in one call: on a GET it reads the ?step= query,
+	and on a POST it reads the hidden field, the body taking precedence over any
+	query string. Anything missing, unparseable or outside the range starts the
+	flow again from the top — a stale or hand-edited URL lands somewhere real
+	rather than on a blank page.
+*/
 func welcomeStepFrom(r *http.Request) int {
 	n, err := strconv.Atoi(strings.TrimSpace(r.FormValue("step")))
 	if err != nil || n < 1 || n > len(welcomeStepLabels) {
@@ -90,12 +95,15 @@ func welcomeStepFrom(r *http.Request) int {
 	return n
 }
 
-/* userOnboarded reports whether this account has finished (or skipped) the
-   wizard.
+/*
+userOnboarded reports whether this account has finished (or skipped) the
 
-   A missing row answers true. That is a session pointing at a user that no
-   longer exists, which requireAuth will drop on its next check; it is not a
-   reason to start a welcome that could never be completed. */
+	wizard.
+
+	A missing row answers true. That is a session pointing at a user that no
+	longer exists, which requireAuth will drop on its next check; it is not a
+	reason to start a welcome that could never be completed.
+*/
 func userOnboarded(userID int) (bool, error) {
 	var done bool
 	err := db.QueryRow(
@@ -107,9 +115,12 @@ func userOnboarded(userID int) (bool, error) {
 	return done, err
 }
 
-/* markOnboarded closes the wizard for good. The extra IS NULL predicate makes
-   this idempotent and keeps the first time it was finished, rather than
-   restamping it on every redirect that happens to pass through here. */
+/*
+markOnboarded closes the wizard for good. The extra IS NULL predicate makes
+
+	this idempotent and keeps the first time it was finished, rather than
+	restamping it on every redirect that happens to pass through here.
+*/
 func markOnboarded(userID int) error {
 	_, err := db.Exec(
 		"UPDATE users SET onboarded_at = CURRENT_TIMESTAMP WHERE id = $1 AND onboarded_at IS NULL",
@@ -146,9 +157,12 @@ type WelcomePageData struct {
 	Form welcomeEntryForm
 }
 
-/* welcomeEntry is what a step-4 submission amounts to: they typed nothing,
-   they typed something usable, or they typed something that needs saying
-   something about. */
+/*
+welcomeEntry is what a step-4 submission amounts to: they typed nothing,
+
+	they typed something usable, or they typed something that needs saying
+	something about.
+*/
 type welcomeEntry int
 
 const (
@@ -157,17 +171,19 @@ const (
 	welcomeEntryRetry
 )
 
-/* welcomeFirstEntry decides what step 4's two fields come to.
+/*
+welcomeFirstEntry decides what step 4's two fields come to.
 
-   The step is optional, so "both blank" has to mean "done, nothing to log"
-   rather than a complaint — otherwise the only way past is to enter something,
-   which is not what optional means. Every other case is a complaint, and each
-   one is phrased with the way out in it, because the way out is not obvious
-   when the thing you are looking at is a form you did not fill in.
+	The step is optional, so "both blank" has to mean "done, nothing to log"
+	rather than a complaint — otherwise the only way past is to enter something,
+	which is not what optional means. Every other case is a complaint, and each
+	one is phrased with the way out in it, because the way out is not obvious
+	when the thing you are looking at is a form you did not fill in.
 
-   A non-positive amount is rejected here rather than by the insert: migration
-   014 puts a CHECK constraint on expenses.amount, so letting one through would
-   surface as a 500 instead of a sentence. */
+	A non-positive amount is rejected here rather than by the insert: migration
+	014 puts a CHECK constraint on expenses.amount, so letting one through would
+	surface as a 500 instead of a sentence.
+*/
 func welcomeFirstEntry(description, rawAmount string) (welcomeEntry, float64, string) {
 	description = strings.TrimSpace(description)
 	rawAmount = strings.TrimSpace(rawAmount)

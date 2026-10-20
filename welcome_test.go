@@ -6,27 +6,30 @@ import (
 	"testing"
 )
 
-/* welcomeStepFrom reads ?step= on a GET and the hidden field on a POST. The
-   clamp matters more than it looks: ?step= is user-editable, and a URL that
-   parsed to 0 or 99 would render a wizard with no step highlighted — a page
-   that looks broken with no way to tell why. */
+/*
+welcomeStepFrom reads ?step= on a GET and the hidden field on a POST. The
+
+	clamp matters more than it looks: ?step= is user-editable, and a URL that
+	parsed to 0 or 99 would render a wizard with no step highlighted — a page
+	that looks broken with no way to tell why.
+*/
 func TestWelcomeStepFromClamps(t *testing.T) {
 	cases := []struct {
 		query string
 		form  string
 		want  int
 	}{
-		{"", "", 1},                 // no step at all: start at the beginning
-		{"?step=1", "", 1},          //
-		{"?step=4", "", 4},          // the last real step
-		{"?step=0", "", 1},          // below the range
-		{"?step=-1", "", 1},         // negative
-		{"?step=99", "", 1},         // past the end
-		{"?step=abc", "", 1},        // not a number
-		{"?step=", "", 1},           // present but empty
-		{"?step=%204%20", "", 4},    // padding is trimmed
-		{"?step=1", "step=3", 3},    // the POST body wins over the query
-		{"?step=9", "step=2", 2},    // ...even when the query is out of range
+		{"", "", 1},                    // no step at all: start at the beginning
+		{"?step=1", "", 1},             //
+		{"?step=4", "", 4},             // the last real step
+		{"?step=0", "", 1},             // below the range
+		{"?step=-1", "", 1},            // negative
+		{"?step=99", "", 1},            // past the end
+		{"?step=abc", "", 1},           // not a number
+		{"?step=", "", 1},              // present but empty
+		{"?step=%204%20", "", 4},       // padding is trimmed
+		{"?step=1", "step=3", 3},       // the POST body wins over the query
+		{"?step=9", "step=2", 2},       // ...even when the query is out of range
 		{"?step=2", "step=garbage", 1}, // a corrupt body falls back, not forward
 	}
 
@@ -48,9 +51,12 @@ func TestWelcomeStepFromClamps(t *testing.T) {
 	}
 }
 
-/* Exactly one step is "now" and everything before it is "done". A wizard that
-   marked two steps current, or none, would still render — it would just be
-   lying about where the user is. */
+/*
+Exactly one step is "now" and everything before it is "done". A wizard that
+
+	marked two steps current, or none, would still render — it would just be
+	lying about where the user is.
+*/
 func TestWelcomeStepsMarksExactlyOneCurrent(t *testing.T) {
 	for current := 1; current <= len(welcomeStepLabels); current++ {
 		steps := welcomeSteps(current)
@@ -90,10 +96,13 @@ func TestWelcomeStepsMarksExactlyOneCurrent(t *testing.T) {
 	}
 }
 
-/* Step 4 is optional, which is the whole reason this is a function rather than
-   three lines in the handler. "Both blank" has to come out as a skip, and
-   every way of getting it wrong has to come out as something the user can act
-   on rather than a 500 from the CHECK constraint on expenses.amount. */
+/*
+Step 4 is optional, which is the whole reason this is a function rather than
+
+	three lines in the handler. "Both blank" has to come out as a skip, and
+	every way of getting it wrong has to come out as something the user can act
+	on rather than a 500 from the CHECK constraint on expenses.amount.
+*/
 func TestWelcomeFirstEntry(t *testing.T) {
 	cases := []struct {
 		description string
@@ -145,10 +154,13 @@ func TestWelcomeFirstEntry(t *testing.T) {
 	}
 }
 
-/* The migration that makes existing accounts skip the wizard. If the backfill
-   UPDATE goes missing, every account that predates the wizard is sent through
-   it on its next visit — which is the one outcome this whole feature must not
-   have, and it is invisible to every other test here. */
+/*
+The migration that makes existing accounts skip the wizard. If the backfill
+
+	UPDATE goes missing, every account that predates the wizard is sent through
+	it on its next visit — which is the one outcome this whole feature must not
+	have, and it is invisible to every other test here.
+*/
 func TestOnboardingMigrationIsEmbedded(t *testing.T) {
 	migration, err := migrationFS.ReadFile("migrations/017_add_onboarding.sql")
 	if err != nil {

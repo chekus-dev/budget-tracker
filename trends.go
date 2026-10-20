@@ -170,26 +170,28 @@ func tileIndex(name string) int {
 	return h
 }
 
-/* ---- Category icons ----
+/*
+---- Category icons ----
 
-   A category is free text: whatever the user types in Settings is the string
-   stored against the expense. There is no icon column and no picker, so the
-   icon is worked out from the name here instead — which also means the
-   categories a user already has pick up an icon without re-entering them.
+	A category is free text: whatever the user types in Settings is the string
+	stored against the expense. There is no icon column and no picker, so the
+	icon is worked out from the name here instead — which also means the
+	categories a user already has pick up an icon without re-entering them.
 
-   categoryRuleIcons is a keyword table, and its order is the part that
-   matters, because the first rule listing a word keeps that word:
+	categoryRuleIcons is a keyword table, and its order is the part that
+	matters, because the first rule listing a word keeps that word:
 
-     - Money concepts come first. "Savings for school fees" is a savings
-       category, and both halves of it are in the table.
-     - Concrete things follow, and vague ones come last, so "Transport to
-       work" reads as transport rather than as work.
-     - "Bills" and "Fees" sit well down, because those are the words people
-       fall back on when nothing more specific fits.
+	  - Money concepts come first. "Savings for school fees" is a savings
+	    category, and both halves of it are in the table.
+	  - Concrete things follow, and vague ones come last, so "Transport to
+	    work" reads as transport rather than as work.
+	  - "Bills" and "Fees" sit well down, because those are the words people
+	    fall back on when nothing more specific fits.
 
-   Words match whole, so "car" does not match "scarves", and a trailing "s"
-   or "es" is folded, so "Snacks" finds "snack" and "Taxes" finds "tax".
-   A name with several known words takes the one that comes first in it. */
+	Words match whole, so "car" does not match "scarves", and a trailing "s"
+	or "es" is folded, so "Snacks" finds "snack" and "Taxes" finds "tax".
+	A name with several known words takes the one that comes first in it.
+*/
 var categoryRuleIcons = []struct {
 	icon  string
 	words []string
@@ -252,9 +254,12 @@ var categoryRuleIcons = []struct {
 	{"tag", []string{"other", "misc", "miscellaneous", "uncategorised", "uncategorized", "general", "random", "tag", "various", "stuff"}},
 }
 
-/* categoryWordIcons is the table above turned inside out, built once at
-   startup. The first rule to list a word keeps it, which is what makes the
-   order of categoryRuleIcons decide a name that fits two of them. */
+/*
+categoryWordIcons is the table above turned inside out, built once at
+
+	startup. The first rule to list a word keeps it, which is what makes the
+	order of categoryRuleIcons decide a name that fits two of them.
+*/
 var categoryWordIcons = func() map[string]string {
 	m := make(map[string]string, 512)
 	for _, rule := range categoryRuleIcons {
@@ -267,19 +272,25 @@ var categoryWordIcons = func() map[string]string {
 	return m
 }()
 
-/* categoryFallbackIcons are the shapes an unrecognised category hashes into.
-   None of them means anything, which is the point: a name the table does not
-   know gets a marker of its own rather than a wrong guess at what it is. Two
-   unknown names can still land on the same shape, but not all of them will. */
+/*
+categoryFallbackIcons are the shapes an unrecognised category hashes into.
+
+	None of them means anything, which is the point: a name the table does not
+	know gets a marker of its own rather than a wrong guess at what it is. Two
+	unknown names can still land on the same shape, but not all of them will.
+*/
 var categoryFallbackIcons = []string{
 	"tag", "wallet", "receipt", "banknote", "piggy", "target", "calendar",
 	"inbox", "bookmark", "star", "flag", "layers", "package", "grid",
 	"sparkle", "folder",
 }
 
-/* categoryIcon returns the sprite id to draw for a category name. It returns
-   "" for an empty name, which is how an entry logged without a category asks
-   for the generic receipt/banknote instead. */
+/*
+categoryIcon returns the sprite id to draw for a category name. It returns
+
+	"" for an empty name, which is how an entry logged without a category asks
+	for the generic receipt/banknote instead.
+*/
 func categoryIcon(name string) string {
 	name = strings.ToLower(strings.TrimSpace(name))
 	if name == "" {
@@ -297,18 +308,24 @@ func categoryIcon(name string) string {
 	return categoryIconFallback(name)
 }
 
-/* categoryWords splits a name into the words the table is matched against.
-   Everything that is not a letter or a digit separates words, so "Car wash",
-   "car-wash" and "car/wash" all give the same two. */
+/*
+categoryWords splits a name into the words the table is matched against.
+
+	Everything that is not a letter or a digit separates words, so "Car wash",
+	"car-wash" and "car/wash" all give the same two.
+*/
 func categoryWords(name string) []string {
 	return strings.FieldsFunc(name, func(r rune) bool {
 		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
 	})
 }
 
-/* categoryIconFallback gives an unrecognised name a stable icon of its own:
-   FNV-1a over the name, so the same category draws the same icon on every
-   page and after every restart, and different names spread over the pool. */
+/*
+categoryIconFallback gives an unrecognised name a stable icon of its own:
+
+	FNV-1a over the name, so the same category draws the same icon on every
+	page and after every restart, and different names spread over the pool.
+*/
 func categoryIconFallback(name string) string {
 	h := uint32(2166136261)
 	for _, r := range name {
@@ -317,21 +334,24 @@ func categoryIconFallback(name string) string {
 	return categoryFallbackIcons[h%uint32(len(categoryFallbackIcons))]
 }
 
-/* catIcon is what the templates ask for wherever a category is drawn as a
-   category — a tile, a budget row, beside a name. It differs from
-   categoryIcon in one way that matters: it never returns "".
+/*
+catIcon is what the templates ask for wherever a category is drawn as a
 
-   An empty id would make the markup <use href="/static/icons.svg?v=7#"/>,
-   and an empty fragment selects the sprite's root <svg>, so the browser
-   would draw all eighty-six symbols at once inside a 20px box. Names are
-   meant to be non-empty by the time they get here — Settings drops blank
-   ones and the report and trends queries relabel them "Uncategorized" — but
-   categoryBudgetProgress also builds rows from the keys in the limits
-   table, which predate that rule, so this does not rely on it.
+	category — a tile, a budget row, beside a name. It differs from
+	categoryIcon in one way that matters: it never returns "".
 
-   rowIcon is the one caller that does need the difference, and it asks
-   categoryIcon directly: an entry logged with no category should fall back
-   to the generic receipt or banknote, not to a meaningless shape. */
+	An empty id would make the markup <use href="/static/icons.svg?v=7#"/>,
+	and an empty fragment selects the sprite's root <svg>, so the browser
+	would draw all eighty-six symbols at once inside a 20px box. Names are
+	meant to be non-empty by the time they get here — Settings drops blank
+	ones and the report and trends queries relabel them "Uncategorized" — but
+	categoryBudgetProgress also builds rows from the keys in the limits
+	table, which predate that rule, so this does not rely on it.
+
+	rowIcon is the one caller that does need the difference, and it asks
+	categoryIcon directly: an entry logged with no category should fall back
+	to the generic receipt or banknote, not to a meaningless shape.
+*/
 func catIcon(name string) string {
 	if icon := categoryIcon(name); icon != "" {
 		return icon
