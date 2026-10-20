@@ -54,7 +54,11 @@
             </div>
             {{end}}
 
-            <form action="/verify-otp" method="POST" autocomplete="off">
+            <div style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; line-height: 1.5; text-align: left;">
+    <strong>Can't find the email?</strong> Please check your <strong>Spam</strong> or <strong>Junk</strong> folder. If you find it there, mark it as "Not Spam" so future emails arrive in your inbox.
+</div>
+
+<form action="/verify-otp" method="POST" autocomplete="off">
                 <div class="auth-field">
                     <label class="label" for="code">6-digit code</label>
                     <input
