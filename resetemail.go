@@ -2,14 +2,15 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 func sendResetEmail(to, code string) error {
@@ -18,24 +19,34 @@ func sendResetEmail(to, code string) error {
 		return nil
 	}
 
-	apiKey := strings.TrimSpace(os.Getenv("AGENTMAIL_API_KEY"))
-	inboxID := strings.TrimSpace(os.Getenv("AGENTMAIL_INBOX_ID"))
+	apiKey := strings.TrimSpace(os.Getenv("SENDGRID_API_KEY"))
+	// This MUST match the email you verified in SendGrid
+	fromEmail := "chekusjoseph@gmail.com"
 
-	if apiKey == "" || inboxID == "" {
-		log.Printf("[MAIL] AGENTMAIL_API_KEY or AGENTMAIL_INBOX_ID not set; skipping send to %s", to)
+	if apiKey == "" {
+		log.Printf("[MAIL] SENDGRID_API_KEY not set; skipping send to %s", to)
 		return nil
 	}
 
-	// 1. Safely encode the email address (turns @ into %40)
-	encodedInboxID := url.PathEscape(inboxID)
-
-	// 2. Use the HTTP API endpoint
-	endpoint := fmt.Sprintf("https://api.agentmail.to/v0/inboxes/%s/messages/send", encodedInboxID)
-
 	payload := map[string]any{
-		"to":      []string{to},
+		"personalizations": []map[string]any{
+			{
+				"to": []map[string]string{
+					{"email": to},
+				},
+			},
+		},
+		"from": map[string]string{
+			"email": fromEmail,
+			"name":  "Budget Tracker",
+		},
 		"subject": "Your Budget Tracker reset code",
-		"text":    fmt.Sprintf("Hi,\n\nYour password reset code is:\n\n    %s\n\nIt expires in 15 minutes.\n\n— Budget Tracker", code),
+		"content": []map[string]string{
+			{
+				"type":  "text/plain",
+				"value": fmt.Sprintf("Hi,\n\nYour password reset code is:\n\n    %s\n\nIt expires in 15 minutes.\n\n— Budget Tracker", code),
+			},
+		},
 	}
 
 	body, err := json.Marshal(payload)
@@ -43,7 +54,11 @@ func sendResetEmail(to, code string) error {
 		return fmt.Errorf("marshal payload: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		"https://api.sendgrid.com/v3/mail/send", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
@@ -58,9 +73,9 @@ func sendResetEmail(to, code string) error {
 
 	if resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return fmt.Errorf("agentmail API returned %d: %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("sendgrid API returned %d: %s", resp.StatusCode, string(respBody))
 	}
 
-	log.Printf("[MAIL] Reset code sent to %s via AgentMail HTTP API", to)
+	log.Printf("[MAIL] Reset code sent to %s via SendGrid", to)
 	return nil
 }
