@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -456,6 +457,9 @@ func (g *gzipResponseWriter) Write(b []byte) (int, error) {
 	}
 	return g.Writer.Write(b)
 }
+
+//go:embed templates/*
+var templateFS embed.FS
 
 func main() {
 	if err := godotenv.Load(); err != nil {
