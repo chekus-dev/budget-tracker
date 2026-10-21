@@ -1,0 +1,18 @@
+{
+  "services": {
+    "budget-tracker": {
+      "root": ".",
+      "framework": "go",
+      "runtime": "go",
+      "buildCommand": "npm ci && npm run build:css && go build -o app ."
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "budget-tracker"
+      }
+    }
+  ]
+}
