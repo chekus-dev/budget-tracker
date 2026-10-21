@@ -2,8 +2,8 @@
   "services": {
     "budget-tracker": {
       "root": ".",
-      "framework": "go",
-      "runtime": "go",
+      "framework": "Go",
+      "runtime": "Go",
       "buildCommand": "npm ci && npm run build:css && go build -o app ."
     }
   },
