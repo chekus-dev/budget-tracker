@@ -353,15 +353,18 @@ func requireDB(w http.ResponseWriter) bool {
 	}
 	return true
 }
-
 func openPostgresDB(dsn string) (*sql.DB, error) {
 	config, err := postgresConfig(dsn)
 	if err != nil {
 		return nil, err
 	}
-	return stdlib.OpenDB(*config), nil
+	d := stdlib.OpenDB(*config)
+	d.SetMaxOpenConns(10)
+	d.SetMaxIdleConns(5)
+	d.SetConnMaxLifetime(30 * time.Minute)
+	d.SetConnMaxIdleTime(5 * time.Minute)
+	return d, nil
 }
-
 func postgresConfig(dsn string) (*pgx.ConnConfig, error) {
 	config, err := pgx.ParseConfig(dsn)
 	if err != nil {
