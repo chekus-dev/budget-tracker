@@ -1,6 +1,6 @@
 {
   "functions": {
-    "main.go": {
+    "./main.go": {
       "includeFiles": ["templates/**"]
     }
   }
