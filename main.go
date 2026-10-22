@@ -36,6 +36,8 @@ import (
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 )
+//go:embed templates/*.html
+var templatesFS embed.FS
 
 // appVersion is shown in the footer of Settings and Terms, and returned by
 // /healthz. Bump it before each deploy so a bug report can name the build.
