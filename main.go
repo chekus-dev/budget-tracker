@@ -457,9 +457,6 @@ func (g *gzipResponseWriter) Write(b []byte) (int, error) {
 	return g.Writer.Write(b)
 }
 
-//go:embed templates/*
-var templateFS embed.FS
-
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file found, relying on environment variables")
@@ -495,7 +492,7 @@ func main() {
 	enableSharedRateLimits()
 	startRateLimiterSweeper()
 
-	tmpl := template.Must(template.ParseFS(templatesFS, "templates/*.html"))
+	tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		"tile": tileIndex,
 		/* Category icons are worked out from the category's name, so
 		   everywhere a category is shown asks for one rather than storing
@@ -1661,6 +1658,10 @@ func saveCategoryBudgets(userID int, categories []string, limits []float64) erro
 		return err
 	}
 	defer tx.Rollback()
+
+	if _, err := tx.Exec("DELETE FROM category_budgets WHERE user_id = $1", userID); err != nil {
+		return err
+	}
 
 	for i, category := range categories {
 		var limit float64

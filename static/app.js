@@ -187,7 +187,7 @@
      would silently exclude valid controls from the trap. getClientRects() is
      the correct test for "is this actually rendered". */
   function isVisible(el) {
-    return el.getClientRects().length > 0;hv`][]`
+    return el.getClientRects().length > 0;
   }
 
   function openModal(modal) {
@@ -563,7 +563,7 @@
     list.addEventListener('click', function (e) {
       var btn = e.target.closest && e.target.closest('[data-remove-category]');
       if (!btn) return;
-      btn.closest('.category-item').remove();
+      var row = btn.closest('.cat-row'); if (row) row.remove();
     });
 
     addBtn.addEventListener('click', function () {
