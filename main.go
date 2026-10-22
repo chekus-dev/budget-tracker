@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"html/template"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -496,7 +497,7 @@ func main() {
 	enableSharedRateLimits()
 	startRateLimiterSweeper()
 
-	tmpl = template.Must(template.New("index.html").Funcs(template.FuncMap{
+	tmpl := template.Must(template.ParseFS(templatesFS, "templates/*.html"))
 		"tile": tileIndex,
 		/* Category icons are worked out from the category's name, so
 		   everywhere a category is shown asks for one rather than storing
