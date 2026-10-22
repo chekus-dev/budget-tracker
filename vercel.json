@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "main.go": {
+      "includeFiles": ["templates/**"]
+    }
+  }
+}
