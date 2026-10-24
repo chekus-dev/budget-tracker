@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gorilla/sessions"
 )
@@ -23,7 +24,7 @@ var wa *webauthn.WebAuthn
 func initWebAuthn() {
 	rpID := strings.TrimSpace(os.Getenv("WEBAUTHN_RPID"))
 	origin := strings.TrimSpace(os.Getenv("WEBAUTHN_ORIGIN"))
-	if base := strings.TrimRight(strings.TrimSpace(os.Getenv("APP_BASE_URL")), "/"); base != "" {
+	if base := strings.TrimRight(strings.TrimSpace(firstEnv("APP_BASE_URL", "RENDER_EXTERNAL_URL")), "/"); base != "" {
 		if u, err := url.Parse(base); err == nil && u.Hostname() != "" {
 			if rpID == "" {
 				rpID = u.Hostname()
@@ -47,6 +48,11 @@ func initWebAuthn() {
 		RPDisplayName: "Budget Tracker",
 		RPID:          rpID,
 		RPOrigins:     []string{origin},
+		AuthenticatorSelection: protocol.AuthenticatorSelection{
+			ResidentKey:        protocol.ResidentKeyRequirementRequired,
+			RequireResidentKey: protocol.ResidentKeyRequired(),
+			UserVerification:   protocol.VerificationPreferred,
+		},
 	})
 	if err != nil {
 		log.Printf("passkeys disabled: %v", err)
@@ -318,4 +324,13 @@ func passkeyLoginFinishHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	waJSON(w, http.StatusOK, map[string]any{"ok": true, "redirect": "/"})
+}
+
+func firstEnv(keys ...string) string {
+	for _, k := range keys {
+		if v := strings.TrimSpace(os.Getenv(k)); v != "" {
+			return v
+		}
+	}
+	return ""
 }
