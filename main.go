@@ -1329,7 +1329,12 @@ func changePasswordHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if newPassword != confirm {
-			render(ChangePasswordPageData{Error: "New passwords do not match."})
+			render(ChangePasswordPageData{Error: "New password and confirmation do not match."})
+			return
+		}
+
+		if newPassword == current {
+			render(ChangePasswordPageData{Error: "Your new password must be different from your current one."})
 			return
 		}
 
@@ -1568,6 +1573,24 @@ func resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if newPassword != confirm {
 			render("Passwords do not match.")
+			return
+		}
+
+		var currentHash string
+		if err := db.QueryRow("SELECT password_hash FROM users WHERE id = $1", userID).Scan(&currentHash); err != nil {
+			serverError(w, err)
+			return
+		}
+		if bcrypt.CompareHashAndPassword([]byte(currentHash), []byte(newPassword)) == nil {
+			render("That is your current password. Please choose a new one you haven't used before.")
+			return
+		}
+
+		if used, err := passwordInHistory(userID, newPassword); err != nil {
+			serverError(w, err)
+			return
+		} else if used {
+			render("You have used this password before. Please choose one you have not used recently.")
 			return
 		}
 
