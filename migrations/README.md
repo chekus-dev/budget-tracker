@@ -23,6 +23,8 @@ builds on the one before it, so **they must be applied in order**.
 | 016 | `016_goals.sql` | Adds user goals |
 | 017 | `017_add_onboarding.sql` | Records completion of the welcome flow |
 | 018 | `018_admin_portal.sql` | Adds admin account fields, audit logs, notes, and user messages |
+| 019 | `019_webauthn_credentials.sql` | Passkey (fingerprint sign-in) credentials |
+| 020 | `020_password_history.sql` | Last five password hashes, filled by a trigger, to reject reused passwords |
 
 Running all eighteen against an empty database produces the complete schema the
 app expects.

@@ -32,6 +32,7 @@
       .password-toggle[data-state="visible"] .pw-eye     { display: none; }
       .password-toggle[data-state="visible"] .pw-eye-off { display: block; }
     </style>
+<script src="/static/passkeys.js?v=1" defer></script>
 </head>
 <body>
     <main class="auth-shell">
@@ -87,6 +88,14 @@
 
                 <button type="submit" class="btn btn-primary btn-block">Log in</button>
             </form>
+
+            <div style="margin-top:14px;text-align:center;">
+                <div style="font-size:12px;color:var(--ink-faint);margin-bottom:10px;">or</div>
+                <button type="button" class="btn btn-soft btn-block" data-passkey-login style="display:none;">
+                    Sign in with fingerprint
+                </button>
+                <p data-passkey-msg role="status" style="font-size:13px;color:var(--ink-muted);margin:10px 0 0;"></p>
+            </div>
 
             <p class="auth-foot"><a href="/forgot-password">Forgot password?</a></p>
             <p class="auth-foot">Don't have an account? <a href="/register">Create one</a></p>

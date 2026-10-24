@@ -56,7 +56,7 @@ const (
 	// supportWhatsApp must be the international format with no "+" and no
 	// spaces — wa.me rejects both. supportPhone is the display value; the
 	// tel: link is derived by stripping spaces.
-	supportEmail    = "chekusjoseph@gmail.com"
+	supportEmail    = "budgettracker.app@yahoo.com"
 	supportPhone    = "+234 9130 789 611"
 	supportWhatsApp = "2349166270135"
 )
@@ -492,6 +492,7 @@ func main() {
 	}
 
 	initSessionStore()
+	initWebAuthn()
 	enableSharedRateLimits()
 	startRateLimiterSweeper()
 
@@ -616,6 +617,11 @@ func main() {
 	mux.HandleFunc("/admin/broadcast/cleanup", requireAdmin(adminBroadcastCleanupHandler))
 
 	mux.HandleFunc("/healthz", healthzHandler)
+	mux.HandleFunc("/passkeys/register/begin", requireAuth(passkeyRegisterBeginHandler))
+	mux.HandleFunc("/passkeys/register/finish", requireAuth(passkeyRegisterFinishHandler))
+	mux.HandleFunc("/passkeys/remove-all", requireAuth(passkeyRemoveAllHandler))
+	mux.HandleFunc("/passkeys/login/begin", passkeyLoginBeginHandler)
+	mux.HandleFunc("/passkeys/login/finish", passkeyLoginFinishHandler)
 	mux.HandleFunc("/login", loginHandler)
 	mux.HandleFunc("/register", registerHandler)
 	mux.HandleFunc("/terms", termsHandler)

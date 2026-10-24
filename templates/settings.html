@@ -462,6 +462,28 @@
             </div>
         </form>
 
+        {{/* ---------- PASSKEYS ---------- */}}
+        <div class="settings-section-head">
+            <span class="settings-section-icon">
+                <svg aria-hidden="true"><use href="/static/icons.svg?v=7#settings"/></svg>
+            </span>
+            <div>
+                <div class="settings-section-title">Fingerprint sign-in</div>
+                <div class="settings-section-sub">Use your fingerprint, face or device PIN</div>
+            </div>
+        </div>
+        <section class="settings-card">
+            <p class="settings-card-hint" style="margin:0 0 12px;">
+                Add a passkey on each device you use. Your password keeps working as a backup.
+            </p>
+            <button type="button" class="btn btn-soft btn-block" data-passkey-add>Add a passkey on this device</button>
+            <p class="settings-card-hint" data-passkey-msg role="status" style="margin-top:10px;"></p>
+            <form action="/passkeys/remove-all" method="POST" style="margin-top:8px;">
+                <button type="submit" class="btn btn-soft btn-sm">Remove all my passkeys</button>
+            </form>
+        </section>
+        <script src="/static/passkeys.js?v=1" defer></script>
+
         {{/* ---------- DATA ---------- */}}
         <div class="settings-section-head">
             <span class="settings-section-icon">
