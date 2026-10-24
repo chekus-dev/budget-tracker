@@ -1,0 +1,178 @@
+/* Password-reset flow: forgot-password, verify-otp, reset-password */
+.auth-shell {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(900px 500px at 12% -10%, #7c3aed33, transparent 60%),
+    radial-gradient(800px 500px at 100% 110%, #4f46e533, transparent 60%),
+    var(--canvas, #f7f8fa);
+}
+.dark .auth-shell {
+  background:
+    radial-gradient(900px 500px at 12% -10%, #7c3aed2e, transparent 60%),
+    radial-gradient(800px 500px at 100% 110%, #4f46e52e, transparent 60%),
+    var(--canvas, #0b1220);
+}
+
+.auth-shell .auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 34px 28px 28px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 24px;
+  box-shadow: 0 24px 60px -24px #4f46e555, 0 2px 6px #0000000d;
+  animation: auth-rise .45s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes auth-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-shell .auth-card { animation: none; }
+}
+
+.auth-shell .auth-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 22px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.auth-shell .brand-mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: #fff;
+  font-size: 20px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 8px 18px -8px #4f46e5aa;
+}
+
+.auth-shell .auth-title {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  margin: 0 0 6px;
+}
+.auth-shell .auth-sub {
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-muted, #6b7280);
+  margin: 0 0 22px;
+  text-wrap: balance;
+}
+.auth-shell .otp-email {
+  font-weight: 600;
+  color: var(--ink, #111827);
+  word-break: break-all;
+}
+
+.auth-shell .auth-field { margin-bottom: 16px; }
+.auth-shell .label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.auth-shell .input {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink, #111827);
+  background: var(--surface, #fff);
+  border: 1px solid var(--line-strong, #d1d5db);
+  border-radius: 14px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.auth-shell .input:focus {
+  outline: 0;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 4px #4f46e524;
+}
+
+.auth-shell #code {
+  text-align: center;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: .5em;
+  padding-left: .5em;
+  font-variant-numeric: tabular-nums;
+}
+
+.auth-shell .btn-primary {
+  width: 100%;
+  min-height: 50px;
+  border: 0;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 10px 22px -10px #4f46e5cc;
+  transition: transform .15s, box-shadow .15s, filter .15s;
+}
+.auth-shell .btn-primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow: 0 14px 26px -10px #4f46e5dd;
+}
+.auth-shell .btn-primary:active { transform: translateY(0); }
+.auth-shell .btn-primary:focus-visible {
+  outline: 3px solid #4f46e555;
+  outline-offset: 2px;
+}
+.auth-shell .btn-soft {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 10px;
+  border-radius: 14px;
+  font-weight: 600;
+}
+
+.auth-shell .alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #b42318;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 14px;
+}
+.auth-shell .alert p { margin: 0; }
+.auth-shell .alert svg { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+.dark .auth-shell .alert {
+  color: #fda29b;
+  background: #7a271a33;
+  border-color: #7a271a;
+}
+
+.auth-shell .auth-foot {
+  text-align: center;
+  margin: 20px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-muted, #6b7280);
+}
+.auth-shell .auth-foot a {
+  color: #4f46e5;
+  font-weight: 600;
+  text-decoration: none;
+}
+.auth-shell .auth-foot a:hover { text-decoration: underline; }
+.dark .auth-shell .auth-foot a { color: #a5b4fc; }

@@ -950,6 +950,7 @@ func tooManyResets(w http.ResponseWriter, wait time.Duration) {
 }
 
 func writeRetryAfter(w http.ResponseWriter, wait time.Duration) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(wait.Seconds()))))
 	w.WriteHeader(http.StatusTooManyRequests)
 }
@@ -1426,13 +1427,10 @@ func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		var userID int
 		err := db.QueryRow("SELECT id FROM users WHERE email = $1", email).Scan(&userID)
 		if err == sql.ErrNoRows {
-			// The message is the same whether or not the account exists, so
-			// the page cannot be used to enumerate accounts.
-			tmpl.ExecuteTemplate(w, "forgot-password.html", ForgotPasswordPageData{
-				Error:            "We couldn't find an account with that email.",
-				Email:            email,
-				RecaptchaSiteKey: recaptchaSiteKey(),
-			})
+			session := getSession(r)
+			session.Values["reset_email"] = email
+			_ = session.Save(r, w)
+			http.Redirect(w, r, "/verify-otp", http.StatusSeeOther)
 			return
 		}
 		if err != nil {
@@ -2858,33 +2856,20 @@ func clearHandler(w http.ResponseWriter, r *http.Request) {
 	userID, _, _ := currentUser(r)
 
 	month := normalizeMonth(r.FormValue("month"))
-
 	start, end := monthRange(month)
-	_, err := db.Exec(
-		"DELETE FROM expenses WHERE user_id = $1 AND created_at >= $2::timestamp AND created_at < $3::timestamp",
+
+	// Soft delete: the purge in autoMonthlyReset removes these after 30 days.
+	if _, err := db.Exec(
+		`UPDATE expenses SET deleted_at = NOW()
+		 WHERE user_id = $1 AND deleted_at IS NULL
+		   AND created_at >= $2::timestamp AND created_at < $3::timestamp`,
 		userID, start, end,
-	)
-	if err != nil {
+	); err != nil {
 		serverError(w, err)
 		return
 	}
 
-	existing, err := loadSettings(userID)
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	newSettings := SettingsData{
-		BudgetLimit: 0,
-		Currency:    existing.Currency,
-		Categories:  existing.Categories,
-	}
-	if err := saveSettings(userID, newSettings); err != nil {
-		serverError(w, err)
-		return
-	}
-
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, homePath(month, ""), http.StatusSeeOther)
 }
 
 func archiveHandler(w http.ResponseWriter, r *http.Request) {

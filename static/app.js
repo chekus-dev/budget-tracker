@@ -701,42 +701,6 @@
        window manager that reports no focus at load would leave the page masked
        with no later event guaranteed to lift it. */
     render();
-
-    document.addEventListener('contextmenu', function (e) {
-      e.preventDefault();
-    });
-
-    document.addEventListener('dragstart', function (e) {
-      if (e.target && e.target.tagName === 'IMG') e.preventDefault();
-    });
-
-    /* Selection and copy are off page-wide, but the forms have to keep
-       working: typing, selecting inside a field and pasting in all still need
-       to go through. This guard mirrors the exemption in the stylesheet. */
-    function inTextField(target) {
-      if (!target) return false;
-      if (target.isContentEditable) return true;
-      var tag = target.tagName;
-      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
-    }
-
-    function blockUnlessTyping(e) {
-      if (inTextField(e.target)) return;
-      e.preventDefault();
-    }
-
-    document.addEventListener('copy', blockUnlessTyping);
-    document.addEventListener('cut', blockUnlessTyping);
-    document.addEventListener('selectstart', blockUnlessTyping);
-
-    /* Ctrl/Cmd+P. The browser's own menu and the OS print shortcut are out of
-       reach, and the export page at /export/pdf is a separate document that
-       never loads this file, so its Save as PDF report still prints. */
-    document.addEventListener('keydown', function (e) {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'p' || e.key === 'P')) {
-        e.preventDefault();
-      }
-    });
   }
 
   /* --------------------------------------------------------------- boot --- */

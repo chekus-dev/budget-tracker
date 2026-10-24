@@ -31,6 +31,7 @@
         word-break: break-all;
       }
     </style>
+<link rel="stylesheet" href="/static/css/auth-reset.css?v=1">
 </head>
 <body>
     <main class="auth-shell">
@@ -42,9 +43,9 @@
 
             <h2 class="auth-title">Enter your code</h2>
             <p class="auth-sub">
-                We sent a 6-digit code to
-                <span class="otp-email">{{.Email}}</span>.
-                It expires in 15 minutes.
+                If an account exists for
+                <span class="otp-email">{{.Email}}</span>,
+                we sent a 6-digit code. It expires in 15 minutes.
             </p>
 
             {{if .Error}}

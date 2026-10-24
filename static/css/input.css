@@ -234,8 +234,8 @@
   .amounts-hidden .amt-m { display: inline; }
 
   body.has-chrome {
-    -webkit-user-select: none;
-    user-select: none;
+    -webkit-user-select: auto;
+    user-select: auto;
   }
   /* Text entry has to stay selectable or the forms stop working. */
   input, textarea, select, [contenteditable] {

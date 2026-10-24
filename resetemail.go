@@ -20,8 +20,14 @@ func sendResetEmail(to, code string) error {
 	}
 
 	apiKey := strings.TrimSpace(os.Getenv("SENDGRID_API_KEY"))
-	// This MUST match the email you verified in SendGrid
-	fromEmail := "chekusjoseph@gmail.com"
+
+	// Must match a sender or domain you verified in SendGrid. Once you
+	// authenticate your own domain, set SENDGRID_FROM=noreply@yourdomain.com
+	// in the environment; no code change is needed.
+	fromEmail := strings.TrimSpace(os.Getenv("SENDGRID_FROM"))
+	if fromEmail == "" {
+		fromEmail = "chekusjoseph@gmail.com"
+	}
 
 	if apiKey == "" {
 		log.Printf("[MAIL] SENDGRID_API_KEY not set; skipping send to %s", to)
@@ -41,11 +47,10 @@ func sendResetEmail(to, code string) error {
 			"name":  "Budget Tracker",
 		},
 		"subject": "Your Budget Tracker reset code",
+		// SendGrid requires text/plain before text/html.
 		"content": []map[string]string{
-			{
-				"type":  "text/plain",
-				"value": fmt.Sprintf("Hi,\n\nYour password reset code is:\n\n    %s\n\nIt expires in 15 minutes.\n\n— Budget Tracker", code),
-			},
+			{"type": "text/plain", "value": resetEmailText(code)},
+			{"type": "text/html", "value": resetEmailHTML(code)},
 		},
 	}
 
