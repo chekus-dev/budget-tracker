@@ -176,28 +176,6 @@ type CategoryBudget struct {
 	Near           bool
 }
 
-type ReportData struct {
-	Count           int
-	Total           float64
-	Average         float64
-	Largest         float64
-	BudgetLimit     float64
-	PercentOfBudget float64
-	ChartExists     bool
-	CategoryTotals  []CategoryTotal
-	// CategoryJSON is the same breakdown as CategoryTotals, pre-marshalled for
-	// the chart. It is typed as template.JS because it is interpolated into a
-	// <script> block; json.Marshal escapes <, > and & so the value cannot
-	// terminate the element.
-	CategoryJSON template.JS
-	PageChrome
-}
-
-type CategoryTotal struct {
-	Category string
-	Total    float64
-}
-
 // CategoryOption is one entry in the category filter select. Value is what the
 // form submits; Label is what the user reads. They differ in one place: the
 // sentinel that means "the empty category" is submitted as "__none__" and
@@ -536,7 +514,6 @@ func main() {
 		"templates/head.html",
 		"templates/index.html",
 		"templates/expenses_list.html",
-		"templates/report.html",
 		"templates/settings.html",
 		"templates/saved-settings.html",
 		"templates/archive.html",
@@ -571,7 +548,6 @@ func main() {
 	mux.HandleFunc("/edit/", requireAuth(editHandler))
 	mux.HandleFunc("/delete/", requireAuth(deleteHandler))
 	mux.HandleFunc("/restore/", requireAuth(restoreHandler))
-	mux.HandleFunc("/report", requireAuth(reportHandler))
 	mux.HandleFunc("/settings", requireAuth(settingsHandler))
 	mux.HandleFunc("/settings/saved", requireAuth(savedSettingsHandler))
 	mux.HandleFunc("/settings/reset", requireAuth(resetSettingsHandler))
@@ -2295,6 +2271,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if data.BudgetLimit > 0 {
 		remaining := data.BudgetLimit - data.Spent
 		percent := (data.Spent / data.BudgetLimit) * 100
+		templateData["PercentUsed"] = percent
 		if percent > 100 {
 			percent = 100
 		}
@@ -2348,6 +2325,7 @@ func verifyTemplatesRender() {
 	withBudget["Remaining"] = 87.5
 	withBudget["OverAmount"] = 87.5
 	withBudget["Percent"] = 12.5
+	withBudget["PercentUsed"] = 12.5
 	withBudget["WarnAt"] = 80.0
 	withBudget["SafeToSpend"] = 12.50
 
@@ -2406,13 +2384,6 @@ func verifyTemplatesRender() {
 		{"index.html", searching},
 		{"archive.html", archiveMonths},
 		{"archive.html", archiveDetail},
-		{"report.html", ReportData{
-			Count: 1, Total: 12.5, Average: 12.5, Largest: 12.5, BudgetLimit: 100,
-			PercentOfBudget: 12.5, ChartExists: true,
-			CategoryTotals: []CategoryTotal{{Category: "Food", Total: 12.5}},
-			CategoryJSON:   template.JS(`[{"category":"Food","total":12.5}]`),
-			PageChrome:     PageChrome{Username: "sam", CurrencySymbol: "₦"},
-		}},
 		{"settings.html", settings},
 		{"saved-settings.html", settings},
 		{"export.html", map[string]interface{}{
@@ -2674,102 +2645,6 @@ func categoriesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	json.NewEncoder(w).Encode(categories)
-}
-
-func reportHandler(w http.ResponseWriter, r *http.Request) {
-	if !requireDB(w) {
-		return
-	}
-	userID, username, _ := currentUser(r)
-	settings, err := loadSettings(userID)
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-
-	rows, err := db.Query(
-		"SELECT amount, category FROM expenses WHERE user_id = $1 AND kind = 'expense' AND deleted_at IS NULL",
-		userID,
-	)
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	defer rows.Close()
-	var amounts []float64
-	categoryTotals := map[string]float64{}
-	for rows.Next() {
-		var a float64
-		var cat string
-		if err := rows.Scan(&a, &cat); err != nil {
-			serverError(w, err)
-			return
-		}
-		amounts = append(amounts, a)
-		if cat == "" {
-			cat = "Uncategorized"
-		}
-		categoryTotals[cat] += a
-	}
-	var total, largest float64
-	for _, a := range amounts {
-		total += a
-		if a > largest {
-			largest = a
-		}
-	}
-	var average float64
-	if len(amounts) > 0 {
-		average = total / float64(len(amounts))
-	}
-
-	var breakdown []CategoryTotal
-	for cat, t := range categoryTotals {
-		breakdown = append(breakdown, CategoryTotal{Category: cat, Total: t})
-	}
-	sort.Slice(breakdown, func(i, j int) bool {
-		if breakdown[i].Total == breakdown[j].Total {
-			return breakdown[i].Category < breakdown[j].Category
-		}
-		return breakdown[i].Total > breakdown[j].Total
-	})
-
-	chartRows := make([]struct {
-		Category string  `json:"category"`
-		Total    float64 `json:"total"`
-	}, len(breakdown))
-	for i, c := range breakdown {
-		chartRows[i].Category = c.Category
-		chartRows[i].Total = c.Total
-	}
-	chartJSON, err := json.Marshal(chartRows)
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-
-	var percentOfBudget float64
-	if settings.BudgetLimit > 0 {
-		percentOfBudget = (total / settings.BudgetLimit) * 100
-	}
-
-	// FIX 3: initChrome so UnreadMessageCount (and Version) are set the same
-	// way they are everywhere else.
-	chrome := PageChrome{
-		Username:       username,
-		CurrencySymbol: currencySymbol(settings.Currency),
-	}
-	initChrome(&chrome, userID)
-
-	if err := tmpl.ExecuteTemplate(w, "report.html", ReportData{
-		Count: len(amounts), Total: total, Average: average, Largest: largest,
-		BudgetLimit: settings.BudgetLimit, PercentOfBudget: percentOfBudget,
-		ChartExists: total > 0, CategoryTotals: breakdown,
-		CategoryJSON: template.JS(chartJSON),
-		PageChrome:   chrome,
-	}); err != nil {
-		log.Printf("failed to render report template: %v", err)
-	}
 }
 
 func settingsHandler(w http.ResponseWriter, r *http.Request) {

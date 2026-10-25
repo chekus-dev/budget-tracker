@@ -1,7 +1,7 @@
 {
     "name": "Budget Tracker",
-    "short_name": "Budget",
-    "description": "Track your monthly spending and stay on budget.",
+    "short_name": "Budget Tracker",
+    "description": "Track your monthly spending and stay on budget, income and goals with ease.",
     "start_url": "/",
     "scope": "/",
     "display": "standalone",

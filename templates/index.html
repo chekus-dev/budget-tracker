@@ -142,7 +142,7 @@
         {{if .HasBudget}}
         <section class="card mb-4" aria-labelledby="progress-label">
             <div class="section-head">
-                <h2 class="card-title" id="progress-label">Monthly budget</h2>
+                <h2 class="card-title" id="progress-label">Spent this month</h2>
                 <span class="figure figure-sm">{{money .CurrencySymbol .Spent}}</span>
             </div>
             <div class="progress">
@@ -156,11 +156,11 @@
             </div>
             <p class="hint mt-2">
                 {{if ge .Spent .BudgetLimit}}
-                <strong>Over limit.</strong> {{printf "%.0f" .Percent}}% of {{money0 .CurrencySymbol .BudgetLimit}} used.
+                <strong>Over limit.</strong> {{printf "%.0f" .PercentUsed}}% of {{money0 .CurrencySymbol .BudgetLimit}} used.
                 {{else if ge .Spent .WarnAt}}
-                <strong>Near your limit.</strong> {{printf "%.0f" .Percent}}% of {{money0 .CurrencySymbol .BudgetLimit}} used.
+                <strong>Near your limit.</strong> {{printf "%.0f" .PercentUsed}}% of {{money0 .CurrencySymbol .BudgetLimit}} used.
                 {{else}}
-                {{printf "%.0f" .Percent}}% of {{money0 .CurrencySymbol .BudgetLimit}} used.
+                {{printf "%.0f" .PercentUsed}}% of {{money0 .CurrencySymbol .BudgetLimit}} used.
                 {{end}}
             </p>
             {{if .SafeToSpend}}

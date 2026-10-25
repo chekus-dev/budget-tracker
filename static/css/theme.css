@@ -1,0 +1,81 @@
+/* Professional theme layer, loaded after app.css (unlayered, so it wins over
+   @layer components). Colours and radii only: no border/shadow shorthands on
+   components, so hover and state rules in app.css keep working.
+   To revert: remove the <link> to this file in templates/head.html.
+   Colour variables must stay 6-digit hex: the charts append alpha to them. */
+:root {
+  --canvas:#EDF1E6; --surface:#F9FBF6; --surface-2:#F1F4EC; --surface-3:#E6EBDF;
+  --ink:#17212B; --ink-muted:#46524A; --ink-faint:#5F6B63;
+  --line:#D5DDCC; --line-strong:#B8C5AE;
+  --brand:#2A4BB3; --brand-strong:#1F3A8A; --brand-soft:#E3E9F7; --brand-ink:#1F3A8A;
+  --on-brand:#FFFFFF;
+  --over:#C23B2E; --over-soft:#FBE9E6; --over-ink:#8E2A20;
+  --safe:#1B6E48; --safe-soft:#E2F1E9; --safe-ink:#14543A;
+  --radius-card:12px; --radius-field:8px; --radius-pill:8px;
+  --shadow-card:0 1px 2px rgba(23,33,43,.06);
+}
+:root.dark {
+  --canvas:#0E1613; --surface:#15201B; --surface-2:#1B2822; --surface-3:#22312A;
+  --ink:#E6EDE3; --ink-muted:#A9B8AD; --ink-faint:#8A9A8F;
+  --line:#2A3A31; --line-strong:#3A4D42;
+  --brand:#8AA4FF; --brand-strong:#B7C6FF; --brand-soft:#1E2A4A; --brand-ink:#B7C6FF;
+  --on-brand:#0E1613;
+  --over:#E5675A; --over-soft:#3A1F1C; --over-ink:#F2A097;
+  --safe:#4FBF8A; --safe-soft:#16301F; --safe-ink:#8EDDB5;
+  --shadow-card:0 1px 2px rgba(0,0,0,.4);
+}
+
+/* Corner radius: app.css hard-codes 14 to 20px on several components */
+body .card, body .stat-card, body .expense-row, body .goal-row, body .contact-card,
+body .link-card, body .archive-month-card, body .archive-search-card, body .archive-search,
+body .filter-bar, body .balance-card, body .trend-hero, body .trend-stat,
+body .trend-chart-card, body .trend-list-card, body .trend-summary, body .trend-empty-card,
+body .account-hero, body .settings-card, body .alert {
+  border-radius: var(--radius-card);
+}
+body .alert { border-radius: var(--radius-field); }
+
+/* Gradients become flat colour */
+body .trend-hero::before, body .account-hero::after, body .balance-card::after,
+body .premium-hero::after { display: none; }
+body .account-hero, body .trend-stat.is-primary, body .stat-card.is-primary {
+  background: var(--brand); color: var(--on-brand); box-shadow: none;
+}
+body .trend-avatar, body .brand-mark {
+  background: var(--brand); color: var(--on-brand); box-shadow: none;
+}
+body .btn-primary { background: var(--brand); color: var(--on-brand); box-shadow: none; }
+body .btn-primary:hover { background: var(--brand-strong); }
+body .fab {
+  background: var(--brand); color: var(--on-brand);
+  border-radius: var(--radius-field);
+  box-shadow: 0 6px 16px rgba(23,33,43,.28);
+}
+body .fab:hover { background: var(--brand-strong); }
+body .trend-tab.is-active { background: var(--brand); border-color: var(--brand); color: var(--on-brand); box-shadow: none; }
+
+/* Home hero card: ink follows the theme instead of indigo */
+body .balance-card {
+  --hero-ink: var(--ink); --hero-ink-muted: var(--ink-muted);
+  --hero-surface: var(--surface-2); --hero-line: var(--line); --hero-track: var(--line);
+  background: var(--surface); border-color: var(--line); box-shadow: var(--shadow-card);
+}
+body .balance-card.is-over {
+  --hero-ink: var(--over-ink); --hero-ink-muted: var(--over-ink);
+  --hero-line: var(--over); --hero-track: var(--over-soft);
+  background: var(--over-soft); border-color: var(--over); box-shadow: none;
+}
+
+/* Sentence-case labels instead of tracked all-caps */
+body .eyebrow, body .stat-label, body .trend-section-title, body .trend-hero-eyebrow,
+body .trend-stat-label, body .archive-section-title, body .contact-card-label,
+body .wizard-label {
+  text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600;
+}
+body nav.tabbar .nav-item { text-transform: none; letter-spacing: 0; font-size: 11px; }
+
+/* Sign-in and reset pages: flat paper */
+body .auth-shell, html.dark body .auth-shell { background: var(--canvas); }
+body .auth-shell .auth-card { border-radius: var(--radius-card); }
+body .auth-shell .btn-primary { background: var(--brand); color: var(--on-brand); box-shadow: none; }
+body .auth-shell .btn-primary:hover { background: var(--brand-strong); }

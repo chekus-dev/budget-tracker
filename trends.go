@@ -383,9 +383,10 @@ func trendAllCategoriesHref(year int) string {
 }
 
 func buildTrends(view string, year int, now time.Time, months [12]monthTotals, limit float64, symbol string) TrendsPageData {
-	d := TrendsPageData{View: view, Year: year, BudgetLimit: limit, AvgDivisor: 12}
+	d := TrendsPageData{View: view, Year: year, BudgetLimit: limit, AvgDivisor: 1}
+	monthsElapsed := 12
 	if year == now.Year() {
-		d.AvgDivisor = int(now.Month())
+		monthsElapsed = int(now.Month())
 	}
 
 	vals := make([]float64, 12)
@@ -413,6 +414,18 @@ func buildTrends(view string, year int, now time.Time, months [12]monthTotals, l
 	}
 	d.Net = d.Received - d.Spent
 
+	// Average over the months since the first entry, not over the whole year
+	// (or every month so far): one month of data means one month averaged.
+	first := -1
+	for i, m := range months {
+		if m.Spent > 0 || m.Received > 0 {
+			first = i
+			break
+		}
+	}
+	if first >= 0 && monthsElapsed > first {
+		d.AvgDivisor = monthsElapsed - first
+	}
 	divisor := float64(d.AvgDivisor)
 	if divisor > 0 {
 		d.AvgIncome = d.Received / divisor
@@ -508,7 +521,7 @@ func buildTrends(view string, year int, now time.Time, months [12]monthTotals, l
 
 	if view == "target" {
 		counted, within := 0, 0
-		for i := 0; i < d.AvgDivisor; i++ {
+		for i := 0; i < monthsElapsed; i++ {
 			if months[i].Spent <= 0 {
 				continue
 			}

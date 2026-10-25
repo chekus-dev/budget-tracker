@@ -25,7 +25,6 @@
 
     if (path.indexOf('/trends') === 0) match = '/trends';
     else if (path.indexOf('/goals') === 0) match = '/goals';
-    else if (path.indexOf('/report') === 0) match = '/report';
     else if (path.indexOf('/archive') === 0) match = '/archive';
     else if (path.indexOf('/export') === 0) match = '/export';
     else if (path.indexOf('/settings') === 0) match = '/settings';
