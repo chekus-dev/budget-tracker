@@ -252,6 +252,11 @@ func renderBillingPage(w http.ResponseWriter, data BillingPageData) {
 }
 
 func billingPageHandler(w http.ResponseWriter, r *http.Request) {
+
+	if !isTruthy(os.Getenv("PREMIUM_ENABLED")) {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 	uid, username, ok := currentUser(r)
 	if !ok {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -296,6 +301,11 @@ func billingPageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func billingCheckoutHandler(w http.ResponseWriter, r *http.Request) {
+
+	if !isTruthy(os.Getenv("PREMIUM_ENABLED")) {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 	if !billingEnabled(w) {
 		return
 	}
