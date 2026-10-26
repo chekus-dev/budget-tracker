@@ -56,12 +56,12 @@
   place-items: center;
   width: 42px;
   height: 42px;
-  color: #0d4939;
-  background: #b7f2d6;
+  color: #fff;
+  background: linear-gradient(135deg, #0f9a75 0%, #095f49 100%);
   border-radius: 14px;
+  font-size: 21px;
+  font-weight: 700;
 }
-
-.welcome-brand-mark svg { width: 24px; height: 24px; }
 
 .welcome-message {
   position: relative;
@@ -337,8 +337,7 @@
   }
   .welcome-setup .auth-card { max-width: 470px; }
   .welcome-mobile-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 15px; font-weight: 700; }
-  .welcome-mobile-brand .welcome-brand-mark { width: 38px; height: 38px; color: #fff; background: linear-gradient(135deg, #0c7a5e, #095f49); }
-  .welcome-mobile-brand .welcome-brand-mark svg { width: 22px; height: 22px; }
+  .welcome-mobile-brand .welcome-brand-mark { width: 38px; height: 38px; font-size: 19px; }
   .welcome-mobile-copy { display: block; margin: 0 0 22px; }
   .welcome-mobile-copy h1 {
     margin: 0;
