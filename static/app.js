@@ -557,6 +557,33 @@
     var addBtn = document.getElementById('add-category-row');
     var rowTemplate = document.getElementById('category-row-template');
     if (!list || !addBtn || !rowTemplate) return;
+    var colorConfigValue = list.getAttribute('data-category-color-config');
+    var colorConfig = colorConfigValue ? JSON.parse(colorConfigValue) : null;
+
+    function categoryColor(name) {
+      var normalized = name.trim().toLowerCase();
+      if (!normalized) return colorConfig.neutral;
+
+      var words = normalized.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+      for (var i = 0; i < words.length; i++) {
+        var word = words[i];
+        var forms = [word];
+        if (word.endsWith('s')) forms.push(word.slice(0, -1));
+        if (word.endsWith('es')) forms.push(word.slice(0, -2));
+        for (var j = 0; j < forms.length; j++) {
+          var icon = colorConfig.words[forms[j]];
+          if (icon && colorConfig.colors[icon]) return colorConfig.colors[icon];
+        }
+      }
+
+      var hash = 2166136261;
+      for (var k = 0; k < normalized.length; ) {
+        var codePoint = normalized.codePointAt(k);
+        hash = Math.imul(hash ^ codePoint, 16777619) >>> 0;
+        k += codePoint > 0xffff ? 2 : 1;
+      }
+      return colorConfig.fallback[hash % colorConfig.fallback.length];
+    }
 
     /* One delegated handler for every current and future row. */
     list.addEventListener('click', function (e) {
@@ -564,6 +591,16 @@
       if (!btn) return;
       var row = btn.closest('.cat-row, .category-item'); if (row) row.remove();
     });
+
+    if (colorConfig) {
+      list.addEventListener('input', function (e) {
+        var input = e.target;
+        if (!input.matches || !input.matches('input[name="category"]')) return;
+        var row = input.closest('.category-item');
+        var icon = row && row.querySelector('.category-icon');
+        if (icon) icon.style.setProperty('--cat', categoryColor(input.value));
+      });
+    }
 
     addBtn.addEventListener('click', function () {
       var row = rowTemplate.content.cloneNode(true).firstElementChild;

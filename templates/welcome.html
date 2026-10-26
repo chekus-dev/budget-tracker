@@ -174,10 +174,11 @@
                         These are the chips you pick from when logging an entry.
                     </p>
 
-                    <div id="category-list" role="group" aria-labelledby="categories-label">
+                    <div id="category-list" role="group" aria-labelledby="categories-label"
+                         data-category-color-config="{{.CategoryColorData}}">
                         {{range .Categories}}
                         <div class="category-item">
-                            <span class="category-icon" aria-hidden="true">
+                            <span class="category-icon" style="--cat:{{catColor .}}" aria-hidden="true">
                                 <svg class="icon-sm"><use href="/static/icons.svg?v=7#{{catIcon .}}"/></svg>
                             </span>
                             <input type="text" name="category" value="{{.}}" class="input" aria-label="Category name">
@@ -259,11 +260,10 @@
     <template id="category-row-template">
         <div class="category-item">
             {{/*
-              A row that does not exist yet has no name the server has seen, so
-              it shows the neutral tag until the form is saved and the page
-              comes back with the icon its name resolves to.
+              New rows begin with the neutral tag; the shared app script updates
+              the icon color as a category name is entered.
             */}}
-            <span class="category-icon" aria-hidden="true">
+            <span class="category-icon" style="--cat:{{catColor ""}}" aria-hidden="true">
                 <svg class="icon-sm"><use href="/static/icons.svg?v=7#tag"/></svg>
             </span>
             <input type="text" name="category" placeholder="New category" class="input" aria-label="Category name">
@@ -274,7 +274,7 @@
         </div>
     </template>
 
-    <script src="/static/app.js?v=6" defer></script>
+    <script src="/static/app.js?v=7" defer></script>
 </body>
 </html>
 {{end}}

@@ -22,6 +22,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -149,10 +150,11 @@ type WelcomePageData struct {
 
 	// The values each step's form renders from. CurrencyList is derived, the
 	// way it is on the settings page; the rest come from the settings row.
-	Currency     string
-	CurrencyList []CurrencyOption
-	BudgetLimit  float64
-	Categories   []string
+	Currency          string
+	CurrencyList      []CurrencyOption
+	BudgetLimit       float64
+	Categories        []string
+	CategoryColorData string
 
 	Form welcomeEntryForm
 }
@@ -231,6 +233,22 @@ func welcomeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	categoryColorData, err := json.Marshal(struct {
+		Words    map[string]string `json:"words"`
+		Colors   map[string]string `json:"colors"`
+		Fallback []string          `json:"fallback"`
+		Neutral  string            `json:"neutral"`
+	}{
+		Words:    categoryWordIcons,
+		Colors:   categoryIconColors,
+		Fallback: categoryFallbackColors,
+		Neutral:  categoryNeutralColor,
+	})
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+
 	render := func(step int, form welcomeEntryForm, errMsg string) {
 		title, sub := welcomeCopy(step)
 		data := WelcomePageData{
@@ -239,16 +257,17 @@ func welcomeHandler(w http.ResponseWriter, r *http.Request) {
 				CurrencySymbol: currencySymbol(settings.Currency),
 				Version:        appVersion,
 			},
-			Step:         step,
-			Steps:        welcomeSteps(step),
-			Title:        title,
-			Sub:          sub,
-			Error:        errMsg,
-			Currency:     settings.Currency,
-			CurrencyList: currencyOptions,
-			BudgetLimit:  settings.BudgetLimit,
-			Categories:   settings.Categories,
-			Form:         form,
+			Step:              step,
+			Steps:             welcomeSteps(step),
+			Title:             title,
+			Sub:               sub,
+			Error:             errMsg,
+			Currency:          settings.Currency,
+			CurrencyList:      currencyOptions,
+			BudgetLimit:       settings.BudgetLimit,
+			Categories:        settings.Categories,
+			CategoryColorData: string(categoryColorData),
+			Form:              form,
 		}
 		if err := tmpl.ExecuteTemplate(w, "welcome.html", data); err != nil {
 			log.Printf("failed to render welcome template: %v", err)
