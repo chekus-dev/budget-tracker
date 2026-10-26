@@ -19,6 +19,22 @@ func sendResetEmail(to, code string) error {
 		return nil
 	}
 
+	return sendTransactionalEmail(to, "Your Budget Tracker reset code", resetEmailText(code), resetEmailHTML(code))
+}
+
+func sendVerificationEmail(to, code string) error {
+	if isTruthy(os.Getenv("DEV_EMAIL")) {
+		log.Printf("[DEV] Email verification code for %s: %s", to, code)
+		return nil
+	}
+
+	text := "Your Budget Tracker verification code is " + code + ".\n" +
+		"It expires in 15 minutes.\n\n" +
+		"If you didn't create an account, you can ignore this email.\n"
+	return sendTransactionalEmail(to, "Verify your Budget Tracker email", text, verificationEmailHTML(code))
+}
+
+func sendTransactionalEmail(to, subject, text, html string) error {
 	apiKey := strings.TrimSpace(os.Getenv("SENDGRID_API_KEY"))
 
 	// Must match a sender or domain you verified in SendGrid. Once you
@@ -30,8 +46,7 @@ func sendResetEmail(to, code string) error {
 	}
 
 	if apiKey == "" {
-		log.Printf("[MAIL] SENDGRID_API_KEY not set; skipping send to %s", to)
-		return nil
+		return fmt.Errorf("SENDGRID_API_KEY is not configured")
 	}
 
 	payload := map[string]any{
@@ -46,11 +61,11 @@ func sendResetEmail(to, code string) error {
 			"email": fromEmail,
 			"name":  "Budget Tracker",
 		},
-		"subject": "Your Budget Tracker reset code",
+		"subject": subject,
 		// SendGrid requires text/plain before text/html.
 		"content": []map[string]string{
-			{"type": "text/plain", "value": resetEmailText(code)},
-			{"type": "text/html", "value": resetEmailHTML(code)},
+			{"type": "text/plain", "value": text},
+			{"type": "text/html", "value": html},
 		},
 	}
 
@@ -81,6 +96,6 @@ func sendResetEmail(to, code string) error {
 		return fmt.Errorf("sendgrid API returned %d: %s", resp.StatusCode, string(respBody))
 	}
 
-	log.Printf("[MAIL] Reset code sent to %s via SendGrid", to)
+	log.Printf("[MAIL] Transactional email sent to %s via SendGrid", to)
 	return nil
 }

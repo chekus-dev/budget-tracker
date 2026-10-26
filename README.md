@@ -43,7 +43,8 @@ This README documents the project honestly — including the setbacks — becaus
 - Export a month as a CSV spreadsheet or a print-ready PDF
 - Delete an expense and undo it from a toast that stays on screen for a few
   seconds
-- Sign in, register, and reset a forgotten password by email
+- Sign in, register with a required 6-digit email verification code, and reset
+  a forgotten password by email
 - Light and dark themes across every screen; the preference is remembered per browser
 - Generate a spending report and monthly chart from the same data, using a
   separate Python script
@@ -295,6 +296,13 @@ openssl rand -base64 32
 
 > Direct and pooler connection strings are supported. The app disables named
 > prepared statements so Supabase's Transaction pooler can be used as well.
+
+#### Email verification and password-reset codes
+
+In production, configure `SENDGRID_API_KEY` and a `SENDGRID_FROM` address
+verified with SendGrid. New accounts cannot sign in until they enter the
+6-digit code sent to that address. For local development, set `DEV_EMAIL=true`
+to log verification and reset codes in the server console instead.
 
 #### Optional: signup bot protection
 

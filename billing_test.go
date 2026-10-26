@@ -184,6 +184,7 @@ func billingTestSetup(t *testing.T) *billingFakePaystack {
 
 	t.Setenv("PAYSTACK_SECRET_KEY", billingTestKey)
 	t.Setenv("APP_BASE_URL", "https://app.test")
+	t.Setenv("PREMIUM_ENABLED", "true")
 
 	store = sessions.NewCookieStore([]byte(strings.Repeat("k", 32)))
 	store.Options = &sessions.Options{Path: "/", MaxAge: 3600, HttpOnly: true}

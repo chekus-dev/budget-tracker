@@ -416,17 +416,8 @@ func buildTrends(view string, year int, now time.Time, months [12]monthTotals, l
 	}
 	d.Net = d.Received - d.Spent
 
-	// Average over the months since the first entry, not over the whole year
-	// (or every month so far): one month of data means one month averaged.
-	first := -1
-	for i, m := range months {
-		if m.Spent > 0 || m.Received > 0 {
-			first = i
-			break
-		}
-	}
-	if first >= 0 && monthsElapsed > first {
-		d.AvgDivisor = monthsElapsed - first
+	if d.HasData {
+		d.AvgDivisor = monthsElapsed
 	}
 	divisor := float64(d.AvgDivisor)
 	if divisor > 0 {
@@ -457,7 +448,7 @@ func buildTrends(view string, year int, now time.Time, months [12]monthTotals, l
 		if d.Net > 0 {
 			d.HeadMain = "+" + d.HeadMain
 		}
-		d.HeadCaption = "Net for the year"
+		d.HeadCaption = "Net"
 	case "target":
 		if d.NoBudget {
 			d.HeadMain, d.HeadCaption = "No budget", "Set one in Settings"

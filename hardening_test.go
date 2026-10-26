@@ -65,6 +65,28 @@ func TestHardening_GeneratedTokenIsNeverStoredRaw(t *testing.T) {
 	}
 }
 
+func TestValidRegistrationEmail(t *testing.T) {
+	cases := []struct {
+		email string
+		valid bool
+	}{
+		{"person@example.com", true},
+		{"person+tag@example.co.uk", true},
+		{"not-an-email", false},
+		{"person@", false},
+		{"Person <person@example.com>", false},
+		{" person@example.com", false},
+		{"person@example.com ", false},
+		{"", false},
+	}
+
+	for _, c := range cases {
+		if got := validRegistrationEmail(c.email); got != c.valid {
+			t.Errorf("validRegistrationEmail(%q) = %t, want %t", c.email, got, c.valid)
+		}
+	}
+}
+
 // ---------- Passwords ----------
 
 func TestHardening_ValidateNewPassword(t *testing.T) {

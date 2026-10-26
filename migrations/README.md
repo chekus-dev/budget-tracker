@@ -27,8 +27,9 @@ builds on the one before it, so **they must be applied in order**.
 | 020 | `020_password_history.sql` | Last five password hashes, filled by a trigger, to reject reused passwords |
 | 021 | `021_recurring_entries.sql` | Recurring entries (rent, salary, subscriptions) created automatically |
 | 022 | `022_recurring_soft_delete.sql` | Soft delete for recurring entries (Undo) |
+| 023 | `023_email_verification.sql` | Requires new signups to verify email addresses |
 
-Running all eighteen against an empty database produces the complete schema the
+Running all twenty-three against an empty database produces the complete schema the
 app expects.
 
 ## Applying them
@@ -92,6 +93,9 @@ users
     email               VARCHAR(255) UNIQUE           -- nullable
     reset_token         VARCHAR(64)                   -- nullable
     reset_token_expires TIMESTAMP                     -- nullable
+    email_verified_at   TIMESTAMP                     -- nullable for pending signups
+    email_verification_token VARCHAR(64)              -- nullable
+    email_verification_expires TIMESTAMP              -- nullable
     session_version    INTEGER NOT NULL DEFAULT 0
 
 settings

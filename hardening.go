@@ -13,6 +13,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/mail"
 	"os"
 	"strings"
 	"syscall"
@@ -29,6 +30,11 @@ import (
 func hashResetToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
+}
+
+func validRegistrationEmail(address string) bool {
+	parsed, err := mail.ParseAddress(address)
+	return err == nil && parsed.Address == address
 }
 
 // ---------- Passwords ----------

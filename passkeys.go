@@ -303,8 +303,27 @@ func passkeyLoginFinishHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var sv int
-	if err := db.QueryRow(`SELECT session_version FROM users WHERE id = $1`, u.id).Scan(&sv); err != nil {
+	var email sql.NullString
+	var emailVerifiedAt sql.NullTime
+	if err := db.QueryRow(
+		`SELECT session_version, email, email_verified_at FROM users WHERE id = $1`,
+		u.id,
+	).Scan(&sv, &email, &emailVerifiedAt); err != nil {
 		fail(http.StatusInternalServerError, "Something went wrong. Please try again.")
+		return
+	}
+	if !emailVerifiedAt.Valid {
+		if !email.Valid || strings.TrimSpace(email.String) == "" {
+			fail(http.StatusUnauthorized, "This account needs an email address before it can be verified. Please contact support.")
+			return
+		}
+		s.Values["signup_verify_user_id"] = u.id
+		s.Values["signup_verify_email"] = email.String
+		if err := s.Save(r, w); err != nil {
+			waJSON(w, http.StatusInternalServerError, map[string]string{"error": "Something went wrong. Please try again."})
+			return
+		}
+		waJSON(w, http.StatusOK, map[string]any{"ok": true, "redirect": "/verify-email"})
 		return
 	}
 	// Persist the updated signature counter and last-used time.

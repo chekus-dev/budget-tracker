@@ -61,11 +61,10 @@ services:
       - key: APP_BASE_URL
         sync: false
 
-      # Optional: without these, password-reset links are logged to the
-      # server console instead of being emailed.
-      - key: RESEND_API_KEY
+      # Required to send email verification and password-reset codes.
+      - key: SENDGRID_API_KEY
         sync: false
-      - key: RESEND_FROM_EMAIL
+      - key: SENDGRID_FROM
         sync: false
 
       # Signup bot protection (Google reCAPTCHA v2 checkbox).

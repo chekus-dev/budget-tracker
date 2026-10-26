@@ -29,7 +29,7 @@ const rateLimitQueryTimeout = 2 * time.Second
 // poolers and transient database load longer to answer than login checks get.
 const rateLimitSweepTimeout = 10 * time.Second
 
-// enableSharedRateLimits switches the four global limiters to database-backed
+// enableSharedRateLimits switches the global limiters to database-backed
 // counters. Call it once at startup, before startRateLimiterSweeper, so the
 // sweeper goroutine sees the final configuration.
 //
@@ -57,6 +57,8 @@ func enableSharedRateLimits() {
 	loginLimiterIP.shared = "login-ip"
 	resetLimiterEmail.shared = "reset-email"
 	resetLimiterIP.shared = "reset-ip"
+	emailVerificationLimiterEmail.shared = "verify-email"
+	emailVerificationLimiterIP.shared = "verify-email-ip"
 	log.Println("rate limits: shared via database")
 }
 

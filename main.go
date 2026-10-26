@@ -15,6 +15,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+
 	"math"
 	"net"
 	"net/http"
@@ -524,6 +525,7 @@ func main() {
 		"templates/change-password.html",
 		"templates/forgot-password.html",
 		"templates/verify-otp.html",
+		"templates/verify-email.html",
 		"templates/reset-password.html",
 		"templates/terms.html",
 		"templates/export.html",
@@ -607,6 +609,7 @@ func main() {
 	mux.HandleFunc("/passkeys/login/finish", passkeyLoginFinishHandler)
 	mux.HandleFunc("/login", loginHandler)
 	mux.HandleFunc("/register", registerHandler)
+	mux.HandleFunc("/verify-email", verifyEmailHandler)
 	mux.HandleFunc("/terms", termsHandler)
 	mux.HandleFunc("/logout", logoutHandler)
 	mux.HandleFunc("/forgot-password", forgotPasswordHandler)
@@ -774,6 +777,9 @@ const (
 	maxResetsPerEmail = 3
 	maxResetsPerIP    = 10
 
+	maxEmailVerificationFailsPerEmail = 5
+	maxEmailVerificationFailsPerIP    = 20
+
 	maxRateKeys = 10000
 )
 
@@ -876,11 +882,15 @@ var (
 
 	resetLimiterEmail = newRateLimiter(maxResetsPerEmail)
 	resetLimiterIP    = newRateLimiter(maxResetsPerIP)
+
+	emailVerificationLimiterEmail = newRateLimiter(maxEmailVerificationFailsPerEmail)
+	emailVerificationLimiterIP    = newRateLimiter(maxEmailVerificationFailsPerIP)
 )
 
 var allRateLimiters = []*rateLimiter{
 	loginLimiterUser, loginLimiterIP,
 	resetLimiterEmail, resetLimiterIP,
+	emailVerificationLimiterEmail, emailVerificationLimiterIP,
 }
 
 func userRateKey(username string) string {
@@ -926,6 +936,17 @@ func resetLockoutMessage(wait time.Duration) string {
 	return fmt.Sprintf("Too many reset requests. Please wait %d minutes and try again.", minutes)
 }
 
+func emailVerificationLockoutMessage(wait time.Duration) string {
+	minutes := int(math.Ceil(wait.Minutes()))
+	if minutes < 1 {
+		minutes = 1
+	}
+	if minutes == 1 {
+		return "Too many verification attempts. Please wait a minute and try again."
+	}
+	return fmt.Sprintf("Too many verification attempts. Please wait %d minutes and try again.", minutes)
+}
+
 func tooManyAttempts(w http.ResponseWriter, wait time.Duration) {
 	writeRetryAfter(w, wait)
 	tmpl.ExecuteTemplate(w, "login.html", AuthPageData{Error: loginLockoutMessage(wait), Version: appVersion})
@@ -949,6 +970,29 @@ func resetRateKey(email string) string {
 	return "reset:" + strings.ToLower(strings.TrimSpace(email))
 }
 func resetIPRateKey(r *http.Request) string { return "reset-ip:" + clientIP(r) }
+
+func emailVerificationRateKey(email string) string {
+	return "verify-email:" + strings.ToLower(strings.TrimSpace(email))
+}
+func emailVerificationIPRateKey(r *http.Request) string {
+	return "verify-email-ip:" + clientIP(r)
+}
+
+func waitingForEmailVerification(r *http.Request, email string) time.Duration {
+	if d := emailVerificationLimiterEmail.retryAfter(emailVerificationRateKey(email)); d > 0 {
+		return d
+	}
+	return emailVerificationLimiterIP.retryAfter(emailVerificationIPRateKey(r))
+}
+
+func chargeEmailVerification(r *http.Request, email string) time.Duration {
+	a := emailVerificationLimiterEmail.fail(emailVerificationRateKey(email))
+	b := emailVerificationLimiterIP.fail(emailVerificationIPRateKey(r))
+	if b > a {
+		return b
+	}
+	return a
+}
 
 func waitingForReset(r *http.Request, email string) time.Duration {
 	if d := resetLimiterEmail.retryAfter(resetRateKey(email)); d > 0 {
@@ -1134,8 +1178,8 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			reject(msg)
 			return
 		}
-		if email == "" || !strings.Contains(email, "@") {
-			reject("A valid email is required for password recovery.")
+		if !validRegistrationEmail(email) {
+			reject("Enter a valid email address that you can access. We'll send a verification code.")
 			return
 		}
 		if password != confirm {
@@ -1161,6 +1205,12 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			serverError(w, err)
 			return
 		}
+		code, err := generateOTP()
+		if err != nil {
+			serverError(w, err)
+			return
+		}
+		expires := time.Now().Add(resetTokenTTL)
 
 		tx, err := db.BeginTx(r.Context(), nil)
 		if err != nil {
@@ -1171,9 +1221,12 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 		var userID int
 		err = tx.QueryRowContext(r.Context(),
-			`INSERT INTO users (username, email, password_hash, terms_accepted_at)
-			 VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id`,
-			username, email, string(hash),
+			`INSERT INTO users (
+			    username, email, password_hash, terms_accepted_at,
+			    email_verification_token, email_verification_expires
+			 )
+			 VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, $5) RETURNING id`,
+			username, email, string(hash), hashResetToken(code), expires,
 		).Scan(&userID)
 		if err != nil {
 			var pgErr *pgconn.PgError
@@ -1195,16 +1248,23 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		session := getSession(r)
-		session.Values["user_id"] = userID
-		session.Values["username"] = username
-		session.Values["sv"] = 0
+		session.Values["signup_verify_user_id"] = userID
+		session.Values["signup_verify_email"] = email
 		if err := session.Save(r, w); err != nil {
 			serverError(w, err)
 			return
 		}
-		// Straight into the wizard rather than through the home page: the
-		// indexHandler gate would only bounce a brand-new account here anyway.
-		http.Redirect(w, r, "/welcome", http.StatusSeeOther)
+		if err := sendVerificationEmail(email, code); err != nil {
+			log.Printf("failed to send signup verification email: %v", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			tmpl.ExecuteTemplate(w, "verify-email.html", map[string]interface{}{
+				"Email":  email,
+				"Error":  "We couldn't send your verification code just now. Please try sending it again.",
+				"Notice": "",
+			})
+			return
+		}
+		http.Redirect(w, r, "/verify-email", http.StatusSeeOther)
 		return
 	}
 	tmpl.ExecuteTemplate(w, "register.html", AuthPageData{RecaptchaSiteKey: recaptchaSiteKey(), Version: appVersion})
@@ -1237,9 +1297,13 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 		var id, sessionVersion int
 		var passwordHash string
+		var email sql.NullString
+		var emailVerifiedAt sql.NullTime
 		err := db.QueryRow(
-			"SELECT id, password_hash, session_version FROM users WHERE username = $1", username,
-		).Scan(&id, &passwordHash, &sessionVersion)
+			`SELECT id, password_hash, session_version, email, email_verified_at
+			 FROM users WHERE username = $1`,
+			username,
+		).Scan(&id, &passwordHash, &sessionVersion, &email, &emailVerifiedAt)
 		if err != nil {
 			bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
 			if wait := recordLoginFailure(r, username); wait > 0 {
@@ -1259,6 +1323,24 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		loginLimiterUser.reset(userRateKey(username))
+		if !emailVerifiedAt.Valid {
+			if !email.Valid || strings.TrimSpace(email.String) == "" {
+				tmpl.ExecuteTemplate(w, "login.html", AuthPageData{
+					Error:   "This account needs an email address before it can be verified. Please contact support.",
+					Version: appVersion,
+				})
+				return
+			}
+			session := getSession(r)
+			session.Values["signup_verify_user_id"] = id
+			session.Values["signup_verify_email"] = email.String
+			if err := session.Save(r, w); err != nil {
+				serverError(w, err)
+				return
+			}
+			http.Redirect(w, r, "/verify-email", http.StatusSeeOther)
+			return
+		}
 
 		session := getSession(r)
 		session.Values["user_id"] = id
@@ -2402,6 +2484,8 @@ func verifyTemplatesRender() {
 		}},
 		{"login.html", AuthPageData{Error: "nope", Version: appVersion}},
 		{"register.html", AuthPageData{RecaptchaSiteKey: "site-key", TermsChecked: true, Version: appVersion}},
+		{"verify-email.html", map[string]interface{}{"Email": "sam@example.com", "Error": "", "Notice": ""}},
+		{"verify-email.html", map[string]interface{}{"Email": "sam@example.com", "Error": "Wrong code.", "Notice": ""}},
 		{"change-password.html", ChangePasswordPageData{
 			PageChrome: PageChrome{Username: "sam", CurrencySymbol: "₦"},
 		}},
