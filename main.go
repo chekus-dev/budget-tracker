@@ -353,28 +353,6 @@ func postgresConfig(dsn string) (*pgx.ConnConfig, error) {
 	return config, nil
 }
 
-func healthzHandler(w http.ResponseWriter, r *http.Request) {
-	dbStatus := "ok"
-	if db == nil {
-		dbStatus = "not configured"
-	} else {
-		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
-		defer cancel()
-		if err := db.PingContext(ctx); err != nil {
-			dbStatus = "unavailable"
-			log.Printf("healthz: database ping failed: %v", err)
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":   "ok",
-		"database": dbStatus,
-		"version":  appVersion,
-	})
-}
-
 // ---------------------------------------------------------------------------
 // Response compression and static asset caching
 // ---------------------------------------------------------------------------
@@ -638,7 +616,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           gzipMiddleware(securityHeaders(mux)),
+		Handler:           gzipMiddleware(securityHeaders(requestTimer(mux))),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,
@@ -1075,7 +1053,7 @@ func initChrome(c *PageChrome, userID int) {
 func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, _, ok := currentUser(r)
-		if !ok || !sessionStillValid(r, userID) {
+		if !ok || !sessionStillValidCached(r, userID) {
 			session := getSession(r)
 			session.Options.MaxAge = -1
 			if err := session.Save(r, w); err != nil {
@@ -1088,10 +1066,7 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 		// Soft-deleted users are locked out even if their session cookie is
 		// still valid. This is what makes "disable account" take effect on
 		// the next request, rather than at the end of the session lifetime.
-		var deleted sql.NullTime
-		if err := db.QueryRow(
-			`SELECT deleted_at FROM users WHERE id = $1`, userID,
-		).Scan(&deleted); err != nil || deleted.Valid {
+		if accountDisabledCached(userID) {
 			session := getSession(r)
 			session.Options.MaxAge = -1
 			if err := session.Save(r, w); err != nil {
@@ -1118,7 +1093,7 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 		if err := session.Save(r, w); err != nil {
 			log.Printf("failed to refresh session: %v", err)
 		}
-		stampLastSeen(userID)
+		stampLastSeenThrottled(userID)
 		next(w, r)
 	}
 }
@@ -2291,7 +2266,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	   issues several queries.
 	   A failed read renders the home page rather than redirecting: a database
 	   blip is not a reason to march someone into a wizard. */
-	if onboarded, err := userOnboarded(userID); err == nil && !onboarded {
+	if onboarded, err := userOnboardedCached(userID); err == nil && !onboarded {
 		http.Redirect(w, r, "/welcome", http.StatusSeeOther)
 		return
 	}
