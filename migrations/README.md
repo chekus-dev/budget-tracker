@@ -25,6 +25,8 @@ builds on the one before it, so **they must be applied in order**.
 | 018 | `018_admin_portal.sql` | Adds admin account fields, audit logs, notes, and user messages |
 | 019 | `019_webauthn_credentials.sql` | Passkey (fingerprint sign-in) credentials |
 | 020 | `020_password_history.sql` | Last five password hashes, filled by a trigger, to reject reused passwords |
+| 021 | `021_recurring_entries.sql` | Repeating entries (rent, salary, subscriptions) created automatically |
+| 022 | `022_recurring_soft_delete.sql` | Soft delete for repeating entries (Undo) |
 
 Running all eighteen against an empty database produces the complete schema the
 app expects.

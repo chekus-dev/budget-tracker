@@ -1,0 +1,118 @@
+{{define "recurring.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Repeating entries — Budget Tracker</title>
+    {{template "head.html" .}}
+</head>
+<body class="has-chrome no-fab">
+    {{template "nav.html" .}}
+
+    <main class="app-main">
+        <div class="page-head">
+            <h2 class="page-title">Repeating entries</h2>
+            <p class="page-sub">Rent, salary and subscriptions are added for you on the day they are due.</p>
+        </div>
+
+        {{if .Error}}
+        <div class="alert alert-over mb-4" role="alert">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#alert"/></svg>
+            <p>{{.Error}}</p>
+        </div>
+        {{end}}
+
+        {{if .Rules}}
+        <ul class="expense-list mb-6">
+            {{range .Rules}}
+            <li class="expense-row{{if .Income}} is-income{{end}}"{{if not .Active}} style="opacity:.6"{{end}}>
+                <span class="expense-icon" aria-hidden="true">
+                    <svg class="icon"><use href="/static/icons.svg?v=7#{{rowIcon .Category .Income}}"/></svg>
+                </span>
+                <div class="expense-body">
+                    <div class="expense-title">{{.Description}}</div>
+                    <div class="expense-meta">
+                        {{.Summary}}{{if .Category}}, {{.Category}}{{end}}.
+                        {{if .Active}}Next: {{.NextDate}}.{{else}}Paused.{{end}}
+                    </div>
+                </div>
+                <span class="expense-amount">{{if .Income}}+{{end}}{{money $.CurrencySymbol .Amount}}</span>
+                <div class="expense-actions">
+                    <form action="/recurring/toggle/{{.ID}}" method="POST">
+                        <button type="submit" class="btn btn-soft btn-sm">{{if .Active}}Pause{{else}}Resume{{end}}</button>
+                    </form>
+                    <form action="/recurring/delete/{{.ID}}" method="POST">
+                        <button type="submit" class="btn-icon is-danger" aria-label="Delete {{.Description}}">
+                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#trash"/></svg>
+                        </button>
+                    </form>
+                </div>
+            </li>
+            {{end}}
+        </ul>
+        <p class="note mb-6">Deleting a rule stops future entries and can be undone right away. Entries already added stay in your history.</p>
+        {{else}}
+        <div class="empty mb-6">
+            <p class="empty-title">Nothing repeats yet</p>
+            <p class="empty-sub">Add your rent, salary or a subscription below and it will be logged automatically.</p>
+        </div>
+        {{end}}
+
+        <section class="card" aria-labelledby="new-rule-title">
+            <h2 class="card-title" id="new-rule-title" style="margin-bottom:16px;">Add a repeating entry</h2>
+            <form action="/recurring/create" method="POST">
+                <div class="auth-field">
+                    <label class="label" for="r-kind">Type</label>
+                    <select class="input" id="r-kind" name="kind">
+                        <option value="expense"{{if ne .Form.Kind "income"}} selected{{end}}>Money out (expense)</option>
+                        <option value="income"{{if eq .Form.Kind "income"}} selected{{end}}>Money in (income)</option>
+                    </select>
+                </div>
+                <div class="auth-field">
+                    <label class="label" for="r-desc">Name</label>
+                    <input class="input" type="text" id="r-desc" name="description" maxlength="255"
+                           placeholder="Rent, salary, Netflix" value="{{.Form.Description}}" required>
+                </div>
+                <div class="auth-field">
+                    <label class="label" for="r-amount">Amount ({{.CurrencySymbol}})</label>
+                    <input class="input" type="number" id="r-amount" name="amount" step="0.01" min="0.01"
+                           inputmode="decimal" placeholder="0.00" value="{{.Form.Amount}}" required>
+                </div>
+                <div class="auth-field">
+                    <label class="label" for="r-cat">Category</label>
+                    <select class="input" id="r-cat" name="category">
+                        <option value="">No category</option>
+                        {{$sel := .Form.Category}}
+                        {{range .Categories}}<option value="{{.}}"{{if eq . $sel}} selected{{end}}>{{.}}</option>{{end}}
+                    </select>
+                </div>
+                <div class="auth-field">
+                    <label class="label" for="r-freq">How often</label>
+                    <select class="input" id="r-freq" name="frequency">
+                        <option value="daily"{{if eq .Form.Frequency "daily"}} selected{{end}}>Every day</option>
+                        <option value="weekly"{{if eq .Form.Frequency "weekly"}} selected{{end}}>Every week</option>
+                        <option value="monthly"{{if eq .Form.Frequency "monthly"}} selected{{end}}>Every month</option>
+                    </select>
+                </div>
+                <div class="auth-field">
+                    <label class="label" for="r-start">First entry on</label>
+                    <input class="input" type="date" id="r-start" name="start" min="{{.Today}}" value="{{.Form.Start}}" required>
+                    <p class="hint">Monthly entries repeat on this day of the month. On shorter months they land on the last day.</p>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Add repeating entry</button>
+            </form>
+        </section>
+    </main>
+    {{if .DeletedID}}
+    <template id="undo-template">
+        <div class="toast">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#trash"/></svg>
+            <span class="toast-msg">Repeating entry deleted.</span>
+            <form action="/recurring/restore/{{.DeletedID}}" method="POST">
+                <button type="submit" class="toast-action">Undo</button>
+            </form>
+        </div>
+    </template>
+    {{end}}
+</body>
+</html>
+{{end}}

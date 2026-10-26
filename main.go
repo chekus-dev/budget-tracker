@@ -528,6 +528,7 @@ func main() {
 		"templates/export.html",
 		"templates/billing.html",
 		"templates/support.html",
+		"templates/recurring.html",
 		"templates/goals.html",
 		"templates/help.html",
 		"templates/welcome.html",
@@ -567,6 +568,11 @@ func main() {
 	mux.HandleFunc("/goals/toggle/", requireAuth(goalsToggleHandler))
 	mux.HandleFunc("/goals/delete/", requireAuth(goalsDeleteHandler))
 	mux.HandleFunc("/welcome", requireAuth(welcomeHandler))
+	mux.HandleFunc("/recurring", requireAuth(recurringPageHandler))
+	mux.HandleFunc("/recurring/create", requireAuth(recurringCreateHandler))
+	mux.HandleFunc("/recurring/toggle/", requireAuth(recurringToggleHandler))
+	mux.HandleFunc("/recurring/delete/", requireAuth(recurringDeleteHandler))
+	mux.HandleFunc("/recurring/restore/", requireAuth(recurringRestoreHandler))
 
 	// FIX 4: the previous comment claimed this redirected to /admin/users;
 	// it renders the dashboard. Comment now matches the handler.
@@ -619,6 +625,7 @@ func main() {
 	}))
 
 	go autoMonthlyReset()
+	startRecurringJob()
 
 	port := os.Getenv("PORT")
 	if port == "" {
