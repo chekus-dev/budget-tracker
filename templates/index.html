@@ -180,7 +180,7 @@
                 {{range .CategoryBudgets}}
                 <li class="catbudget">
                     <div class="catbudget-head">
-                        <span class="catbudget-name">
+                        <span class="catbudget-name" style="--cat:{{catColor .Category}}">
                             <svg class="icon icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#{{catIcon .Category}}"/></svg>
                             {{.Category}}
                         </span>

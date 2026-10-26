@@ -8,8 +8,8 @@
     '.pw-eye{position:absolute;top:50%;right:6px;transform:translateY(-50%);' +
     'width:38px;height:38px;display:grid;place-items:center;border:0;border-radius:10px;' +
     'background:transparent;color:inherit;opacity:.6;cursor:pointer;transition:opacity .15s,background-color .15s}' +
-    '.pw-eye:hover{opacity:1;background:#6366f114}' +
-    '.pw-eye:focus-visible{opacity:1;outline:2px solid #4f46e5;outline-offset:1px}' +
+    '.pw-eye:hover{opacity:1;background:#0c7a5e14}' +
+    '.pw-eye:focus-visible{opacity:1;outline:2px solid #0c7a5e;outline-offset:1px}' +
     '.pw-eye svg{width:20px;height:20px}';
 
   var EYE =

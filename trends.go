@@ -201,6 +201,7 @@ var categoryRuleIcons = []struct {
 	{"trending-up", []string{"investment", "invest", "stock", "share", "crypto", "bitcoin", "forex", "trading", "trade", "dividend", "bond", "mutual"}},
 	{"coins", []string{"loan", "debt", "borrow", "repay", "repayment", "owe", "owed", "instalment", "installment", "hire"}},
 	{"wallet", []string{"allowance", "pocket", "personal", "cash", "petty", "upkeep"}},
+	{"banknote", []string{"salary", "wage", "wages", "payroll", "bonus", "commission", "freelance", "stipend", "income", "revenue", "profit", "refund", "cashback", "earning", "earnings", "gig"}},
 
 	// Food and drink.
 	{"utensils", []string{"food", "feeding", "feed", "eat", "eating", "lunch", "dinner", "breakfast", "brunch", "restaurant", "eatery", "takeaway", "takeout", "chop", "suya", "shawarma", "pizza", "burger", "snack", "canteen", "cafeteria", "kitchen", "meal"}},
@@ -250,6 +251,7 @@ var categoryRuleIcons = []struct {
 	{"laptop", []string{"laptop", "computer", "electronics", "gadget", "accessories", "charger"}},
 	{"bag", []string{"shopping", "shop", "mall", "boutique", "purchase", "amazon", "jumia", "konga"}},
 	{"receipt", []string{"bill", "fee", "charge", "subscription", "due", "levy", "tax", "vat"}},
+	{"receipt", []string{"charges", "bank", "transfer", "stamp", "atm", "penalty"}},
 	{"briefcase", []string{"work", "business", "office", "job", "company", "staff", "employee", "professional", "consulting"}},
 	{"tag", []string{"other", "misc", "miscellaneous", "uncategorised", "uncategorized", "general", "random", "tag", "various", "stuff"}},
 }
@@ -683,19 +685,20 @@ func trendsHandler(w http.ResponseWriter, r *http.Request) {
 		type donutSlice struct {
 			Name  string  `json:"name"`
 			Value float64 `json:"value"`
+			Color string  `json:"color"`
 		}
 		const maxSlices = 8
 		var slices []donutSlice
 		var otherSum float64
 		for i, c := range cats {
 			if i < maxSlices {
-				slices = append(slices, donutSlice{Name: c.Name, Value: c.Total})
+				slices = append(slices, donutSlice{Name: c.Name, Value: c.Total, Color: catColor(c.Name)})
 			} else {
 				otherSum += c.Total
 			}
 		}
 		if otherSum > 0 {
-			slices = append(slices, donutSlice{Name: "Other", Value: otherSum})
+			slices = append(slices, donutSlice{Name: "Other", Value: otherSum, Color: "#94A3B8"})
 		}
 		if raw, err := json.Marshal(slices); err == nil {
 			data.DonutJSON = template.JS(raw)

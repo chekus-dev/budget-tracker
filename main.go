@@ -481,7 +481,8 @@ func main() {
 		   one. See categoryIcon in trends.go for how a name picks an icon.
 		   catIcon never returns an empty id, so the sprite URL always
 		   carries a fragment that names one symbol. */
-		"catIcon": catIcon,
+		"catIcon":  catIcon,
+		"catColor": catColor,
 		/* The icon on a list row: the category's own when the entry has a
 		   category, and the generic receipt/banknote when it does not. */
 		"rowIcon": func(category string, income bool) string {
@@ -1212,6 +1213,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 func termsHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "terms.html", map[string]interface{}{
 		"Version": appVersion,
+		"Email":   supportEmail,
 	})
 }
 
@@ -2463,7 +2465,7 @@ func verifyTemplatesRender() {
 		}},
 		// FIX 5: termsHandler passes a map with Version, not nil. Match it so
 		// this smoke test actually exercises the template's real data shape.
-		{"terms.html", map[string]interface{}{"Version": appVersion}},
+		{"terms.html", map[string]interface{}{"Version": appVersion, "Email": supportEmail}},
 	}
 
 	for _, p := range pages {

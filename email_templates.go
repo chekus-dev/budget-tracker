@@ -14,16 +14,16 @@ const resetEmailTpl = `<!DOCTYPE html>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f8;padding:32px 12px;">
 <tr><td align="center">
 <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;background:#ffffff;border-radius:20px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-<tr><td align="center" bgcolor="#4f46e5" style="background:#4f46e5;background-image:linear-gradient(135deg,#4f46e5,#7c3aed);padding:30px 24px;">
+<tr><td align="center" bgcolor="#0c7a5e" style="background:#0c7a5e;background-image:linear-gradient(135deg,#0c7a5e,#095f49);padding:30px 24px;">
 <div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Budget Tracker</div>
-<div style="font-size:13px;color:#e0e7ff;margin-top:4px;">Password reset</div>
+<div style="font-size:13px;color:#d3efe4;margin-top:4px;">Password reset</div>
 </td></tr>
 <tr><td style="padding:32px 28px 8px;">
 <h1 style="margin:0 0 10px;font-size:22px;line-height:1.3;color:#111827;">Your reset code</h1>
 <p style="margin:0;font-size:15px;line-height:1.6;color:#4b5563;">Enter this code in the app to choose a new password. It expires in 15 minutes.</p>
 </td></tr>
 <tr><td align="center" style="padding:20px 28px;">
-<div style="display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;border-radius:14px;padding:16px 26px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:34px;font-weight:700;letter-spacing:10px;color:#3730a3;">{{CODE}}</div>
+<div style="display:inline-block;background:#e0f3ec;border:1px solid #a9dcc9;border-radius:14px;padding:16px 26px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:34px;font-weight:700;letter-spacing:10px;color:#095f49;">{{CODE}}</div>
 </td></tr>
 <tr><td style="padding:0 28px 28px;">
 <p style="margin:0;font-size:13px;line-height:1.6;color:#6b7280;">Didn't ask for this? You can ignore this email and your password will stay the same. Never share this code with anyone.</p>

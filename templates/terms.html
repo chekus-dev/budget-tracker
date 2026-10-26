@@ -146,9 +146,9 @@
         <div class="page-head">
             <h2 class="page-title">Terms and Conditions</h2>
             <div class="legal-meta">
-                <span>Last updated 13 October 2026</span>
+                <span>Last updated 26 October 2026</span>
                 <span class="meta-sep">·</span>
-                <span>Version {{.Version}}</span>
+                <span>App version {{.Version}}</span>
                 <span class="meta-sep">·</span>
                 <span>Tap a section to read it</span>
             </div>
@@ -177,7 +177,7 @@
                 </div>
                 <div class="summary-row">
                     <span class="summary-label">What we store</span>
-                    <span class="summary-value">Your account, entries, budgets and goals</span>
+                    <span class="summary-value">Your account, entries, repeating entries, budgets, goals and passkeys</span>
                 </div>
                 <div class="summary-row">
                     <span class="summary-label">What we don't do</span>
@@ -290,7 +290,7 @@
                 </svg>
             </summary>
             <div class="legal-section-body legal-body">
-                <p>To run the app we keep the following, and nothing else:</p>
+                <p>To run the app we keep the following:</p>
                 <ul>
                     <li>
                         <strong>Account details:</strong> your username, email address,
@@ -311,9 +311,9 @@
                 </ul>
                 <p>
                     Your email is used for password recovery and nothing else. We do
-                    not sell your data, and we do not use it for advertising.
-                    Deleting an entry or a goal hides it immediately; it is
-                    permanently removed shortly afterwards.
+                    not sell your data, and we do not use it for advertising. Deleted entries and repeating entries are hidden immediately and kept for up to 30 days so you can undo, then permanently removed.</p>
+                <p>
+                    We rely on other services to run the app: hosting, a database, email delivery and Google reCAPTCHA. They handle data only to provide that service.
                 </p>
             </div>
         </details>
@@ -472,8 +472,7 @@
             <div class="legal-section-body legal-body">
                 <p>
                     Questions about these terms, or requests to delete your data,
-                    should go to the email address on this  site you signed up
-                    through. At support panel.
+                    should be sent from the email address you signed up with to {{.Email}}. We will delete your account and its data within seven days.
                 </p>
             </div>
         </details>

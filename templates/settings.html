@@ -402,7 +402,7 @@
                 <div id="category-list" role="group" aria-labelledby="categories-label">
                     {{range .Categories}}
                     <div class="cat-row">
-                        <span class="cat-icon-box" aria-hidden="true">
+                        <span class="cat-icon-box" style="--cat:{{catColor .}}" aria-hidden="true">
                             <svg><use href="/static/icons.svg?v=7#{{catIcon .}}"/></svg>
                         </span>
                         <input type="text" name="category" value="{{.}}" class="input" aria-label="Category name">

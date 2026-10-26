@@ -471,7 +471,7 @@
                 {{range .Rows}}
                 <li>
                     <a class="trend-row" href="{{.Href}}">
-                        <span class="trend-tile trend-tile-{{.Tile}}" aria-hidden="true">
+                        <span class="trend-tile trend-tile-{{.Tile}}" style="--cat:{{catColor .Name}}" aria-hidden="true">
                             <svg class="icon"><use href="/static/icons.svg?v=7#{{.Icon}}"/></svg>
                         </span>
                         <span class="trend-row-body">
@@ -496,7 +496,7 @@
                     {{range .MoreRows}}
                     <li>
                         <a class="trend-row" href="{{.Href}}">
-                            <span class="trend-tile trend-tile-{{.Tile}}" aria-hidden="true">
+                            <span class="trend-tile trend-tile-{{.Tile}}" style="--cat:{{catColor .Name}}" aria-hidden="true">
                                 <svg class="icon"><use href="/static/icons.svg?v=7#{{.Icon}}"/></svg>
                             </span>
                             <span class="trend-row-body">
@@ -732,13 +732,7 @@
 
         var palette = [
             brand,
-            '#8B5CF6',
-            '#EC4899',
-            '#F59E0B',
-            '#10B981',
-            '#06B6D4',
-            '#6366F1',
-            '#94A3B8'
+            '#E8A33D', '#3B6FA0', '#7BC8A4', '#C2554A', '#5B6B63', '#A1B0A8'
         ];
 
         new Chart(canvas, {
@@ -747,7 +741,7 @@
                 labels: slices.map(function (s) { return s.name; }),
                 datasets: [{
                     data: slices.map(function (s) { return s.value; }),
-                    backgroundColor: slices.map(function (_, i) { return palette[i % palette.length]; }),
+                    backgroundColor: slices.map(function (s, i) { return s.color || palette[i % palette.length]; }),
                     borderColor: surface,
                     borderWidth: 2,
                     hoverOffset: 6
