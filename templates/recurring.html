@@ -58,7 +58,7 @@
         {{end}}
 
         <section class="card" aria-labelledby="new-rule-title">
-            <h2 class="card-title" id="new-rule-title" style="margin-bottom:16px;">Add a repeating entry</h2>
+            <h2 class="card-title" id="new-rule-title" style="margin-bottom:16px;">Add a recurring entry</h2>
             <form action="/recurring/create" method="POST">
                 <div class="auth-field">
                     <label class="label" for="r-kind">Type</label>
@@ -98,7 +98,7 @@
                     <input class="input" type="date" id="r-start" name="start" min="{{.Today}}" value="{{.Form.Start}}" required>
                     <p class="hint">Monthly entries repeat on this day of the month. On shorter months they land on the last day.</p>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">Add repeating entry</button>
+                <button type="submit" class="btn btn-primary btn-block">Add recurring entry</button>
             </form>
         </section>
     </main>
@@ -106,7 +106,7 @@
     <template id="undo-template">
         <div class="toast">
             <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v=7#trash"/></svg>
-            <span class="toast-msg">Repeating entry deleted.</span>
+            <span class="toast-msg">Recurring entry deleted.</span>
             <form action="/recurring/restore/{{.DeletedID}}" method="POST">
                 <button type="submit" class="toast-action">Undo</button>
             </form>

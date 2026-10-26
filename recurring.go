@@ -304,7 +304,7 @@ func recurringCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if count >= maxRecurringPerUser {
-		fail(fmt.Sprintf("You can have up to %d repeating entries. Delete one to add another.", maxRecurringPerUser))
+		fail(fmt.Sprintf("You can have up to %d recurring entries. Delete one to add another.", maxRecurringPerUser))
 		return
 	}
 
