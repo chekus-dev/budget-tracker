@@ -326,7 +326,25 @@
 
 @media (max-width: 760px) {
   .welcome-shell { min-height: 100dvh; display: block; }
-  .welcome-intro { display: none; }
+  .welcome-intro {
+    display: flex;
+    min-height: 0;
+    padding: max(26px, env(safe-area-inset-top)) 22px 24px;
+    overflow: visible;
+  }
+  .welcome-intro::after { right: -220px; bottom: 4%; }
+  .welcome-intro .welcome-brand { font-size: 15px; }
+  .welcome-message { margin: 34px 0 0; }
+  .welcome-message h1 { margin-top: 18px; font-size: clamp(42px, 11vw, 58px); }
+  .welcome-lead { font-size: 15px; }
+  .welcome-preview { display: none; }
+  .welcome-stat-grid { grid-template-columns: 1fr; margin-top: 24px; }
+  .stat-card { padding: 14px; }
+  .stat-card .stat-label { font-size: 10px; }
+  .stat-card strong { font-size: 17px; }
+  .stat-card small { font-size: 12px; }
+  .welcome-benefits { gap: 9px 14px; font-size: 12px; }
+  .welcome-footer-row { margin-top: 24px; }
   .welcome-setup {
     min-height: 100dvh;
     align-items: start;
@@ -336,54 +354,14 @@
       var(--canvas, #f7f8fa);
   }
   .welcome-setup .auth-card { max-width: 470px; }
-  .welcome-mobile-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 15px; font-weight: 700; }
-  .welcome-mobile-brand .welcome-brand-mark { width: 38px; height: 38px; font-size: 19px; }
-  .welcome-mobile-copy { display: block; margin: 0 0 22px; }
-  .welcome-mobile-copy h1 {
-    margin: 0;
-    color: var(--ink);
-    font-size: clamp(30px, 8vw, 38px);
-    font-weight: 700;
-    letter-spacing: -.055em;
-    line-height: 1.04;
-  }
-  .welcome-mobile-copy h1 em {
-    color: var(--brand);
-    font-family: Georgia, "Times New Roman", serif;
-    font-weight: 400;
-    font-style: italic;
-  }
-  .welcome-mobile-copy p {
-    max-width: 360px;
-    margin: 10px 0 0;
-    color: var(--ink-muted);
-    font-size: 14px;
-    line-height: 1.55;
-  }
-  .setup-trust-strip {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 0 0 18px;
-  }
-  .setup-trust-strip span {
-    display: inline-flex;
-    align-items: center;
-    min-height: 28px;
-    padding: 0 10px;
-    border-radius: 999px;
-    background: rgba(12, 122, 94, .08);
-    color: var(--brand-ink, #0c7a5e);
-    font-size: 11px;
-    font-weight: 700;
-  }
+  .welcome-mobile-brand, .welcome-mobile-copy, .setup-trust-strip { display: none; }
   .setup-step-count { margin-bottom: 8px; }
   .welcome-setup .wizard-steps { margin-bottom: 28px; }
 }
 
 @media (max-width: 420px) {
+  .welcome-intro { padding-right: 18px; padding-left: 18px; }
   .welcome-setup { padding-right: 18px; padding-left: 18px; }
-  .welcome-mobile-brand { margin-bottom: 32px; }
   .welcome-setup .wizard-steps { gap: 6px; }
   .welcome-setup .wizard-label { font-size: 10px; }
   .welcome-setup .wizard-actions { grid-template-columns: 1fr; gap: 9px; }
