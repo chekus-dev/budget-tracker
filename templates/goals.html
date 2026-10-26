@@ -371,7 +371,7 @@
     <main class="app-main">
 
         <div class="page-head">
-            <h2 class="page-title">Goals</h2>
+            <h3 class="page-title">Goals</h3>
             <p class="page-sub">What you mean to do this month and this year, and what you are saving for</p>
         </div>
 
@@ -386,13 +386,13 @@
                 </svg>
                 Your goals
             </span>
-            <h2 class="goals-hero-title" id="goals-hero-title">
+            <h3 class="goals-hero-title" id="goals-hero-title">
                 {{if eq .TotalDone .TotalGoals}}
                     All done. Nice.
                 {{else}}
                     {{.TotalOpen}} to go
                 {{end}}
-            </h2>
+            </h3>
             <p class="goals-hero-sub">
                 {{.TotalDone}} of {{.TotalGoals}} complete
             </p>
@@ -423,7 +423,7 @@
         {{/* ---------- Active groups ---------- */}}
         {{if .ActiveGroups}}
         <div class="goals-section-head">
-            <h2 class="goals-section-title">Open goals</h2>
+            <h3 class="goals-section-title">Open goals</h3>
             <span class="goals-section-meta">{{.TotalOpen}} open</span>
         </div>
 
