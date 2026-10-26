@@ -562,7 +562,7 @@
     list.addEventListener('click', function (e) {
       var btn = e.target.closest && e.target.closest('[data-remove-category]');
       if (!btn) return;
-      var row = btn.closest('.cat-row'); if (row) row.remove();
+      var row = btn.closest('.cat-row, .category-item'); if (row) row.remove();
     });
 
     addBtn.addEventListener('click', function () {

@@ -4,27 +4,112 @@
 <head>
     <title>Welcome — Budget Tracker</title>
     {{template "head.html" .}}
+    <link rel="stylesheet" href="/static/css/welcome.css?v=2">
 </head>
 {{/*
-  The auth shell, not the app shell: a centred card with no nav bar and no FAB
-  to wander off into. The auth-* classes are layout only — a card on a branded
-  gradient — and carry no auth behaviour, so reusing them costs nothing and
-  saves duplicating the rules.
+  A focused first-run setup with no app navigation to distract from the steps.
+  The onboarding form stays server-rendered and keeps working without JavaScript.
 
-  app.js is loaded by nav.html and nowhere else, and this page has no nav, so
-  it loads the script itself. Without it the Add/Remove buttons on step 3 do
-  nothing at all, and the failure is silent — the button is there and simply
-  does not respond. Nothing else here needs a script.
+  This page has no navigation, so it loads the app script directly for the
+  category controls on step 3.
 */}}
-<body>
-    <main class="auth-shell">
-        <div class="auth-card">
-            <div class="auth-brand">
-                <span class="brand-mark" aria-hidden="true">{{.CurrencySymbol}}</span>
-                Budget Tracker
+<body class="welcome-page">
+    <main class="welcome-shell">
+        <section class="welcome-intro" aria-labelledby="welcome-heading">
+            <a class="welcome-brand" href="/" aria-label="Budget Tracker home">
+                <span class="welcome-brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H20v14H6.5A2.5 2.5 0 0 1 4 16.5v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                        <path d="M4 8h13M16 12h4M7.5 14.5h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        <circle cx="16" cy="12" r=".8" fill="currentColor"/>
+                    </svg>
+                </span>
+                <span>Budget Tracker</span>
+            </a>
+
+            <div class="welcome-message">
+                <span class="welcome-kicker"><span></span> A little more clarity, every day</span>
+                <h1 id="welcome-heading">Your money,<br>on <em>your terms.</em></h1>
+                <p class="welcome-lead">A calmer way to see where it goes, make a plan, and feel good about what comes next.</p>
+
+                <div class="welcome-preview" aria-hidden="true">
+                    <div class="preview-heading">
+                        <span class="preview-label">Your month at a glance</span>
+                        <span class="preview-menu"><i></i><i></i><i></i></span>
+                    </div>
+                    <div class="preview-total">
+                        <span class="preview-caption">You’re building a clear picture</span>
+                        <span class="preview-placeholder"><b></b><b></b><b></b><b></b><b></b><b></b><b></b></span>
+                    </div>
+                    <div class="preview-bottom">
+                        <span class="preview-avatar">↗</span>
+                        <span><strong>Small steps add up</strong><small>Your progress, all in one place</small></span>
+                        <span class="preview-arrow">↗</span>
+                    </div>
+                </div>
+
+                <div class="welcome-stat-grid" aria-label="Budget tracker highlights">
+                    <div class="stat-card">
+                        <span class="stat-label">Monthly budget</span>
+                        <strong>Your pace</strong>
+                        <small>See how spending tracks against your limit.</small>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Categories</span>
+                        <strong>Your way</strong>
+                        <small>Organize entries around what matters to you.</small>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Recurring entries</span>
+                        <strong>Right on time</strong>
+                        <small>Log regular bills and income automatically.</small>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Archive</span>
+                        <strong>Look back</strong>
+                        <small>Browse and search entries from past months.</small>
+                    </div>
+                </div>
+
+                <ul class="welcome-benefits">
+                    <li><span aria-hidden="true">✓</span> Log income and expenses</li>
+                    <li><span aria-hidden="true">✓</span> Automate recurring entries</li>
+                    <li><span aria-hidden="true">✓</span> Find past entries in the archive</li>
+                </ul>
             </div>
 
-            <ol class="wizard-steps">
+            <div class="welcome-footer-row" aria-label="Budget tracker qualities">
+                <span class="mini-pill">Flexible</span>
+                <span class="mini-pill">Straightforward</span>
+                <span class="mini-pill">Made for you</span>
+            </div>
+        </section>
+
+        <section class="welcome-setup" aria-label="Set up your budget">
+          <div class="auth-card">
+            <div class="welcome-mobile-brand">
+                <span class="welcome-brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H20v14H6.5A2.5 2.5 0 0 1 4 16.5v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                        <path d="M4 8h13M16 12h4M7.5 14.5h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        <circle cx="16" cy="12" r=".8" fill="currentColor"/>
+                    </svg>
+                </span>
+                <span>Budget Tracker</span>
+            </div>
+            <div class="welcome-mobile-copy">
+                <h1>More clarity.<br><em>Less money stress.</em></h1>
+                <p>Build a budget that works for you, one small step at a time.</p>
+            </div>
+
+            <div class="setup-trust-strip" aria-label="Setup details">
+                <span>Quick setup</span>
+                <span>Recurring entries</span>
+                <span>Searchable archive</span>
+            </div>
+
+            <p class="setup-step-count">Step {{.Step}} of {{len .Steps}}</p>
+            <ol class="wizard-steps" aria-label="Setup progress">
                 {{range .Steps}}
                 <li class="wizard-step is-{{.State}}">
                     <span class="wizard-dot" aria-hidden="true"></span>
@@ -35,7 +120,7 @@
                 {{end}}
             </ol>
 
-            <h3 class="auth-title">{{.Title}}</h3>
+            <h2 class="auth-title">{{.Title}}</h2>
             <p class="auth-sub">{{.Sub}}</p>
 
             {{if .Error}}
@@ -168,6 +253,7 @@
 
             <p class="auth-foot">Skipping leaves the rest to Settings.</p>
         </div>
+        </section>
     </main>
 
     <template id="category-row-template">

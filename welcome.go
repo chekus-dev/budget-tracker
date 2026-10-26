@@ -295,12 +295,9 @@ func welcomeHandler(w http.ResponseWriter, r *http.Request) {
 		settings.BudgetLimit = budget
 
 	case 3:
-		// An empty list keeps what is already there rather than wiping it: a
-		// user who deletes every row and presses Next means "I am done here",
-		// not "I want no categories".
-		if categories := normalizeCategories(r.PostForm["category"]); len(categories) > 0 {
-			settings.Categories = categories
-		}
+		// The submitted list is authoritative, including when the user removes
+		// every category. saveSettings persists an empty slice as an empty value.
+		settings.Categories = normalizeCategories(r.PostForm["category"])
 
 	case 4:
 		form := welcomeEntryForm{
