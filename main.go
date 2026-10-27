@@ -2333,6 +2333,13 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	templateData["CategoryOptions"] = categoryOptions(data.Categories, "")
 	templateData["CategoryBudgets"] = data.CategoryBudgets
 	templateData["CurrencySymbol"] = data.CurrencySymbol
+	if data.Month == currentMonth() {
+		if wk, err := weekInsights(userID, time.Now()); err != nil {
+			log.Printf("home: week insights: %v", err)
+		} else {
+			templateData["Week"] = wk
+		}
+	}
 
 	if data.BudgetLimit > 0 {
 		remaining := data.BudgetLimit - data.Spent
