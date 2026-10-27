@@ -8,6 +8,31 @@
 <body class="has-chrome">
     {{template "nav.html" .}}
     <main class="app-main">
+        {{if not .Searching}}
+        <div class="page-head" id="greeting">
+            <h2 class="page-title"><span id="greet-hello">Welcome back</span>, <span id="greet-name">{{.Username}}</span> <span id="greet-emoji" aria-hidden="true">👋</span></h2>
+        </div>
+        <script>
+        (function () {
+            function pick(h) {
+                if (h >= 5 && h < 12)  return ['Good morning', '\u2600\uFE0F'];
+                if (h >= 12 && h < 17) return ['Good afternoon', '\uD83C\uDF24\uFE0F'];
+                if (h >= 17 && h < 22) return ['Good evening', '\uD83C\uDF06'];
+                return ['Hello', '\uD83C\uDF19'];
+            }
+            function update() {
+                var hello = document.getElementById('greet-hello');
+                var emoji = document.getElementById('greet-emoji');
+                if (!hello || !emoji) return;
+                var g = pick(new Date().getHours());
+                hello.textContent = g[0];
+                emoji.textContent = g[1];
+            }
+            update();
+            setInterval(update, 60000);
+        })();
+        </script>
+        {{end}}
         {{if .Searching}}
         <section class="balance-card" aria-labelledby="results-label">
             {{if and .Received (not .Spent)}}
@@ -229,6 +254,33 @@
             <p>You're viewing {{.MonthLabel}}. New expenses are always added to the current month.</p>
         </div>
         {{end}}
+        {{with .Week}}{{if and .Show (eq $.Month $.CurrentMonth)}}
+        <section class="card mb-4" aria-labelledby="week-label">
+            <div class="section-head">
+                <h2 class="card-title" id="week-label">Your last 7 days</h2>
+                {{if gt .Streak 0}}<span class="chip is-active is-static">{{.Streak}} day{{if ne .Streak 1}}s{{end}} in a row</span>{{end}}
+            </div>
+            {{if .WeekSpent}}
+            <p class="figure figure-lg">{{money $.CurrencySymbol .WeekSpent}}</p>
+            <p class="hint">
+                {{if .HasLast}}{{if .Same}}About the same as the 7 days before.{{else if .Less}}{{printf "%.0f" .ChangePct}}% less than the 7 days before.{{else}}{{printf "%.0f" .ChangePct}}% more than the 7 days before.{{end}}{{else}}Spent in the last 7 days.{{end}}
+            </p>
+            {{if .TopCategory}}
+            <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+                <span class="expense-icon" style="--cat:{{catColor .TopCategory}}" aria-hidden="true">
+                    <svg class="icon"><use href="/static/icons.svg?v=7#{{catIcon .TopCategory}}"/></svg>
+                </span>
+                <p class="note">Most went on <strong>{{.TopCategory}}</strong>, {{money $.CurrencySymbol .TopAmount}}.</p>
+            </div>
+            {{end}}
+            {{else}}
+            <p class="note">No spending logged in the last 7 days.</p>
+            {{end}}
+            {{if and (gt .Streak 0) (not .LoggedToday)}}
+            <p class="note mt-2">Log something today to keep your streak going.</p>
+            {{end}}
+        </section>
+        {{end}}{{end}}
         <div class="section-head">
             <h2 class="card-title">{{if eq .Month .CurrentMonth}}Recent activity{{else}}Expenses{{end}}</h2>
             <span class="hint mt-0">{{len .Expenses}} entr{{if ne (len .Expenses) 1}}ies{{else}}y{{end}}</span>
