@@ -42,10 +42,24 @@ body .balance-card {
   --hero-ink:#FFFFFF; --hero-ink-muted:rgba(255,255,255,.78);
   --hero-surface:rgba(255,255,255,.12); --hero-line:rgba(255,255,255,.18);
   --hero-track:rgba(255,255,255,.22);
-  --hero-sheen:radial-gradient(circle, rgba(255,255,255,.18), transparent 68%);
-  background:linear-gradient(150deg,#0D5A46 0%,#0B3F32 100%);
-  border-color:transparent; border-radius:24px;
-  box-shadow:0 22px 40px -20px rgba(11,63,50,.65);
+  --hero-sheen:radial-gradient(circle, rgba(255,255,255,.22), transparent 68%);
+  position:relative;
+  isolation:isolate;
+  background:
+    radial-gradient(circle at 92% 18%,rgba(255,255,255,.16) 0 3px,transparent 4px),
+    radial-gradient(circle at 84% 42%,rgba(255,255,255,.12) 0 2px,transparent 3px),
+    linear-gradient(145deg,#168C70 0%,#0F765C 48%,#083D31 100%);
+  border:1px solid rgba(255,255,255,.14); border-radius:24px;
+  box-shadow:0 24px 48px -24px rgba(8,61,49,.78), inset 0 1px rgba(255,255,255,.16);
+}
+body .balance-card::before {
+  content:"";
+  position:absolute;
+  width:190px; height:190px; right:-82px; top:-105px;
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:50%;
+  box-shadow:0 0 0 28px rgba(255,255,255,.025),0 0 0 58px rgba(255,255,255,.025);
+  pointer-events:none;
 }
 body .balance-card.is-over {
   background:linear-gradient(150deg,#8E2A20 0%,#5A1A14 100%);
@@ -138,13 +152,268 @@ body .category-icon[style*="--cat"], body .trend-tile[style*="--cat"] {
 }
 body .catbudget-name[style*="--cat"] .icon-sm { color: var(--cat); }
 
-/* Goals page: same look as the rest of the app */
+/* Goals page: visually separate from the home balance card. */
 body .goals-hero {
-  background: linear-gradient(150deg,#0D5A46 0%,#0B3F32 100%);
+  isolation:isolate;
+  background:
+    linear-gradient(120deg,rgba(255,255,255,.10),transparent 38%),
+    linear-gradient(135deg,#FF9A3D 0%,#F0446B 52%,#8B5CF6 100%);
+  border: 1px solid rgba(255,255,255,.30);
   border-radius: 24px;
-  box-shadow: 0 22px 40px -20px rgba(11,63,50,.65);
+  box-shadow: 0 22px 42px -20px rgba(240,68,107,.72), inset 0 1px rgba(255,255,255,.20);
 }
-body .goals-hero-pill { border-radius: 14px; }
+body .goals-hero::before {
+  content:"";
+  position:absolute;
+  inset:12px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:16px;
+  pointer-events:none;
+}
+body .goals-hero-pill {
+  background: linear-gradient(145deg,rgba(255,255,255,.22),rgba(255,255,255,.10));
+  border-color: rgba(255,255,255,.32);
+  border-radius: 14px;
+  box-shadow: inset 0 1px rgba(255,255,255,.12);
+  backdrop-filter:blur(8px);
+}
+body.goals-page .brand-mark,
+body.goals-page .trend-avatar {
+  background: linear-gradient(135deg,#FF9A3D 0%,#F0446B 52%,#8B5CF6 100%);
+  color: #fff;
+}
+body.goals-page .trend-account-name {
+  width: fit-content;
+  background: linear-gradient(135deg,#FF9A3D 0%,#F0446B 52%,#8B5CF6 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Unique page themes. The accent flows through buttons, links, active
+   navigation, brand marks, avatars, and usernames on every signed-in page. */
+body.home-page { --brand:#0F9A75; --brand-ink:#095F49; --brand-soft:#E8F6F1; --page-accent:#0F9A75; }
+body.trends-page { --brand:#2563EB; --brand-ink:#1D4ED8; --brand-soft:#EAF1FF; --page-accent:#2563EB; }
+body.goals-page { --brand:#F0446B; --brand-ink:#C026D3; --brand-soft:#FFF0F4; --page-accent:#F0446B; }
+body.archive-page { --brand:#F97316; --brand-ink:#C2410C; --brand-soft:#FFF3E8; --page-accent:#F97316; }
+body.settings-page, body.saved-settings-page { --brand:#7C3AED; --brand-ink:#6D28D9; --brand-soft:#F1EAFE; --page-accent:#7C3AED; }
+body.export-page { --brand:#0891B2; --brand-ink:#0E7490; --brand-soft:#E8F7FA; --page-accent:#0891B2; }
+body.notifications-page { --brand:#E11D48; --brand-ink:#BE123C; --brand-soft:#FFEAF0; --page-accent:#E11D48; }
+body.recurring-page { --brand:#D97706; --brand-ink:#92400E; --brand-soft:#FFF4DC; --page-accent:#D97706; }
+body.billing-page { --brand:#9333EA; --brand-ink:#7E22CE; --brand-soft:#F4EAFE; --page-accent:#9333EA; }
+body.account-page { --brand:#0284C7; --brand-ink:#0369A1; --brand-soft:#E6F3FA; --page-accent:#0284C7; }
+body.help-page { --brand:#0D9488; --brand-ink:#0F766E; --brand-soft:#E3F5F2; --page-accent:#0D9488; }
+body.support-page { --brand:#DB2777; --brand-ink:#BE185D; --brand-soft:#FCE8F1; --page-accent:#DB2777; }
+body.welcome-page { --brand:#059669; --brand-ink:#047857; --brand-soft:#EAF8F3; --page-accent:#059669; }
+body.login-page { --brand:#2563EB; --brand-ink:#1D4ED8; --brand-soft:#EAF1FF; --page-accent:#2563EB; }
+body.register-page { --brand:#7C3AED; --brand-ink:#6D28D9; --brand-soft:#F1EAFE; --page-accent:#7C3AED; }
+body.forgot-password-page { --brand:#EA580C; --brand-ink:#C2410C; --brand-soft:#FFF2E8; --page-accent:#EA580C; }
+body.reset-password-page { --brand:#DC2626; --brand-ink:#B91C1C; --brand-soft:#FEECEC; --page-accent:#DC2626; }
+body.verify-email-page { --brand:#0891B2; --brand-ink:#0E7490; --brand-soft:#E8F7FA; --page-accent:#0891B2; }
+body.verify-otp-page { --brand:#4F46E5; --brand-ink:#4338CA; --brand-soft:#EEEDFF; --page-accent:#4F46E5; }
+body.terms-page { --brand:#475569; --brand-ink:#334155; --brand-soft:#EDF1F5; --page-accent:#475569; }
+body.admin-page { --brand:#6366F1; --brand-ink:#4338CA; --brand-soft:#EEF0FF; --page-accent:#6366F1; }
+body.admin-dashboard-page { --brand:#0D9488; --brand-ink:#0F766E; --brand-soft:#E3F5F2; --page-accent:#0D9488; }
+body.admin-users-page { --brand:#9333EA; --brand-ink:#7E22CE; --brand-soft:#F4EAFE; --page-accent:#9333EA; }
+body.admin-audit-page { --brand:#B45309; --brand-ink:#92400E; --brand-soft:#FFF4DC; --page-accent:#B45309; }
+body.admin-broadcast-page { --brand:#DB2777; --brand-ink:#BE185D; --brand-soft:#FCE8F1; --page-accent:#DB2777; }
+
+/* Keep the icon/avatar and username on exactly the same page gradient. */
+body.home-page { --page-gradient:linear-gradient(135deg,#0F9A75 0%,#095F49 100%); }
+body.trends-page { --page-gradient:linear-gradient(135deg,#38BDF8 0%,#2563EB 55%,#4F46E5 100%); }
+body.goals-page { --page-gradient:linear-gradient(135deg,#FF9A3D 0%,#F0446B 52%,#8B5CF6 100%); }
+body.archive-page { --page-gradient:linear-gradient(135deg,#FBBF24 0%,#F97316 55%,#DC2626 100%); }
+body.settings-page, body.saved-settings-page { --page-gradient:linear-gradient(135deg,#A78BFA 0%,#7C3AED 55%,#C026D3 100%); }
+body.export-page { --page-gradient:linear-gradient(135deg,#2DD4BF 0%,#0891B2 55%,#2563EB 100%); }
+body.notifications-page { --page-gradient:linear-gradient(135deg,#FB7185 0%,#E11D48 55%,#BE123C 100%); }
+body.recurring-page { --page-gradient:linear-gradient(135deg,#F59E0B 0%,#D97706 55%,#92400E 100%); }
+body.billing-page { --page-gradient:linear-gradient(135deg,#C084FC 0%,#9333EA 55%,#7E22CE 100%); }
+body.account-page { --page-gradient:linear-gradient(135deg,#38BDF8 0%,#0284C7 55%,#0369A1 100%); }
+body.help-page { --page-gradient:linear-gradient(135deg,#5EEAD4 0%,#0D9488 55%,#0F766E 100%); }
+body.support-page { --page-gradient:linear-gradient(135deg,#F472B6 0%,#DB2777 55%,#BE185D 100%); }
+body.welcome-page { --page-gradient:linear-gradient(135deg,#34D399,#059669,#047857); }
+body.login-page { --page-gradient:linear-gradient(135deg,#38BDF8,#2563EB,#4338CA); }
+body.register-page { --page-gradient:linear-gradient(135deg,#A78BFA,#7C3AED,#C026D3); }
+body.forgot-password-page { --page-gradient:linear-gradient(135deg,#FB923C,#EA580C,#C2410C); }
+body.reset-password-page { --page-gradient:linear-gradient(135deg,#F87171,#DC2626,#991B1B); }
+body.verify-email-page { --page-gradient:linear-gradient(135deg,#2DD4BF,#0891B2,#2563EB); }
+body.verify-otp-page { --page-gradient:linear-gradient(135deg,#818CF8,#4F46E5,#3730A3); }
+body.terms-page { --page-gradient:linear-gradient(135deg,#94A3B8,#475569,#334155); }
+body.admin-page { --page-gradient:linear-gradient(135deg,#818CF8,#6366F1,#4338CA); }
+body.admin-dashboard-page { --page-gradient:linear-gradient(135deg,#5EEAD4,#0D9488,#0F766E); }
+body.admin-users-page { --page-gradient:linear-gradient(135deg,#C084FC,#9333EA,#7E22CE); }
+body.admin-audit-page { --page-gradient:linear-gradient(135deg,#FBBF24,#B45309,#92400E); }
+body.admin-broadcast-page { --page-gradient:linear-gradient(135deg,#F472B6,#DB2777,#BE185D); }
+
+body.home-page .brand-mark,
+body.home-page .trend-avatar,
+body.trends-page .brand-mark,
+body.trends-page .trend-avatar,
+body.goals-page .brand-mark,
+body.goals-page .trend-avatar,
+body.archive-page .brand-mark,
+body.archive-page .trend-avatar,
+body.settings-page .brand-mark,
+body.settings-page .trend-avatar,
+body.export-page .brand-mark,
+body.export-page .trend-avatar,
+body.notifications-page .brand-mark,
+body.notifications-page .trend-avatar,
+body.recurring-page .brand-mark,
+body.recurring-page .trend-avatar,
+body.billing-page .brand-mark,
+body.billing-page .trend-avatar,
+body.account-page .brand-mark,
+body.account-page .trend-avatar,
+body.help-page .brand-mark,
+body.help-page .trend-avatar,
+body.support-page .brand-mark,
+body.support-page .trend-avatar,
+body.login-page .brand-mark,
+body.register-page .brand-mark,
+body.forgot-password-page .brand-mark,
+body.reset-password-page .brand-mark,
+body.verify-email-page .brand-mark,
+body.verify-otp-page .brand-mark,
+body.terms-page .brand-mark,
+body.admin-page .brand-mark,
+body.admin-dashboard-page .brand-mark,
+body.admin-users-page .brand-mark,
+body.admin-audit-page .brand-mark,
+body.admin-broadcast-page .brand-mark {
+  background: var(--page-gradient);
+  color:#fff;
+}
+body.welcome-page .welcome-brand-mark { background:var(--page-gradient); }
+
+body.home-page .trend-account-name,
+body.trends-page .trend-account-name,
+body.goals-page .trend-account-name,
+body.archive-page .trend-account-name,
+body.settings-page .trend-account-name,
+body.export-page .trend-account-name,
+body.notifications-page .trend-account-name,
+body.recurring-page .trend-account-name,
+body.billing-page .trend-account-name,
+body.account-page .trend-account-name,
+body.help-page .trend-account-name,
+body.support-page .trend-account-name {
+  width:fit-content;
+  background:var(--page-gradient);
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+body .topbar { border-bottom-color: color-mix(in srgb, var(--page-accent, var(--brand)) 22%, var(--line)); }
+body .nav-item[aria-current="page"] { color: var(--brand-ink); }
+
+/* Page-specific navigation themes. Brand, avatar, and username share each
+   page's accent without changing the navigation layout. */
+body.home-page .brand-mark, body.home-page .trend-avatar {
+  background: linear-gradient(135deg,#0F9A75 0%,#095F49 100%); color:#fff;
+}
+body.trends-page .brand-mark, body.trends-page .trend-avatar {
+  background: linear-gradient(135deg,#38BDF8 0%,#2563EB 55%,#4F46E5 100%); color:#fff;
+}
+body.goals-page .brand-mark, body.goals-page .trend-avatar {
+  background: linear-gradient(135deg,#FF9A3D 0%,#F0446B 52%,#8B5CF6 100%); color:#fff;
+}
+body.archive-page .brand-mark, body.archive-page .trend-avatar {
+  background: linear-gradient(135deg,#FBBF24 0%,#F97316 55%,#DC2626 100%); color:#fff;
+}
+body.settings-page .brand-mark, body.settings-page .trend-avatar {
+  background: linear-gradient(135deg,#A78BFA 0%,#7C3AED 55%,#C026D3 100%); color:#fff;
+}
+body.export-page .brand-mark, body.export-page .trend-avatar {
+  background: linear-gradient(135deg,#2DD4BF 0%,#0891B2 55%,#2563EB 100%); color:#fff;
+}
+body.notifications-page .brand-mark, body.notifications-page .trend-avatar {
+  background: linear-gradient(135deg,#FB7185 0%,#E11D48 55%,#BE123C 100%); color:#fff;
+}
+body.recurring-page .brand-mark, body.recurring-page .trend-avatar {
+  background: linear-gradient(135deg,#F59E0B 0%,#D97706 55%,#92400E 100%); color:#fff;
+}
+body.billing-page .brand-mark, body.billing-page .trend-avatar {
+  background: linear-gradient(135deg,#C084FC 0%,#9333EA 55%,#7E22CE 100%); color:#fff;
+}
+body.account-page .brand-mark, body.account-page .trend-avatar {
+  background: linear-gradient(135deg,#38BDF8 0%,#0284C7 55%,#0369A1 100%); color:#fff;
+}
+body.help-page .brand-mark, body.help-page .trend-avatar {
+  background: linear-gradient(135deg,#5EEAD4 0%,#0D9488 55%,#0F766E 100%); color:#fff;
+}
+body.support-page .brand-mark, body.support-page .trend-avatar {
+  background: linear-gradient(135deg,#F472B6 0%,#DB2777 55%,#BE185D 100%); color:#fff;
+}
+body.welcome-page .welcome-brand-mark,
+body.login-page .brand-mark,
+body.register-page .brand-mark,
+body.forgot-password-page .brand-mark,
+body.reset-password-page .brand-mark,
+body.verify-email-page .brand-mark,
+body.verify-otp-page .brand-mark,
+body.terms-page .brand-mark { color:#fff; }
+body.welcome-page .welcome-brand-mark { background:linear-gradient(135deg,#34D399,#059669,#047857); }
+body.login-page .brand-mark { background:linear-gradient(135deg,#38BDF8,#2563EB,#4338CA); }
+body.register-page .brand-mark { background:linear-gradient(135deg,#A78BFA,#7C3AED,#C026D3); }
+body.forgot-password-page .brand-mark { background:linear-gradient(135deg,#FB923C,#EA580C,#C2410C); }
+body.reset-password-page .brand-mark { background:linear-gradient(135deg,#F87171,#DC2626,#991B1B); }
+body.verify-email-page .brand-mark { background:linear-gradient(135deg,#2DD4BF,#0891B2,#2563EB); }
+body.verify-otp-page .brand-mark { background:linear-gradient(135deg,#818CF8,#4F46E5,#3730A3); }
+body.terms-page .brand-mark { background:linear-gradient(135deg,#94A3B8,#475569,#334155); }
+body.admin-page .brand-mark,
+body.admin-dashboard-page .brand-mark,
+body.admin-users-page .brand-mark,
+body.admin-audit-page .brand-mark,
+body.admin-broadcast-page .brand-mark { color:#fff; }
+body.admin-page .brand-mark { background:linear-gradient(135deg,#818CF8,#6366F1,#4338CA); }
+body.admin-dashboard-page .brand-mark { background:linear-gradient(135deg,#5EEAD4,#0D9488,#0F766E); }
+body.admin-users-page .brand-mark { background:linear-gradient(135deg,#C084FC,#9333EA,#7E22CE); }
+body.admin-audit-page .brand-mark { background:linear-gradient(135deg,#FBBF24,#B45309,#92400E); }
+body.admin-broadcast-page .brand-mark { background:linear-gradient(135deg,#F472B6,#DB2777,#BE185D); }
+
+body.trends-page .trend-account-name {
+  background: linear-gradient(135deg,#38BDF8 0%,#2563EB 55%,#4F46E5 100%);
+}
+body.archive-page .trend-account-name {
+  background: linear-gradient(135deg,#FBBF24 0%,#F97316 55%,#DC2626 100%);
+}
+body.settings-page .trend-account-name {
+  background: linear-gradient(135deg,#A78BFA 0%,#7C3AED 55%,#C026D3 100%);
+}
+body.export-page .trend-account-name {
+  background: linear-gradient(135deg,#2DD4BF 0%,#0891B2 55%,#2563EB 100%);
+}
+body.notifications-page .trend-account-name {
+  background: linear-gradient(135deg,#FB7185 0%,#E11D48 55%,#BE123C 100%);
+}
+body.recurring-page .trend-account-name {
+  background: linear-gradient(135deg,#F59E0B 0%,#D97706 55%,#92400E 100%);
+}
+body.billing-page .trend-account-name {
+  background: linear-gradient(135deg,#C084FC 0%,#9333EA 55%,#7E22CE 100%);
+}
+body.account-page .trend-account-name {
+  background: linear-gradient(135deg,#38BDF8 0%,#0284C7 55%,#0369A1 100%);
+}
+body.help-page .trend-account-name {
+  background: linear-gradient(135deg,#5EEAD4 0%,#0D9488 55%,#0F766E 100%);
+}
+body.support-page .trend-account-name {
+  background: linear-gradient(135deg,#F472B6 0%,#DB2777 55%,#BE185D 100%);
+}
+body.home-page .trend-account-name { color: var(--brand-ink); }
+body.trends-page .trend-account-name, body.archive-page .trend-account-name,
+body.settings-page .trend-account-name, body.export-page .trend-account-name,
+body.notifications-page .trend-account-name, body.recurring-page .trend-account-name,
+body.billing-page .trend-account-name, body.account-page .trend-account-name,
+body.help-page .trend-account-name, body.support-page .trend-account-name {
+  width: fit-content;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 body .goals-hero-eyebrow, body .goals-hero-pill-label,
 body .goals-section-title, body .goal-completed summary {
   text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600;
@@ -154,6 +423,26 @@ body .goal-group-title .goal-group-tile { border-radius: 12px; }
 body .goal-add-toggle { border-radius: 18px; }
 body .goal-check { border-radius: 8px; }
 body .goal-meta { background: var(--brand-soft); color: var(--brand-ink); }
+
+@media (max-width: 480px) {
+  body .topbar { position: fixed; }
+  body .topbar-brand {
+    position: relative;
+    z-index: 1;
+  }
+  body .topbar-actions {
+    position: absolute;
+    right: max(12px, env(safe-area-inset-right, 0px));
+    margin-left: 0;
+  }
+  body .brand-name-suffix { display: none; }
+  body .trend-account-name {
+    max-width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
 
 /* Help page */
 body .step-num { background: linear-gradient(135deg,#0F9A75 0%,#095F49 100%); border-radius: 10px; }
@@ -194,3 +483,106 @@ body .legal-section-num { background: linear-gradient(135deg,#0F9A75 0%,#095F49 
 body .legal-toc a:hover .toc-num { background: var(--brand); color: var(--on-brand); }
 body .legal-toc, body .legal-section { border-radius: var(--radius-card); }
 body .legal-section-tag { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
+
+/* Tablet: a wider column, same phone layout */
+@media (min-width: 640px) {
+  :root { --app-width: 640px; }
+}
+
+/* Desktop and laptop: sidebar + wide content */
+@media (min-width: 1024px) {
+  body.has-chrome { padding-left: 232px; padding-bottom: 48px; }
+  body .app-main { max-width: 880px; padding-top: 28px; }
+
+  body .topbar { left: 0; right: 0; padding: 0 24px; }
+
+  body nav.tabbar {
+    top: 60px; bottom: 0; left: 0; right: auto; width: 232px;
+    flex-direction: column; justify-content: flex-start; align-items: stretch;
+    gap: 4px; padding: 16px 12px;
+    border: 0; border-right: 1px solid var(--line); border-radius: 0;
+    background: var(--surface);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    box-shadow: none;
+  }
+  body nav.tabbar .nav-item {
+    flex: 0 0 auto; flex-direction: row; justify-content: flex-start;
+    gap: 12px; min-height: 44px; padding: 10px 14px;
+    font-size: 14px; border-radius: 12px;
+  }
+  body nav.tabbar .nav-item span { text-align: left; }
+  body nav.tabbar .nav-item:hover { background: var(--surface-3); }
+
+  body .fab { right: 32px; bottom: 32px; }
+  body .toast-host { left: calc(50% + 116px); bottom: 32px; }
+
+  body .modal { place-items: center; padding: 24px; }
+  body .modal:not([hidden]) .modal-panel {
+    max-width: 480px; border-radius: 20px; border-bottom: 1px solid var(--line);
+    padding: 24px;
+  }
+  body .modal-panel::before { display: none; }
+  body .modal-actions { flex-direction: row; }
+  body .modal-actions > .btn { flex: 1; width: auto; }
+
+  body .account-dropdown {
+    position: absolute; top: calc(100% + 8px); right: 0; left: auto; min-width: 248px;
+  }
+
+  body .trend-charts.is-double { grid-template-columns: 1.4fr 1fr; }
+  body .archive-filter-grid { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* Category suggestions and live icons in Settings */
+body .suggest-block { margin-top: 14px; }
+body .suggest-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+body .chip[data-suggest] { cursor: pointer; gap: 8px; padding-left: 6px; }
+body .chip[data-suggest] .chip-dot {
+  width: 22px; height: 22px; border-radius: 8px; flex: none;
+  display: grid; place-items: center; background: var(--cat); color: #fff;
+}
+body .chip[data-suggest] .chip-dot svg { width: 13px; height: 13px; }
+body .cat-icon-box[style*="--cat"] svg { color: #fff; }
+
+/* Desktop: the sidebar is a drawer opened from the top bar */
+.menu-toggle, .sidebar-backdrop { display: none; }
+
+@media (min-width: 1024px) {
+  body.has-chrome { padding-left: 0; }
+  body .app-main { margin-left: auto; margin-right: auto; }
+
+  body .menu-toggle {
+    display: grid; place-items: center; flex: none;
+    width: 40px; height: 40px; margin-right: 6px;
+    border: 0; border-radius: 12px; background: transparent;
+    color: var(--ink); cursor: pointer;
+    transition: background-color .15s ease;
+  }
+  body .menu-toggle:hover { background: var(--surface-3); }
+  body .menu-toggle svg { width: 22px; height: 22px; }
+
+  body nav.tabbar {
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform .22s ease, visibility 0s linear .22s;
+    z-index: 50;
+  }
+  body.sidebar-open nav.tabbar {
+    transform: none;
+    visibility: visible;
+    transition: transform .22s ease, visibility 0s;
+    box-shadow: 0 24px 60px -20px rgba(15,29,24,.45);
+  }
+  body .sidebar-backdrop {
+    position: fixed; inset: 60px 0 0 0; z-index: 49;
+    background: rgba(15,29,24,.35);
+  }
+  body .sidebar-backdrop[hidden] { display: none; }
+  body.sidebar-open .sidebar-backdrop:not([hidden]) { display: block; }
+
+  body .toast-host { left: 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body nav.tabbar { transition: none; }
+}

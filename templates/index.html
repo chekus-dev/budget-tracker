@@ -5,7 +5,7 @@
     <title>Budget Tracker</title>
     {{template "head.html" .}}
 </head>
-<body class="has-chrome">
+<body class="has-chrome home-page">
     {{template "nav.html" .}}
     <main class="app-main">
         {{if not .Searching}}
@@ -188,11 +188,6 @@
                 {{printf "%.0f" .PercentUsed}}% of {{money0 .CurrencySymbol .BudgetLimit}} used.
                 {{end}}
             </p>
-            {{if .SafeToSpend}}
-            <p class="hint mt-2">
-                <strong>{{money0 .CurrencySymbol .SafeToSpend}}</strong> a day is safe to spend for the rest of the month.
-            </p>
-            {{end}}
         </section>
         {{end}}
         {{if .CategoryBudgets}}

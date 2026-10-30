@@ -318,7 +318,7 @@
         .save-bar .btn { box-shadow: 0 4px 12px -4px #4f46e566; }
     </style>
 </head>
-<body class="has-chrome no-fab">
+<body class="has-chrome no-fab settings-page">
     {{template "nav.html" .}}
 
     <main class="app-main">
@@ -424,6 +424,79 @@
                     <svg class="icon-sm" aria-hidden="true"><use href="/static/icons.svg?v=7#plus"/></svg>
                     Add category
                 </button>
+                <div class="suggest-block">
+                    <p class="hint">Suggestions. Tap one to add it, then press Save settings.</p>
+                    <div class="suggest-row">
+                        <button type="button" class="chip" data-suggest="Rent" style="--cat:{{catColor "Rent"}}"><span class="chip-dot" aria-hidden="true"><svg><use href="/static/icons.svg?v=7#{{catIcon "Rent"}}"/></svg></span>Rent</button>
+                        <button type="button" class="chip" data-suggest="Airtime &amp; Data" style="--cat:{{catColor "Airtime & Data"}}"><span class="chip-dot" aria-hidden="true"><svg><use href="/static/icons.svg?v=7#{{catIcon "Airtime & Data"}}"/></svg></span>Airtime &amp; Data</button>
+                        <button type="button" class="chip" data-suggest="Groceries" style="--cat:{{catColor "Groceries"}}"><span class="chip-dot" aria-hidden="true"><svg><use href="/static/icons.svg?v=7#{{catIcon "Groceries"}}"/></svg></span>Groceries</button>
+                        <button type="button" class="chip" data-suggest="Eating Out" style="--cat:{{catColor "Eating Out"}}"><span class="chip-dot" aria-hidden="true"><svg><use href="/static/icons.svg?v=7#{{catIcon "Eating Out"}}"/></svg></span>Eating Out</button>
+                        <button type="button" class="chip" data-suggest="Health" style="--cat:{{catColor "Health"}}"><span class="chip-dot" aria-hidden="true"><svg><use href="/static/icons.svg?v=7#{{catIcon "Health"}}"/></svg></span>Health</button>
+                        <button type="button" class="chip" data-suggest="Shopping" style="--cat:{{catColor "Shopping"}}"><span class="chip-dot" aria-hidden="true"><svg><use href="/static/icons.svg?v=7#{{catIcon "Shopping"}}"/></svg></span>Shopping</button>
+                        <button type="button" class="chip" data-suggest="Savings" style="--cat:{{catColor "Savings"}}"><span class="chip-dot" aria-hidden="true"><svg><use href="/static/icons.svg?v=7#{{catIcon "Savings"}}"/></svg></span>Savings</button>
+                        <button type="button" class="chip" data-suggest="School Fees" style="--cat:{{catColor "School Fees"}}"><span class="chip-dot" aria-hidden="true"><svg><use href="/static/icons.svg?v=7#{{catIcon "School Fees"}}"/></svg></span>School Fees</button>
+                        <button type="button" class="chip" data-suggest="Entertainment" style="--cat:{{catColor "Entertainment"}}"><span class="chip-dot" aria-hidden="true"><svg><use href="/static/icons.svg?v=7#{{catIcon "Entertainment"}}"/></svg></span>Entertainment</button>
+                        <button type="button" class="chip" data-suggest="Fuel" style="--cat:{{catColor "Fuel"}}"><span class="chip-dot" aria-hidden="true"><svg><use href="/static/icons.svg?v=7#{{catIcon "Fuel"}}"/></svg></span>Fuel</button>
+                        <button type="button" class="chip" data-suggest="Church" style="--cat:{{catColor "Church"}}"><span class="chip-dot" aria-hidden="true"><svg><use href="/static/icons.svg?v=7#{{catIcon "Church"}}"/></svg></span>Church</button>
+                        <button type="button" class="chip" data-suggest="Family Support" style="--cat:{{catColor "Family Support"}}"><span class="chip-dot" aria-hidden="true"><svg><use href="/static/icons.svg?v=7#{{catIcon "Family Support"}}"/></svg></span>Family Support</button>
+                    </div>
+                </div>
+                <script>
+                (function () {
+                    var list = document.getElementById('category-list');
+                    var addBtn = document.getElementById('add-category-row');
+                    if (!list || !addBtn) return;
+                    var chips = document.querySelectorAll('[data-suggest]');
+                    var timers = new WeakMap();
+
+                    function names() {
+                        return Array.prototype.map.call(list.querySelectorAll('input[name="category"]'), function (i) {
+                            return i.value.trim().toLowerCase();
+                        });
+                    }
+                    function syncChips() {
+                        var have = names();
+                        chips.forEach(function (c) {
+                            c.hidden = have.indexOf(c.getAttribute('data-suggest').toLowerCase()) !== -1;
+                        });
+                    }
+                    function styleRow(input) {
+                        var row = input.closest('.cat-row');
+                        var box = row && row.querySelector('.cat-icon-box');
+                        if (!box) return;
+                        fetch('/api/category-style?name=' + encodeURIComponent(input.value.trim()), { credentials: 'same-origin' })
+                            .then(function (r) { return r.ok ? r.json() : null; })
+                            .then(function (s) {
+                                if (!s) return;
+                                box.style.setProperty('--cat', s.color);
+                                var use = box.querySelector('use');
+                                if (use) use.setAttribute('href', '/static/icons.svg?v=7#' + s.icon);
+                            })
+                            .catch(function () {});
+                    }
+                    list.addEventListener('input', function (e) {
+                        var el = e.target;
+                        if (!el || el.name !== 'category') return;
+                        clearTimeout(timers.get(el));
+                        timers.set(el, setTimeout(function () { styleRow(el); syncChips(); }, 250));
+                    });
+                    list.addEventListener('click', function (e) {
+                        if (e.target.closest && e.target.closest('[data-remove-category]')) setTimeout(syncChips, 0);
+                    });
+                    chips.forEach(function (chip) {
+                        chip.addEventListener('click', function () {
+                            addBtn.click();
+                            var inputs = list.querySelectorAll('input[name="category"]');
+                            var input = inputs[inputs.length - 1];
+                            if (!input) return;
+                            input.value = chip.getAttribute('data-suggest');
+                            styleRow(input);
+                            syncChips();
+                        });
+                    });
+                    syncChips();
+                })();
+                </script>
             </section>
 
             {{/* ---------- APPEARANCE ---------- */}}

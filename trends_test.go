@@ -76,6 +76,9 @@ func TestBuildTrendsCurrentYearAveragesElapsedMonths(t *testing.T) {
 	if d.AvgDivisor != 10 || !trendNear(d.LineValue, 100) {
 		t.Errorf("divisor %d, average %v; want 10 and 100", d.AvgDivisor, d.LineValue)
 	}
+	if d.TrackedMonths != 1 {
+		t.Errorf("tracked months = %d; want 1", d.TrackedMonths)
+	}
 }
 
 func TestBuildTrendsBalanceGoesBelowZero(t *testing.T) {

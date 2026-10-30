@@ -88,10 +88,11 @@ type TrendsPageData struct {
 	// headline gets the masked twin the screenshot deterrents swap in.
 	HeadMoney bool
 
-	HasData     bool
-	NoBudget    bool
-	BudgetLimit float64
-	AvgDivisor  int
+	HasData       bool
+	NoBudget      bool
+	BudgetLimit   float64
+	AvgDivisor    int
+	TrackedMonths int
 
 	Bars       []TrendBar
 	PosPct     float64
@@ -307,6 +308,9 @@ func categoryIcon(name string) string {
 			}
 		}
 	}
+	if icon, ok := matchCategoryIcon(name); ok {
+		return icon
+	}
 	return categoryIconFallback(name)
 }
 
@@ -396,6 +400,9 @@ func buildTrends(view string, year int, now time.Time, months [12]monthTotals, l
 	for i, m := range months {
 		d.Spent += m.Spent
 		d.Received += m.Received
+		if m.Spent > 0 || m.Received > 0 {
+			d.TrackedMonths++
+		}
 		if view == "balance" {
 			vals[i] = m.Received - m.Spent
 			if m.Spent > 0 || m.Received > 0 {

@@ -541,6 +541,7 @@ func main() {
 	mux.HandleFunc("/export/csv", requireAuth(exportCSVHandler))
 	mux.HandleFunc("/export/pdf", requireAuth(exportPDFHandler))
 	mux.HandleFunc("/api/categories", requireAuth(categoriesHandler))
+	mux.HandleFunc("/api/category-style", requireAuth(categoryStyleHandler))
 	mux.HandleFunc("/api/expenses-raw", requireAuth(expensesRawHandler))
 	mux.HandleFunc("/support", requireAuth(supportHandler))
 	mux.HandleFunc("/help", requireAuth(helpHandler))
@@ -1675,7 +1676,7 @@ func defaultSettings() SettingsData {
 	return SettingsData{
 		BudgetLimit: 0,
 		Currency:    "NGN",
-		Categories:  []string{"Food", "Transport", "Bills"},
+		Categories:  defaultCategories(),
 	}
 }
 
@@ -1962,39 +1963,6 @@ func categoryBudgetProgress(userID int, month string, order []string) ([]Categor
 }
 
 const budgetWarnFraction = 0.8
-
-// safeToSpend divides what's left of the monthly budget by the days remaining
-// in the current month, including today. It answers "can I afford this
-// today?", which a lump sum that only shrinks does not.
-//
-// Only meaningful for the current month: a past month has no days left to
-// divide over, and a future month has nothing spent against it yet. The
-// handler checks data.Month == currentMonth() before setting the value, so
-// the template only sees a number when it's true.
-//
-// The divisor never drops below 1. On the last day of the month the whole
-// remaining amount is "safe to spend today", which is what someone at the
-// end of the month needs to see.
-func safeToSpend(budget, spent float64, month string) float64 {
-	if budget <= 0 {
-		return 0
-	}
-	remaining := budget - spent
-	if remaining <= 0 {
-		return 0
-	}
-	start, err := time.Parse("2006-01", month)
-	if err != nil {
-		return 0
-	}
-	// Last day of the month: one month forward, one day back.
-	lastDay := start.AddDate(0, 1, -1).Day()
-	daysRemaining := lastDay - time.Now().Day() + 1
-	if daysRemaining < 1 {
-		daysRemaining = 1
-	}
-	return remaining / float64(daysRemaining)
-}
 
 func newCategoryBudget(category string, limit, spent float64) CategoryBudget {
 	b := CategoryBudget{
@@ -2353,10 +2321,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		templateData["OverAmount"] = math.Abs(remaining)
 		templateData["Percent"] = percent
 		templateData["WarnAt"] = data.BudgetLimit * budgetWarnFraction
-
-		if data.Month == currentMonth() && remaining > 0 {
-			templateData["SafeToSpend"] = safeToSpend(data.BudgetLimit, data.Spent, data.Month)
-		}
 	}
 
 	if err := tmpl.ExecuteTemplate(w, "index.html", templateData); err != nil {
@@ -2400,7 +2364,6 @@ func verifyTemplatesRender() {
 	withBudget["Percent"] = 12.5
 	withBudget["PercentUsed"] = 12.5
 	withBudget["WarnAt"] = 80.0
-	withBudget["SafeToSpend"] = 12.50
 
 	withUndo := home()
 	withUndo["DeletedID"] = "1"
@@ -2441,7 +2404,7 @@ func verifyTemplatesRender() {
 	}
 
 	settings := SettingsData{
-		BudgetLimit: 100, Currency: "NGN", Categories: []string{"Food", "Transport", "Bills"},
+		BudgetLimit: 100, Currency: "NGN", Categories: defaultCategories(),
 		PageChrome:     PageChrome{Username: "sam", CurrencySymbol: "₦"},
 		CurrencyList:   currencyOptions,
 		CategoryLimits: map[string]float64{"Food": 100},
@@ -2515,7 +2478,7 @@ func verifyTemplatesRender() {
 			Sub:          "Amounts are labelled with this everywhere in the app.",
 			Currency:     "NGN",
 			CurrencyList: currencyOptions,
-			Categories:   []string{"Food", "Transport", "Bills"},
+			Categories:   defaultCategories(),
 		}},
 		{"welcome.html", WelcomePageData{
 			PageChrome:   PageChrome{Username: "sam", CurrencySymbol: "₦", Version: appVersion},
@@ -2526,7 +2489,7 @@ func verifyTemplatesRender() {
 			Error:        "Enter an amount, or clear the description to skip this step.",
 			Currency:     "NGN",
 			CurrencyList: currencyOptions,
-			Categories:   []string{"Food", "Transport", "Bills"},
+			Categories:   defaultCategories(),
 			Form:         welcomeEntryForm{Description: "Lunch", Amount: "", Kind: kindExpense, Category: "Food"},
 		}},
 		// FIX 5: termsHandler passes a map with Version, not nil. Match it so
@@ -3001,7 +2964,7 @@ func resetSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	newSettings := SettingsData{
 		BudgetLimit: 0,
 		Currency:    "NGN",
-		Categories:  []string{"Food", "Transport", "Bills"},
+		Categories:  defaultCategories(),
 	}
 	if err := saveSettings(userID, newSettings); err != nil {
 		serverError(w, err)

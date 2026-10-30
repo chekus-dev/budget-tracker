@@ -319,7 +319,7 @@
         }
     </style>
 </head>
-<body class="has-chrome no-fab">
+<body class="has-chrome no-fab trends-page">
     {{template "nav.html" .}}
 
     <main class="app-main">
@@ -407,7 +407,7 @@
                     </svg>
                 </span>
                 <span class="trend-stat-label">Months tracked</span>
-                <span class="trend-stat-value">{{.AvgDivisor}}</span>
+                <span class="trend-stat-value">{{.TrackedMonths}}</span>
             </div>
             {{end}}
         </div>
