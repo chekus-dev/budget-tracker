@@ -111,9 +111,10 @@
                 </div>
 
                 <div class="admin-card">
-                    <h2 class="admin-card-title">Activity Summary</h2>
+                    <h3 class="admin-card-title">Activity Summary</h3>
                     <ul class="data-list">
                         <li class="data-row"><span class="data-label">Total Transactions</span><span class="data-value">{{.User.ExpenseCount}}</span></li>
+                        <li class="data-row"><span class="data-label">Recurring Entries</span><span class="data-value">{{.User.RepeatsCount}}</span></li>
                         <li class="data-row"><span class="data-label">Goals Created</span><span class="data-value">{{.User.GoalCount}}</span></li>
                         <li class="data-row"><span class="data-label">Total Spent</span><span class="data-value">{{printf "%.0f" .User.TotalSpent}}</span></li>
                         <li class="data-row"><span class="data-label">Total Received</span><span class="data-value">{{printf "%.0f" .User.TotalIncome}}</span></li>
@@ -121,7 +122,7 @@
                 </div>
                 
                 <div class="admin-card">
-                    <h2 class="admin-card-title">Send a Message</h2>
+                    <h3 class="admin-card-title">Send a Message</h3>
                     <p style="padding:12px 20px 0; margin:0; font-size:12px; color:var(--ink-muted);">The user sees this on their <a href="/notifications" style="color:inherit; text-decoration:underline;">notifications page</a>.</p>
                     <form method="POST" action="/admin/users/message/{{.User.ID}}" style="display:flex; flex-direction:column; gap:8px; padding:16px 20px;">
                         <input class="input" type="text" name="subject" placeholder="Subject (optional)" maxlength="200">
@@ -148,7 +149,7 @@
                 </div>
 
                 <div class="admin-card">
-                    <h2 class="admin-card-title">Internal Notes</h2>
+                    <h3 class="admin-card-title">Internal Notes</h3>
                     <form method="POST" action="/admin/users/notes/add/{{.User.ID}}" style="display:flex; gap:8px; padding:16px 20px; border-bottom:1px solid var(--line);">
                         <input class="input" type="text" name="body" placeholder="Add a private note…" maxlength="2000" required style="flex:1;">
                         <button type="submit" class="btn btn-primary">Save</button>
@@ -176,7 +177,7 @@
 
             <div>
                 <div class="admin-card">
-                    <h2 class="admin-card-title">Administrative Actions</h2>
+                    <h1 class="admin-card-title">Administrative Actions</h1>
                     <div class="action-list">
                         
                         <div class="action-row">
@@ -246,6 +247,46 @@
 
                     </div>
                 </div>
+
+                {{if .User.Goals}}
+                <div class="admin-card">
+                    <h2 class="admin-card-title">Goals</h2>
+                    <table class="mini-table">
+                        {{range .User.Goals}}
+                        <tr>
+                            <td>
+                                <div style="font-weight:500;">{{.Title}}</div>
+                                <div style="font-size:12px; color:var(--ink-muted);">{{.Period}}{{if .Note}} · {{.Note}}{{end}}</div>
+                            </td>
+                            <td style="text-align:right;">
+                                {{if .HasAmount}}<div style="font-weight:600;">{{printf "%.0f" .Amount}}</div>{{end}}
+                                <div style="font-size:12px; color:var(--ink-muted);">{{if .Completed}}Completed{{else}}In progress{{end}}</div>
+                            </td>
+                        </tr>
+                        {{end}}
+                    </table>
+                </div>
+                {{end}}
+
+                {{if .User.Recurring}}
+                <div class="admin-card">
+                    <h2 class="admin-card-title">Recurring Entries</h2>
+                    <table class="mini-table">
+                        {{range .User.Recurring}}
+                        <tr>
+                            <td>
+                                <div style="font-weight:500;">{{.Desc}}</div>
+                                <div style="font-size:12px; color:var(--ink-muted);">{{.Frequency}}{{if .Category}} · {{.Category}}{{end}}</div>
+                            </td>
+                            <td style="text-align:right;">
+                                <div style="font-weight:600;" class="{{if eq .Kind "income"}}is-income{{end}}">{{printf "%.0f" .Amount}}</div>
+                                <div style="font-size:12px; color:var(--ink-muted);">{{if .Active}}Next {{.NextDate}}{{else}}Paused{{end}}</div>
+                            </td>
+                        </tr>
+                        {{end}}
+                    </table>
+                </div>
+                {{end}}
 
                 {{if .User.RecentTx}}
                 <div class="admin-card">

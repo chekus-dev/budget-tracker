@@ -147,15 +147,16 @@ func adminDashboardHandler(w http.ResponseWriter, r *http.Request) {
 // ---------- Users list ----------
 
 type AdminUserRow struct {
-	ID           int
-	Username     string
-	Email        string
-	LastSeenAt   string
-	SignedUpAt   string
-	ExpenseCount int
-	GoalCount    int
-	Deleted      bool
-	HasNote      bool
+	ID             int
+	Username       string
+	Email          string
+	LastSeenAt     string
+	SignedUpAt     string
+	RecurringCount int
+	ExpenseCount   int
+	GoalCount      int
+	Deleted        bool
+	HasNote        bool
 }
 
 const (
@@ -191,6 +192,7 @@ func buildAdminUserQuery(filter, search string) (string, []any) {
 		SELECT u.id, u.username, u.email,
 		       u.last_seen_at, u.terms_accepted_at, u.deleted_at,
 		       (u.admin_note <> '') AS has_note,
+		       COALESCE((SELECT COUNT(*) FROM recurring_entries r WHERE r.user_id = u.id AND r.deleted_at IS NULL), 0),
 		       COALESCE((SELECT COUNT(*) FROM expenses e WHERE e.user_id = u.id AND e.deleted_at IS NULL), 0),
 		       COALESCE((SELECT COUNT(*) FROM goals g WHERE g.user_id = u.id), 0)
 		FROM users u
@@ -225,7 +227,7 @@ func adminUsersHandler(w http.ResponseWriter, r *http.Request) {
 		var lastSeen, signedUp, deletedAt sql.NullTime
 		if err := rows.Scan(&u.ID, &u.Username, &u.Email,
 			&lastSeen, &signedUp, &deletedAt, &u.HasNote,
-			&u.ExpenseCount, &u.GoalCount); err != nil {
+			&u.RecurringCount, &u.ExpenseCount, &u.GoalCount); err != nil {
 			serverError(w, err)
 			return
 		}
@@ -290,14 +292,14 @@ func adminExportCSVHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", `attachment; filename="users.csv"`)
 	cw := csv.NewWriter(w)
 	defer cw.Flush()
-	cw.Write([]string{"ID", "Username", "Email", "Last seen", "Signed up", "Expenses", "Goals", "Status"})
+	cw.Write([]string{"ID", "Username", "Email", "Last seen", "Signed up", "Recurring", "Expenses", "Goals", "Status"})
 
 	for rows.Next() {
 		var u AdminUserRow
 		var lastSeen, signedUp, deletedAt sql.NullTime
 		if err := rows.Scan(&u.ID, &u.Username, &u.Email,
 			&lastSeen, &signedUp, &deletedAt, &u.HasNote,
-			&u.ExpenseCount, &u.GoalCount); err != nil {
+			&u.RecurringCount, &u.ExpenseCount, &u.GoalCount); err != nil {
 			continue
 		}
 		lastSeenStr := "never"
@@ -314,7 +316,7 @@ func adminExportCSVHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		cw.Write([]string{
 			strconv.Itoa(u.ID), u.Username, u.Email, lastSeenStr, signedUpStr,
-			strconv.Itoa(u.ExpenseCount), strconv.Itoa(u.GoalCount), status,
+			strconv.Itoa(u.RecurringCount), strconv.Itoa(u.ExpenseCount), strconv.Itoa(u.GoalCount), status,
 		})
 	}
 }
@@ -336,12 +338,15 @@ type AdminUserDetail struct {
 	Inactive     bool
 	ExpenseCount int
 	GoalCount    int
+	RepeatsCount int
 	TotalSpent   float64
 	TotalIncome  float64
 	Currency     string
 	Recent       []AdminActionLog
 	Notes        []AdminNoteRow
 	RecentTx     []AdminTx
+	Recurring    []AdminRecurring
+	Goals        []AdminGoal
 }
 
 type AdminActionLog struct {
@@ -364,6 +369,25 @@ type AdminTx struct {
 	Desc     string
 	Amount   float64
 	Category string
+}
+
+type AdminRecurring struct {
+	Desc      string
+	Kind      string
+	Amount    float64
+	Category  string
+	Frequency string
+	NextDate  string
+	Active    bool
+}
+
+type AdminGoal struct {
+	Title     string
+	Note      string
+	Amount    float64
+	HasAmount bool
+	Period    string
+	Completed bool
 }
 
 func adminUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -423,6 +447,7 @@ func adminUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	db.QueryRow(`SELECT COUNT(*) FROM expenses WHERE user_id = $1 AND deleted_at IS NULL`, u.ID).Scan(&u.ExpenseCount)
 	db.QueryRow(`SELECT COUNT(*) FROM goals WHERE user_id = $1`, u.ID).Scan(&u.GoalCount)
+	db.QueryRow(`SELECT COUNT(*) FROM recurring_entries WHERE user_id = $1 AND deleted_at IS NULL`, u.ID).Scan(&u.RepeatsCount)
 	db.QueryRow(`SELECT COALESCE(SUM(amount),0) FROM expenses WHERE user_id = $1 AND kind = 'expense' AND deleted_at IS NULL`, u.ID).Scan(&u.TotalSpent)
 	db.QueryRow(`SELECT COALESCE(SUM(amount),0) FROM expenses WHERE user_id = $1 AND kind = 'income' AND deleted_at IS NULL`, u.ID).Scan(&u.TotalIncome)
 
@@ -479,6 +504,57 @@ func adminUserHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			tx.When = when.Format("2 Jan 15:04")
 			u.RecentTx = append(u.RecentTx, tx)
+		}
+	}
+
+	rows4, err := db.Query(`
+		SELECT description, kind, amount, COALESCE(category,''), frequency, next_date, active
+		FROM recurring_entries
+		WHERE user_id = $1 AND deleted_at IS NULL
+		ORDER BY active DESC, next_date ASC, id ASC`, u.ID)
+	if err == nil {
+		defer rows4.Close()
+		for rows4.Next() {
+			var rule AdminRecurring
+			var frequency string
+			var nextDate time.Time
+			if err := rows4.Scan(&rule.Desc, &rule.Kind, &rule.Amount, &rule.Category, &frequency, &nextDate, &rule.Active); err != nil {
+				continue
+			}
+			switch frequency {
+			case "daily":
+				rule.Frequency = "Daily"
+			case "weekly":
+				rule.Frequency = "Weekly"
+			default:
+				rule.Frequency = "Monthly"
+			}
+			rule.NextDate = nextDate.Format("2 Jan 2006")
+			u.Recurring = append(u.Recurring, rule)
+		}
+	}
+
+	rowsGoals, err := db.Query(`
+		SELECT title, COALESCE(note,''), target_amount, scope, period, completed_at IS NOT NULL
+		FROM goals
+		WHERE user_id = $1
+		ORDER BY period DESC, scope ASC, completed_at IS NOT NULL, created_at DESC
+		LIMIT 50`, u.ID)
+	if err == nil {
+		defer rowsGoals.Close()
+		for rowsGoals.Next() {
+			var goal AdminGoal
+			var amount sql.NullFloat64
+			var scope, period string
+			if err := rowsGoals.Scan(&goal.Title, &goal.Note, &amount, &scope, &period, &goal.Completed); err != nil {
+				continue
+			}
+			goal.Period = goalPeriodLabel(scope, period)
+			if amount.Valid {
+				goal.Amount = amount.Float64
+				goal.HasAmount = true
+			}
+			u.Goals = append(u.Goals, goal)
 		}
 	}
 

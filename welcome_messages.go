@@ -26,9 +26,13 @@ var welcomeMessages = []struct {
 	{
 		Subject: "How to get the most out of it",
 		Body: "A few things worth knowing:\n\n" +
-			"• Set a monthly budget in Settings — the home screen will show what's left to spend.\n" +
+			"• Set a monthly budget in Settings — the home screen will show what's left to spend. Or rather don't set a limit.\n" +
 			"• Give categories their own limits to track them separately.\n" +
 			"• Log expenses as they happen. Even rough ones. A habit beats perfection.\n" +
+			"• You can leave a category limit blank if you don't want to track it.\n" +
+			"• Set goals for things you plan to do this month or this year.\n" +
+			"• Add recurring expenses for rent, subscriptions, bills, and other regular costs.\n" +
+			"• Add recurring income for regular money coming in.\n" +
 			"• Export to CSV or PDF any time. Your data is yours.",
 	},
 	{

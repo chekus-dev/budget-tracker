@@ -94,6 +94,7 @@
                         <th>User</th>
                         <th>Last seen</th>
                         <th>Signed up</th>
+                        <th class="text-right">Recurring</th>
                         <th class="text-right">Txns</th>
                         <th class="text-right">Goals</th>
                         <th>Status</th>
@@ -109,6 +110,7 @@
                         </td>
                         <td class="num">{{.LastSeenAt}}</td>
                         <td class="num">{{.SignedUpAt}}</td>
+                        <td class="num text-right">{{.RecurringCount}}</td>
                         <td class="num text-right">{{.ExpenseCount}}</td>
                         <td class="num text-right">{{.GoalCount}}</td>
                         <td>
