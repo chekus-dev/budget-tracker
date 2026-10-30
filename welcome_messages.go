@@ -19,7 +19,8 @@ var welcomeMessages = []struct {
 	Body    string
 }{
 	
-	{   Header: "Welcome to Budget Tracker",
+	{ 
+	    Header: "Welcome to Budget Tracker",
 		Subject: "How to get the most out of it",
 		Body: "A few things worth knowing:\n\n" +
 			"• Set a monthly budget in Settings — the home screen will show what's left to spend. Or rather don't set a limit.\n" +
