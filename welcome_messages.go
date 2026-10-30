@@ -14,11 +14,12 @@ import (
 // welcomeMessages is the set a fresh account receives, in order.
 // Keep these short, warm, and useful. No marketing jargon.
 var welcomeMessages = []struct {
+	Header  string
 	Subject string
 	Body    string
 }{
 	
-	{
+	{   Header: "Welcome to Budget Tracker",
 		Subject: "How to get the most out of it",
 		Body: "A few things worth knowing:\n\n" +
 			"• Set a monthly budget in Settings — the home screen will show what's left to spend. Or rather don't set a limit.\n" +
@@ -30,12 +31,6 @@ var welcomeMessages = []struct {
 			"• Add recurring income for regular money coming in.\n" +
 			"• Export to CSV or PDF any time. Your data is yours.",
 	},
-	// {
-	// 	Subject: "You're part of something small",
-	// 	Body: "Budget Tracker is built by one person, not a company. Every user matters, every piece of feedback is read, and there are no investors to please.\n\n" +
-	// 		"If it's useful to you, keep using it. If something is missing, tell us. If you ever decide to leave, your data goes with you — export it and it's yours.\n\n" +
-	// 		"Stay with us. This only works because people like you do.",
-	// },
 }
 
 // seedWelcomeMessagesIfNeeded inserts the welcome set exactly once per user.
