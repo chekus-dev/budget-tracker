@@ -17,12 +17,7 @@ var welcomeMessages = []struct {
 	Subject string
 	Body    string
 }{
-	{
-		Subject: "Welcome to Budget Tracker",
-		Body: "Thanks for signing up. Budget Tracker is a small, private tool for keeping track of what you spend and what you save — one month at a time.\n\n" +
-			"There's no feed, no ads, and no algorithm. Just you and your money, laid out clearly.\n\n" +
-			"Take a minute to set a monthly budget in Settings, add your first expense, and you'll see it come to life.",
-	},
+	
 	{
 		Subject: "How to get the most out of it",
 		Body: "A few things worth knowing:\n\n" +
@@ -35,12 +30,12 @@ var welcomeMessages = []struct {
 			"• Add recurring income for regular money coming in.\n" +
 			"• Export to CSV or PDF any time. Your data is yours.",
 	},
-	{
-		Subject: "You're part of something small",
-		Body: "Budget Tracker is built by one person, not a company. Every user matters, every piece of feedback is read, and there are no investors to please.\n\n" +
-			"If it's useful to you, keep using it. If something is missing, tell us. If you ever decide to leave, your data goes with you — export it and it's yours.\n\n" +
-			"Stay with us. This only works because people like you do.",
-	},
+	// {
+	// 	Subject: "You're part of something small",
+	// 	Body: "Budget Tracker is built by one person, not a company. Every user matters, every piece of feedback is read, and there are no investors to please.\n\n" +
+	// 		"If it's useful to you, keep using it. If something is missing, tell us. If you ever decide to leave, your data goes with you — export it and it's yours.\n\n" +
+	// 		"Stay with us. This only works because people like you do.",
+	// },
 }
 
 // seedWelcomeMessagesIfNeeded inserts the welcome set exactly once per user.
