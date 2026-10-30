@@ -14,14 +14,11 @@ import (
 // welcomeMessages is the set a fresh account receives, in order.
 // Keep these short, warm, and useful. No marketing jargon.
 var welcomeMessages = []struct {
-	Header  string
 	Subject string
 	Body    string
 }{
-	
-	{ 
-	    Header: "Welcome to Budget Tracker",
-		Subject: "How to get the most out of it",
+	{
+		Subject: "Welcome to Budget tracker. How to get the most out of it",
 		Body: "A few things worth knowing:\n\n" +
 			"• Set a monthly budget in Settings — the home screen will show what's left to spend. Or rather don't set a limit.\n" +
 			"• Give categories their own limits to track them separately.\n" +
@@ -42,18 +39,6 @@ func seedWelcomeMessagesIfNeeded(userID int) {
 		return
 	}
 
-	var existing int
-	if err := db.QueryRow(
-		`SELECT COUNT(*) FROM user_messages WHERE user_id = $1 AND is_system = TRUE`,
-		userID,
-	).Scan(&existing); err != nil {
-		log.Printf("seedWelcome: check failed for %d: %v", userID, err)
-		return
-	}
-	if existing > 0 {
-		return
-	}
-
 	tx, err := db.Begin()
 	if err != nil {
 		log.Printf("seedWelcome: begin failed for %d: %v", userID, err)
@@ -62,6 +47,24 @@ func seedWelcomeMessagesIfNeeded(userID int) {
 	defer tx.Rollback()
 
 	for _, m := range welcomeMessages {
+		result, err := tx.Exec(`
+			UPDATE user_messages
+			SET body = $3
+			WHERE user_id = $1 AND is_system = TRUE AND subject = $2`,
+			userID, m.Subject, m.Body,
+		)
+		if err != nil {
+			log.Printf("seedWelcome: update failed for %d: %v", userID, err)
+			return
+		}
+		updated, err := result.RowsAffected()
+		if err != nil {
+			log.Printf("seedWelcome: update count failed for %d: %v", userID, err)
+			return
+		}
+		if updated > 0 {
+			continue
+		}
 		if _, err := tx.Exec(
 			`INSERT INTO user_messages (user_id, admin_id, subject, body, is_system)
 			 VALUES ($1, 0, $2, $3, TRUE)`,
