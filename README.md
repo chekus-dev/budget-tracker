@@ -13,7 +13,7 @@
 ![Tailwind](https://img.shields.io/badge/Tailwind_v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
-[![Live Demo](https://img.shields.io/badge/▶_Live_Demo-budget--tracker-f97316?style=for-the-badge)](https://budget-tracker-1-svws.onrender.com/)
+[![Live Demo](https://img.shields.io/badge/▶_Live_Demo-budget--tracker-f97316?style=for-the-badge)](https://budget-tracker-2-1o9w.onrender.com/)
 
 </div>
 
