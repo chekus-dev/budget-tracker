@@ -10,6 +10,7 @@ type WeekInsight struct {
 	Show        bool
 	WeekSpent   float64
 	LastSpent   float64
+	TodaySpent  float64
 	HasLast     bool
 	Less, Same  bool
 	ChangePct   float64
@@ -19,8 +20,10 @@ type WeekInsight struct {
 	LoggedToday bool
 }
 
-// weekInsights compares the last 7 days with the 7 before and counts the
-// current logging streak, from one query over the last 60 days.
+// weekInsights compares the last 7 finished days (yesterday and the six days
+// before it) with the 7 finished days before those, so a half-finished today
+// can't make spending look lower. Today is reported on its own. The streak
+// counts today. One query over the last 60 days.
 func weekInsights(userID int, now time.Time) (WeekInsight, error) {
 	var ins WeekInsight
 	today := utcDate(now)
@@ -54,13 +57,15 @@ func weekInsights(userID int, now time.Time) (WeekInsight, error) {
 		}
 		age := int(today.Sub(day) / (24 * time.Hour))
 		switch {
-		case age >= 0 && age <= 6:
+		case age == 0:
+			ins.TodaySpent += sum
+		case age >= 1 && age <= 7:
 			ins.WeekSpent += sum
 			if cat == "" {
 				cat = "Uncategorized"
 			}
 			cats[cat] += sum
-		case age >= 7 && age <= 13:
+		case age >= 8 && age <= 14:
 			ins.LastSpent += sum
 		}
 	}
@@ -94,6 +99,6 @@ func weekInsights(userID int, now time.Time) (WeekInsight, error) {
 		day = day.AddDate(0, 0, -1)
 	}
 
-	ins.Show = ins.WeekSpent > 0 || ins.Streak > 0
+	ins.Show = ins.WeekSpent > 0 || ins.TodaySpent > 0 || ins.Streak > 0
 	return ins, nil
 }

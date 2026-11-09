@@ -252,13 +252,13 @@
         {{with .Week}}{{if and .Show (eq $.Month $.CurrentMonth)}}
         <section class="card mb-4" aria-labelledby="week-label">
             <div class="section-head">
-                <h2 class="card-title" id="week-label">Your last 7 days</h2>
+                <h2 class="card-title" id="week-label">The last 7 full days</h2>
                 {{if gt .Streak 0}}<span class="chip is-active is-static">{{.Streak}} day{{if ne .Streak 1}}s{{end}} in a row</span>{{end}}
             </div>
             {{if .WeekSpent}}
             <p class="figure figure-lg">{{money $.CurrencySymbol .WeekSpent}}</p>
             <p class="hint">
-                {{if .HasLast}}{{if .Same}}About the same as the 7 days before.{{else if .Less}}{{printf "%.0f" .ChangePct}}% less than the 7 days before.{{else}}{{printf "%.0f" .ChangePct}}% more than the 7 days before.{{end}}{{else}}Spent in the last 7 days.{{end}}
+                {{if .HasLast}}{{if .Same}}About the same as the 7 days before.{{else if .Less}}{{printf "%.0f" .ChangePct}}% less than the 7 days before.{{else}}{{printf "%.0f" .ChangePct}}% more than the 7 days before.{{end}}{{else}}Spent in the last 7 full days.{{end}}
             </p>
             {{if .TopCategory}}
             <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
@@ -269,8 +269,9 @@
             </div>
             {{end}}
             {{else}}
-            <p class="note">No spending logged in the last 7 days.</p>
+            <p class="note">No spending logged in the last 7 full days.</p>
             {{end}}
+            {{if .TodaySpent}}<p class="note mt-2">Today so far: {{money $.CurrencySymbol .TodaySpent}}.</p>{{end}}
             {{if and (gt .Streak 0) (not .LoggedToday)}}
             <p class="note mt-2">Log something today to keep your streak going.</p>
             {{end}}
